@@ -46,5 +46,10 @@ Bu dosya, aynı hataların tekrarlanmaması için tutulur.
 - GitHub Pages, Actions ile yayınlanırken `github-pages` ortamı **yalnızca varsayılan
   daldan** dağıtıma izin verir. Bu yüzden iş akışı her dalda derleme yapıp yalnızca
   varsayılan dalda yayınlıyor (`github.ref_name == default_branch`).
+- **GitHub Pages'i iş akışı kendisi açamaz.** `actions/configure-pages` `enablement: true`
+  ile denendi; `GITHUB_TOKEN` "Resource not accessible by integration" veriyor — Pages
+  sitesini oluşturma yetkisi depo sahibinde. Bu yüzden adım `continue-on-error: true`
+  yapılıp, ardından kullanıcıya ne tıklayacağını anlatan Türkçe bir Actions özeti
+  yazılıyor. Sessizce yeşil kalmak yerine, anlaşılır bir hatayla durmak tercih edildi.
 - `shutil.rmtree` ile çıktı klasörü silinirken depo kökü koruması şart; aksi hâlde
   `--cikti .` tüm depoyu siler.

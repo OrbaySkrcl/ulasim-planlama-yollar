@@ -87,6 +87,12 @@ düzenlenir; koda hiç dokunulmaz.
   (`renk_koyu` desteği).
 - `derle.py --cikti <depo kökü>` güvenlik kontrolü test edildi: reddediyor.
 
+### Kullanıcının yapması gereken tek şey
+GitHub Pages, güvenlik gereği yalnızca depo sahibi tarafından açılabiliyor
+(`GITHUB_TOKEN` için "Resource not accessible by integration"). Bu yüzden **bir kez**:
+Settings → Pages → Source: **GitHub Actions** → Actions sekmesinde **Re-run all jobs**.
+İş akışı, bu yapılmadığında ne yapılacağını Actions özetinde Türkçe olarak anlatıyor.
+
 ### Planın dışında eklenenler
 - **Veri kalitesi raporu:** boş geometri / boş DURUM / adsız yol / 1 m altı çizgiler,
   QGIS'te bulunabilmesi için kayıt numaralarıyla listeleniyor.
