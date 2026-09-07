@@ -27,19 +27,22 @@ _(Aşağıdaki "Tek seferlik kurulum" adımını yaptıktan birkaç dakika sonra
 
 ## 1. Tek seferlik kurulum (sadece bir kez)
 
-Normalde **hiçbir şey yapmanız gerekmiyor**: iş akışı GitHub Pages'i kendisi açar.
-Depo sayfasındaki **Actions** sekmesinden "Siteyi derle ve yayınla" çalışmasının
-yeşil ✓ olmasını bekleyin (2–3 dakika), sonra adresi açın:
+Siteyi yayına almak için **bir kez** şu 4 adımı yapmanız gerekiyor. (GitHub, güvenlik
+gereği Pages'i açma yetkisini yalnızca depo sahibine verir; bu yüzden bu adımı otomatik
+yapamıyoruz.)
+
+1. Deponun üstündeki **Settings** (Ayarlar) sekmesine girin.
+2. Sol menüden **Pages**'e tıklayın.
+3. **Build and deployment → Source** kutusundan **GitHub Actions**'ı seçin.
+4. **Actions** sekmesine gidin → en üstteki çalışmayı açın → sağ üstten
+   **Re-run all jobs**.
+
+2–3 dakika sonra site yayında olur:
 
 `https://orbayskrcl.github.io/ulasim-planlama-yollar/`
 
-Eğer Actions'ta **kırmızı ✗** görürseniz ve hata "Get Pages site failed" diyorsa,
-Pages'i elle açmanız gerekir:
-
-1. Deponun **Settings** (Ayarlar) sekmesi.
-2. Sol menüden **Pages**.
-3. **Build and deployment → Source** kutusundan **GitHub Actions**'ı seçin.
-4. **Actions** sekmesine dönüp son çalışmada **Re-run all jobs** deyin.
+Bundan sonra bu adımı bir daha yapmanız gerekmez; her veri yüklemesinde site
+kendiliğinden yenilenir.
 
 > **Not:** Site yalnızca deponun **varsayılan dalından (default branch)** yayınlanır.
 > Şu an varsayılan dal `claude/izmir-road-classification-web-f4fq44`; bu yüzden ek bir

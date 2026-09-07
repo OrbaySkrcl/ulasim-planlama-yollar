@@ -50,13 +50,35 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      # enablement: true -> GitHub Pages kapalıysa kendisi açar,
-      # böylece kullanıcının Settings'ten ayar yapmasına gerek kalmaz.
-      - name: Pages ayarlarını hazırla (gerekirse Pages'i aç)
+      # enablement: true -> Pages açıksa doğrular, kapalıysa açmayı dener.
+      # (Açma yetkisi depo yöneticisine aittir; başarısız olursa aşağıdaki adım
+      #  ne yapılacağını Türkçe olarak Actions özetine yazar.)
+      - name: Pages ayarlarını hazırla
+        id: pages
         if: github.ref_name == github.event.repository.default_branch
+        continue-on-error: true
         uses: actions/configure-pages@v5
         with:
           enablement: true
+
+      - name: Pages kapalıysa yapılacakları yaz
+        if: steps.pages.outcome == 'failure'
+        run: |
+          {
+            echo "## ⚠️ Site derlendi ama yayınlanamadı: GitHub Pages henüz açık değil"
+            echo ""
+            echo "Veri sorunsuz derlendi (yukarıdaki özete bakın). Yayına almak için"
+            echo "**tek seferlik** şu adımları uygulayın:"
+            echo ""
+            echo "1. Deponun **Settings** (Ayarlar) sekmesine girin."
+            echo "2. Sol menüden **Pages**'e tıklayın."
+            echo "3. **Build and deployment → Source** kutusundan **GitHub Actions**'ı seçin."
+            echo "4. Bu sayfaya dönüp sağ üstteki **Re-run all jobs** düğmesine basın."
+            echo ""
+            echo "Bundan sonraki güncellemelerde bu adımı tekrarlamanız gerekmez."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "GitHub Pages acik degil. Settings -> Pages -> Source: GitHub Actions secip Re-run all jobs deyin."
+          exit 1
 
       - name: Siteyi paketle
         if: github.ref_name == github.event.repository.default_branch
