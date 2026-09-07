@@ -37,9 +37,11 @@ Siteyi yayına almak için GitHub'da tek bir ayarı açmanız yeterli:
 
 Bitti. Site adresi: `https://orbayskrcl.github.io/ulasim-planlama-yollar/`
 
-> **Not:** Bu değişiklikler `claude/izmir-road-classification-web-f4fq44` dalında (branch)
-> hazırlandı. Deponun ana dalı farklıysa önce bu dalı ana dala birleştirin (Pull request →
-> Merge); site yalnızca **ana daldan** yayınlanır.
+> **Not:** Site yalnızca deponun **varsayılan dalından (default branch)** yayınlanır.
+> Şu an varsayılan dal `claude/izmir-road-classification-web-f4fq44`; bu yüzden ek bir
+> işlem yapmanız gerekmiyor. İleride `main` gibi başka bir dala geçerseniz, varsayılan
+> dalı **Settings → General → Default branch** bölümünden değiştirmeniz yeterli —
+> iş akışı kendini otomatik ona göre ayarlar.
 
 ---
 
