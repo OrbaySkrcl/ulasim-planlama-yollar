@@ -1,0 +1,45 @@
+{
+  "_aciklama_koyu": "renk_koyu: koyu temada kullanilacak renk. Yazilmazsa 'renk' kullanilir.",
+  "_aciklama": "Bu dosya sitedeki kategori adlarini, renklerini ve siralamasini belirler. QGIS'teki DURUM alanindaki her deger burada bir satirdir. Renk null birakilirsa KML dosyasindaki renk otomatik kullanilir. Yeni bir DURUM degeri eklerseniz burada tanimlamaniz yeterlidir; tanimlamazsaniz site otomatik olarak 'Durum X' adiyla gosterir.",
+  "kategoriler": {
+    "1": {
+      "ad": "Büyükşehir'e geçen köy yolları",
+      "kisa_ad": "Devredilen köy yolları",
+      "renk": "#a855f7",
+      "aciklama": "İl Özel İdaresi'nden İzmir Büyükşehir Belediyesi'ne devredilen mahalle/köy yolları.",
+      "sira": 1,
+      "varsayilan_acik": true
+    },
+    "2": {
+      "ad": "Durumu belirsiz yollar",
+      "kisa_ad": "Belirsiz",
+      "renk": "#e11d48",
+      "aciklama": "Sorumluluğu henüz netleşmemiş, incelemesi süren yollar.",
+      "sira": 2,
+      "varsayilan_acik": true
+    },
+    "4": {
+      "ad": "Halihazırda Büyükşehir'e ait yollar",
+      "kisa_ad": "Mevcut Büyükşehir",
+      "renk": "#2563eb",
+      "aciklama": "Devir öncesinde de İzmir Büyükşehir Belediyesi sorumluluğunda olan yollar.",
+      "sira": 3,
+      "varsayilan_acik": true
+    },
+    "3": {
+      "ad": "Karayolları Genel Müdürlüğü yolları",
+      "kisa_ad": "Karayolları",
+      "renk": "#1f2937",
+      "renk_koyu": "#cbd5e1",
+      "aciklama": "KGM sorumluluğundaki devlet yolları, il yolları ve otoyollar.",
+      "sira": 4,
+      "varsayilan_acik": true
+    }
+  },
+  "site": {
+    "baslik": "İzmir Köy Yolları Devir Haritası",
+    "alt_baslik": "İl Özel İdaresi'nden Büyükşehir Belediyesi'ne geçen mahalle ve köy yolları",
+    "kurum": "Ulaşım Planlama",
+    "not": "Bu harita çalışma amaçlı hazırlanmıştır, resmî bir belge niteliği taşımaz. Veriler güncellenmeye devam etmektedir."
+  }
+}

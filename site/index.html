@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="tr" data-tema="acik">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+<title>İzmir Köy Yolları Devir Haritası</title>
+<meta name="description" content="İzmir'de İl Özel İdaresi'nden Büyükşehir Belediyesi'ne geçen mahalle ve köy yollarının güncel haritası. Kategorilere göre filtreleyin, yol arayın, veriyi indirin.">
+<meta property="og:title" content="İzmir Köy Yolları Devir Haritası">
+<meta property="og:description" content="İl Özel İdaresi'nden Büyükşehir Belediyesi'ne geçen mahalle ve köy yolları — açık, güncellenen harita.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230d7c8a'/%3E%3Cpath d='M9 26 L14 6 M18 26 L23 6' stroke='white' stroke-width='2.6' stroke-linecap='round'/%3E%3Cpath d='M16 24 v-3 M16 17.5 v-3 M16 11 v-3' stroke='%23a855f7' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="uygulama">
+
+  <header id="ustbar">
+    <div class="marka">
+      <div class="rozet">İZ</div>
+      <div style="min-width:0">
+        <h1 id="site-baslik">İzmir Köy Yolları Devir Haritası</h1>
+        <div class="alt" id="site-altbaslik">Yükleniyor…</div>
+      </div>
+    </div>
+    <div class="bosluk"></div>
+    <div class="arac">
+      <button class="dbtn ikon" id="btn-konum" title="Konumuma git">📍<span class="etiket-gizle" style="margin-left:5px">Konumum</span></button>
+      <button class="dbtn ikon" id="btn-tema" title="Açık / koyu tema">🌙</button>
+      <div class="menu-sarma">
+        <button class="dbtn" id="btn-indir">⬇︎ <span class="etiket-gizle">Veriyi indir</span></button>
+        <div class="menu" id="menu-indir">
+          <div class="baslik">Veriyi indir</div>
+          <a href="veri/yollar.geojson" download>GeoJSON (<span id="boyut-geojson">–</span>)
+            <small>QGIS, ArcGIS, Google Earth ve çoğu program açar</small></a>
+          <a href="veri/ibb_yollar.kml" download>KML — kaynak dosya (<span id="boyut-kml">–</span>)
+            <small>QGIS'ten dışa aktarılan orijinal katman</small></a>
+          <div class="ayrac"></div>
+          <button id="btn-link">🔗 Bu görünümün bağlantısını kopyala
+            <small>Filtreler ve harita konumu bağlantıya işlenir</small></button>
+        </div>
+      </div>
+      <button class="dbtn ikon" id="btn-yardim" title="Bilgi ve güncelleme rehberi">?</button>
+    </div>
+  </header>
+
+  <div id="govde">
+    <aside id="panel">
+
+      <section class="bolum">
+        <div class="arama-kutu">
+          <span class="buyutec">🔍</span>
+          <input id="arama" type="search" placeholder="Yol adı ara (ör. Terzihaliller)" autocomplete="off" aria-label="Yol adı ara">
+          <button class="temizle" id="arama-temizle" aria-label="Aramayı temizle">×</button>
+        </div>
+        <div id="arama-sonuc"></div>
+      </section>
+
+      <section class="bolum" id="bolum-kategori">
+        <h2>Kategoriler <span id="kategori-hepsi" style="text-transform:none;letter-spacing:0;font-weight:600;cursor:pointer;color:var(--vurgu)">tümünü seç</span></h2>
+        <div id="kategori-liste"></div>
+      </section>
+
+      <section class="bolum kapanabilir kapali" id="bolum-tip">
+        <h2>Yol tipi</h2>
+        <div class="icerik"><div class="rozetler" id="tip-liste"></div></div>
+      </section>
+
+      <section class="bolum kapanabilir kapali" id="bolum-ilce" style="display:none">
+        <h2>İlçe</h2>
+        <div class="icerik"><div class="rozetler" id="ilce-liste"></div></div>
+      </section>
+
+      <section class="bolum">
+        <h2>Özet</h2>
+        <div class="ist-kutular">
+          <div class="ist-kutu"><div class="deger" id="ist-km">–</div><div class="etiket">Görünen uzunluk (km)</div></div>
+          <div class="ist-kutu"><div class="deger" id="ist-adet">–</div><div class="etiket">Görünen yol parçası</div></div>
+        </div>
+        <table class="tablo" id="tip-tablo" style="margin-top:12px"></table>
+      </section>
+
+      <section class="bolum kapanabilir kapali" id="bolum-kalite" style="display:none">
+        <h2>Veri kalitesi uyarıları</h2>
+        <div class="icerik"><div id="kalite-liste"></div></div>
+      </section>
+
+      <section class="bolum">
+        <div class="not-kutu" id="site-not"></div>
+        <p class="kucuk" style="margin:10px 0 0">
+          Son güncelleme: <strong id="guncelleme">–</strong><br>
+          Kaynak: <span id="kaynak">–</span><br>
+          <a href="#" id="link-yardim">Bu harita nasıl güncelleniyor?</a>
+        </p>
+      </section>
+    </aside>
+
+    <div id="harita-alan">
+      <div id="harita"></div>
+      <button class="dbtn" id="panel-ac">☰ Filtreler</button>
+      <div id="altlik-secim" class="harita-kontrol"></div>
+      <div id="koordinat">–</div>
+      <div id="yukleniyor">
+        <div>
+          <div class="halka"></div>
+          <div style="font-weight:600">Yol verisi yükleniyor…</div>
+          <div class="kucuk" style="margin-top:4px" id="yukleniyor-alt">Yaklaşık 2 MB</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="perde" id="perde-yardim">
+  <div class="pencere">
+    <header>
+      <h3>Harita hakkında ve güncelleme rehberi</h3>
+      <button class="kapat" data-kapat="perde-yardim" aria-label="Kapat">×</button>
+    </header>
+    <div class="govde">
+      <h4>Bu harita nedir?</h4>
+      <p>İzmir'de İl Özel İdaresi'nden İzmir Büyükşehir Belediyesi'ne devredilen mahalle ve
+         köy yollarının belirlenmesi çalışmasıdır. Yollar QGIS ortamında sınıflandırılır,
+         bu site de o çalışmanın herkese açık görüntüsüdür. Çalışma sürmektedir;
+         yollar ve sınıflandırmaları zaman içinde değişebilir.</p>
+
+      <h4>Kategoriler ne anlama geliyor?</h4>
+      <div id="yardim-kategoriler"></div>
+
+      <h4>Haritayı nasıl kullanırım?</h4>
+      <ul>
+        <li>Soldaki kutucuklarla kategorileri açıp kapatabilirsiniz.</li>
+        <li>Arama kutusuna yol adı yazıp sonuca tıklayınca harita o yola gider.</li>
+        <li>Bir yola tıklayınca adı, tipi, uzunluğu ve koordinatı görünür.</li>
+        <li><strong>Veriyi indir</strong> ile GeoJSON veya KML dosyasını bilgisayarınıza alabilirsiniz.</li>
+        <li><strong>Bağlantıyı kopyala</strong> ile o anki görünümü (konum + filtreler) paylaşabilirsiniz.</li>
+      </ul>
+
+      <h4>Veriyi güncellemek (çalışmayı yürüten kişi için)</h4>
+      <ol>
+        <li>QGIS'te katmanı sağ tıklayın → <em>Dışa Aktar → Özellikleri Farklı Kaydet…</em>
+            → biçim <strong>KML</strong>, dosya adı <code>ibb_yollar.kml</code>.</li>
+        <li>GitHub deposunda <code>veri</code> klasörünü açın → <strong>Add file → Upload files</strong>.</li>
+        <li>Yeni <code>ibb_yollar.kml</code> dosyasını sürükleyip <strong>Commit changes</strong> deyin.</li>
+        <li>2–3 dakika içinde bu site otomatik olarak yenilenir. Başka hiçbir şey yapmanız gerekmez.</li>
+      </ol>
+      <p class="kucuk">Kategori adlarını, renklerini veya sıralamasını değiştirmek için
+         <code>veri/kategoriler.json</code> dosyasını GitHub üzerinden düzenlemeniz yeterlidir.</p>
+
+      <h4>Sorumluluk</h4>
+      <p class="kucuk" id="yardim-not"></p>
+    </div>
+  </div>
+</div>
+
+<div id="bildirim"></div>
+
+<script src="vendor/leaflet/leaflet.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

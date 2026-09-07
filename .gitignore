@@ -1,0 +1,9 @@
+# Derleme çıktısı — GitHub Actions her seferinde yeniden üretir, depoda tutulmaz.
+_site/
+
+# Sistem dosyaları
+.DS_Store
+Thumbs.db
+*.qgz~
+*.swp
+__pycache__/

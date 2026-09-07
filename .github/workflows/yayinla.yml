@@ -1,0 +1,77 @@
+# Siteyi otomatik derleyip GitHub Pages'te yayınlar.
+# veri/ klasörüne yeni bir KML yüklediğinizde kendiliğinden çalışır.
+
+name: Siteyi derle ve yayınla
+
+on:
+  push:
+    paths:
+      - "veri/**"
+      - "site/**"
+      - "araclar/**"
+      - ".github/workflows/yayinla.yml"
+  workflow_dispatch:        # Actions sekmesinden elle de çalıştırılabilir
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  derle:
+    name: Veriyi derle
+    runs-on: ubuntu-latest
+    steps:
+      - name: Depoyu al
+        uses: actions/checkout@v4
+
+      - name: Python kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: KML'i siteye dönüştür
+        run: |
+          set -o pipefail
+          python3 araclar/derle.py --cikti _site 2>&1 | tee derleme.log
+
+      - name: Derleme özetini yaz
+        if: always()
+        run: |
+          {
+            echo "## Derleme sonucu"
+            echo ""
+            echo '```'
+            cat derleme.log 2>/dev/null || echo "Derleme günlüğü oluşmadı."
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Pages ayarlarını hazırla
+        if: github.ref_name == github.event.repository.default_branch
+        uses: actions/configure-pages@v5
+
+      - name: Siteyi paketle
+        if: github.ref_name == github.event.repository.default_branch
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  yayinla:
+    name: GitHub Pages'e yayınla
+    needs: derle
+    if: github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.dagit.outputs.page_url }}
+    steps:
+      - name: Yayınla
+        id: dagit
+        uses: actions/deploy-pages@v4
+
+      - name: Adresi özete yaz
+        run: echo "Site yayında -> ${{ steps.dagit.outputs.page_url }}" >> "$GITHUB_STEP_SUMMARY"
