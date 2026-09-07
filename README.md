@@ -27,15 +27,19 @@ _(Aşağıdaki "Tek seferlik kurulum" adımını yaptıktan birkaç dakika sonra
 
 ## 1. Tek seferlik kurulum (sadece bir kez)
 
-Siteyi yayına almak için GitHub'da tek bir ayarı açmanız yeterli:
+Normalde **hiçbir şey yapmanız gerekmiyor**: iş akışı GitHub Pages'i kendisi açar.
+Depo sayfasındaki **Actions** sekmesinden "Siteyi derle ve yayınla" çalışmasının
+yeşil ✓ olmasını bekleyin (2–3 dakika), sonra adresi açın:
 
-1. Bu deponun sayfasında üstteki **Settings** (Ayarlar) sekmesine girin.
-2. Sol menüden **Pages**'e tıklayın.
+`https://orbayskrcl.github.io/ulasim-planlama-yollar/`
+
+Eğer Actions'ta **kırmızı ✗** görürseniz ve hata "Get Pages site failed" diyorsa,
+Pages'i elle açmanız gerekir:
+
+1. Deponun **Settings** (Ayarlar) sekmesi.
+2. Sol menüden **Pages**.
 3. **Build and deployment → Source** kutusundan **GitHub Actions**'ı seçin.
-4. Depo sayfasındaki **Actions** sekmesine gidin, en üstteki "Siteyi derle ve yayınla"
-   çalışmasının yeşil ✓ olmasını bekleyin (2–3 dakika).
-
-Bitti. Site adresi: `https://orbayskrcl.github.io/ulasim-planlama-yollar/`
+4. **Actions** sekmesine dönüp son çalışmada **Re-run all jobs** deyin.
 
 > **Not:** Site yalnızca deponun **varsayılan dalından (default branch)** yayınlanır.
 > Şu an varsayılan dal `claude/izmir-road-classification-web-f4fq44`; bu yüzden ek bir
@@ -191,7 +195,7 @@ tasks/                      çalışma planı ve notlar
 | Bir kategori hiç görünmüyor | Sol paneldeki kutucuğu işaretleyin; ya da o `DURUM` değeri KML'de hiç yoksa kategori listelenmez. |
 | "Tanımsız durum kodu" uyarısı | KML'de `veri/kategoriler.json`'da tanımlı olmayan bir `DURUM` var. 4. bölümdeki gibi ekleyin. |
 | Renkler QGIS'tekiyle aynı değil | Renkler `kategoriler.json`'dan gelir. Oradaki `renk` değerini `null` yaparsanız KML'deki renk kullanılır. |
-| Site adresi 404 veriyor | 1. bölümdeki **Settings → Pages → GitHub Actions** ayarı yapılmamış olabilir. |
+| Site adresi 404 veriyor | Yayın henüz tamamlanmamış olabilir; **Actions** sekmesinden son çalışmayı kontrol edin. Sürekli 404 ise 1. bölümdeki elle açma adımlarını uygulayın. |
 
 ---
 
