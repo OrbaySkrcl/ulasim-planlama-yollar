@@ -1,30 +1,45 @@
 /* İzmir Köy Yolları Devir Haritası
    Saf JavaScript + Leaflet. Derleme aracı gerektirmez.
-   Veri: veri/ozet.json (istatistik + ayarlar) ve veri/yollar.geojson (geometri) */
+   Veri: veri/ozet.json (istatistik + ayarlar), veri/yollar.geojson (geometri)
+
+   Çizim mimarisi: her kategori tek bir birleşik çizgi nesnesiyle çizilir
+   (6.647 nesne yerine 4). Hangi yola tıklandığı, kendi ızgara indeksimizle
+   yapılan "en yakın çizgi" testiyle bulunur. Bu, zoom/kaydırmayı akıcı tutar. */
 
 (function () {
   "use strict";
 
-  var D = {                       // uygulama durumu
+  var IZGARA = 0.004;          // ~350 m: tıklama testi için mekânsal ızgara adımı
+  var TIKLAMA_ESIGI = 14;      // piksel
+  var DEPOLAMA = "izmirYollar.";
+
+  var D = {
     ozet: null,
-    ozellikler: [],               // tüm yollar (GeoJSON Feature)
-    duruma_gore: {},              // durum kodu -> Feature[]
-    katmanlar: {},                // durum kodu -> L.GeoJSON
+    ozellikler: [],
+    durumaGore: {},
+    katmanlar: {},
+    izgara: null,
     seciliKategori: new Set(),
     seciliTip: new Set(),
     seciliIlce: new Set(),
+    ozelKategori: {},          // kullanıcının kendi ad/renk değişiklikleri
     vurgu: null,
+    hover: null,
+    hoverKatman: null,
+    olcum: null,
+    cizimSiniri: null,
+    cizimZoom: null,
     konumIsaret: null,
     harita: null,
     cizer: null,
     altlik: null,
-    agirlikKademe: null,
-    hashYaziliyor: false
+    altlikAdi: null
   };
 
   var $ = function (s) { return document.querySelector(s); };
   var $$ = function (s) { return Array.prototype.slice.call(document.querySelectorAll(s)); };
 
+  /* ---------------------------------------------------------- yardımcılar */
   function sayi(n, hane) {
     if (n === null || n === undefined || isNaN(n)) return "–";
     return Number(n).toLocaleString("tr-TR", {
@@ -54,64 +69,126 @@
     return m >= 1000 ? sayi(m / 1000, 2) + " km" : sayi(m, 0) + " m";
   }
 
+  function yerelYaz(anahtar, deger) {
+    try { localStorage.setItem(DEPOLAMA + anahtar, JSON.stringify(deger)); } catch (e) {}
+  }
+  function yerelOku(anahtar, varsayilan) {
+    try {
+      var v = localStorage.getItem(DEPOLAMA + anahtar);
+      return v === null ? varsayilan : JSON.parse(v);
+    } catch (e) { return varsayilan; }
+  }
+
   var bildirimZaman;
   function bildir(mesaj) {
     var el = $("#bildirim");
     el.textContent = mesaj;
     el.classList.add("gorunur");
     clearTimeout(bildirimZaman);
-    bildirimZaman = setTimeout(function () { el.classList.remove("gorunur"); }, 2400);
+    bildirimZaman = setTimeout(function () { el.classList.remove("gorunur"); }, 2600);
   }
 
-  /* ------------------------------------------------------------------ tema */
-  function temaUygula(tema) {
-    document.documentElement.setAttribute("data-tema", tema);
-    $("#btn-tema").textContent = tema === "koyu" ? "☀️" : "🌙";
-    try { localStorage.setItem("tema", tema); } catch (e) {}
-    if (D.harita && D.altlikTanim) {
-      var ad = D.altlikAdi;
-      if (tema === "koyu" && (ad === "Sade" || ad === "Sokak")) altligiSec("Koyu");
-      else if (tema === "acik" && ad === "Koyu") altligiSec("Sokak");
+  function panoyaKopyala(metin) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(metin).catch(function () {});
+      return;
     }
-    if (D.ozet && D.ozellikler.length) {
-      kategoriListesiCiz();
-      katmanlariYenile();
-      yardimCiz();
-    }
+    var ta = document.createElement("textarea");
+    ta.value = metin; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); } catch (err) {}
+    document.body.removeChild(ta);
   }
 
-  function temaBaslat() {
-    var t = null;
-    try { t = localStorage.getItem("tema"); } catch (e) {}
-    if (!t) {
-      t = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "koyu" : "acik";
+  /* ------------------------------------------------------------- renkler */
+  function hexRgb(h) {
+    h = String(h || "").replace("#", "");
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    if (h.length !== 6) return [136, 136, 136];
+    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+  }
+  function rgbHex(c) {
+    return "#" + c.map(function (v) {
+      v = Math.max(0, Math.min(255, Math.round(v)));
+      return (v < 16 ? "0" : "") + v.toString(16);
+    }).join("");
+  }
+  function parlaklik(h) {
+    var c = hexRgb(h).map(function (v) {
+      v /= 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  }
+  // Koyu temada görünmeyecek kadar koyu renkleri okunur hâle getirir
+  function koyuIcinAyarla(h) {
+    if (parlaklik(h) >= 0.09) return h;
+    for (var t = 0.25; t <= 0.95; t += 0.05) {
+      var yeni = rgbHex(hexRgb(h).map(function (v) { return v + (255 - v) * t; }));
+      if (parlaklik(yeni) >= 0.45) return yeni;
     }
-    document.documentElement.setAttribute("data-tema", t);
-    $("#btn-tema").textContent = t === "koyu" ? "☀️" : "🌙";
+    return "#cbd5e1";
   }
 
-  /* --------------------------------------------------------------- altlık */
+  function koyuMu() {
+    return document.documentElement.getAttribute("data-tema") === "koyu";
+  }
+
+  // Yol renkleri arayüz temasına değil, ALTLIK HARİTANIN koyuluğuna göre seçilir:
+  // koyu tema + açık altlık seçildiğinde siyah yolların kaybolmasını önler.
+  function koyuZeminMi() {
+    return D.altlikAdi === "Koyu" || D.altlikAdi === "Uydu";
+  }
+
+  /* --------------------------------------------------- kategori ayarları */
+  function katAd(durum) {
+    var o = D.ozelKategori[durum];
+    if (o && o.ad) return o.ad;
+    var k = D.ozet.kategoriler[durum];
+    return k ? k.ad : "Durum " + durum;
+  }
+
+  function katRenk(durum) {
+    var o = D.ozelKategori[durum];
+    if (o && o.renk) return koyuZeminMi() ? koyuIcinAyarla(o.renk) : o.renk;
+    var k = D.ozet.kategoriler[durum] || {};
+    if (koyuZeminMi()) return k.renk_koyu || koyuIcinAyarla(k.renk || "#888888");
+    return k.renk || "#888888";
+  }
+
+  function katTemelRenk(durum) {           // düzenleyicideki renk kutusu için
+    var o = D.ozelKategori[durum];
+    if (o && o.renk) return o.renk;
+    var k = D.ozet.kategoriler[durum] || {};
+    return k.renk || "#888888";
+  }
+
+  function ozelVarMi() { return Object.keys(D.ozelKategori).length > 0; }
+
+  /* ------------------------------------------------------------- altlık */
+  var OSM = {
+    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> katkıcıları'
+  };
+
   var ALTLIKLAR = {
-    "Sokak": {
-      url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-      opt: { maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> katkıcıları' }
-    },
+    "Sokak": { url: OSM.url, opt: { maxZoom: 19, attribution: OSM.attribution } },
     "Sade": {
-      url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-      opt: { maxZoom: 20, subdomains: "abcd", attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · © <a href="https://carto.com/attributions">CARTO</a>' }
+      url: OSM.url,
+      opt: { maxZoom: 19, attribution: OSM.attribution, className: "altlik-sade" }
     },
     "Koyu": {
-      url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-      opt: { maxZoom: 20, subdomains: "abcd", attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · © <a href="https://carto.com/attributions">CARTO</a>' }
+      url: OSM.url,
+      opt: { maxZoom: 19, attribution: OSM.attribution, className: "altlik-koyu" }
     },
     "Uydu": {
       url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-      opt: { maxZoom: 19, attribution: 'Uydu görüntüsü: Esri, Maxar, Earthstar Geographics' }
+      opt: { maxZoom: 19, maxNativeZoom: 18, attribution: "Uydu görüntüsü: Esri, Maxar, Earthstar Geographics" }
     }
   };
 
   function altligiSec(ad) {
     if (!ALTLIKLAR[ad]) ad = "Sokak";
+    var oncekiKoyu = koyuZeminMi();
     if (D.altlik) D.harita.removeLayer(D.altlik);
     D.altlik = L.tileLayer(ALTLIKLAR[ad].url, ALTLIKLAR[ad].opt).addTo(D.harita);
     D.altlik.bringToBack();
@@ -119,7 +196,12 @@
     $$("#altlik-secim button").forEach(function (b) {
       b.classList.toggle("secili", b.dataset.ad === ad);
     });
-    try { localStorage.setItem("altlik", ad); } catch (e) {}
+    yerelYaz("altlik", ad);
+    if (D.ozet && D.ozellikler.length && oncekiKoyu !== koyuZeminMi()) {
+      kategoriListesiCiz();
+      katmanlariCiz(true);
+      yardimCiz();
+    }
   }
 
   function altlikKur() {
@@ -132,39 +214,94 @@
       b.onclick = function () { altligiSec(ad); };
       kap.appendChild(b);
     });
-    D.altlikTanim = true;
-    var kayit = null;
-    try { kayit = localStorage.getItem("altlik"); } catch (e) {}
-    altligiSec(kayit || (document.documentElement.getAttribute("data-tema") === "koyu" ? "Koyu" : "Sokak"));
+    altligiSec(yerelOku("altlik", koyuMu() ? "Koyu" : "Sokak"));
   }
 
-  /* -------------------------------------------------------------- çizgiler */
-  function koyuMu() {
-    return document.documentElement.getAttribute("data-tema") === "koyu";
+  /* --------------------------------------------------------------- tema */
+  function temaUygula(tema) {
+    document.documentElement.setAttribute("data-tema", tema);
+    $("#btn-tema").textContent = tema === "koyu" ? "☀️" : "🌙";
+    yerelYaz("tema", tema);
+    if (D.harita) {
+      if (tema === "koyu" && (D.altlikAdi === "Sokak" || D.altlikAdi === "Sade")) altligiSec("Koyu");
+      else if (tema === "acik" && D.altlikAdi === "Koyu") altligiSec("Sokak");
+    }
   }
 
-  function katRenk(durum) {
-    var k = D.ozet && D.ozet.kategoriler[durum];
-    if (!k) return "#888";
-    return (koyuMu() && k.renk_koyu) ? k.renk_koyu : k.renk;
+  function temaBaslat() {
+    var t = yerelOku("tema", null);
+    if (!t) {
+      t = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "koyu" : "acik";
+    }
+    document.documentElement.setAttribute("data-tema", t);
+    $("#btn-tema").textContent = t === "koyu" ? "☀️" : "🌙";
   }
 
-  function agirlik(z) {
-    if (z >= 16) return 5.5;
-    if (z >= 14) return 4;
-    if (z >= 12) return 2.8;
-    if (z >= 10) return 2;
-    return 1.4;
-  }
-
-  function stilUret(durum) {
-    return {
-      color: katRenk(durum),
-      weight: agirlik(D.harita.getZoom()),
-      opacity: 0.92,
-      lineCap: "round",
-      lineJoin: "round"
+  /* ------------------------------------------------------- ızgara indeksi */
+  function izgaraKur() {
+    D.izgara = new Map();
+    var ekle = function (x, y, i) {
+      var a = Math.round(x / IZGARA) + "|" + Math.round(y / IZGARA);
+      var s = D.izgara.get(a);
+      if (!s) { s = []; D.izgara.set(a, s); }
+      if (s[s.length - 1] !== i) s.push(i);
     };
+    D.ozellikler.forEach(function (f, i) {
+      f.parcalar.forEach(function (p) {
+        for (var j = 0; j < p.length; j++) {
+          ekle(p[j][0], p[j][1], i);
+          if (j > 0) {                       // uzun kenarlarda ara noktalar
+            var a = p[j - 1], b = p[j];
+            var dx = b[0] - a[0], dy = b[1] - a[1];
+            var n = Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) / (IZGARA * 0.5));
+            for (var k = 1; k < n; k++) ekle(a[0] + dx * k / n, a[1] + dy * k / n, i);
+          }
+        }
+      });
+    });
+  }
+
+  function yakinAdaylar(lng, lat) {
+    var cx = Math.round(lng / IZGARA), cy = Math.round(lat / IZGARA);
+    var out = [];
+    for (var dx = -1; dx <= 1; dx++) {
+      for (var dy = -1; dy <= 1; dy++) {
+        var s = D.izgara.get((cx + dx) + "|" + (cy + dy));
+        if (s) for (var i = 0; i < s.length; i++) if (out.indexOf(s[i]) === -1) out.push(s[i]);
+      }
+    }
+    return out;
+  }
+
+  function yolBul(latlng, esik) {
+    if (!D.izgara) return null;
+    var p = D.harita.latLngToContainerPoint(latlng);
+    var enIyi = null, enIyiD = esik || TIKLAMA_ESIGI;
+    var aday = yakinAdaylar(latlng.lng, latlng.lat);
+    for (var n = 0; n < aday.length; n++) {
+      var f = D.ozellikler[aday[n]];
+      if (!D.seciliKategori.has(f.properties.durum) || !gecerliMi(f.properties)) continue;
+      for (var q = 0; q < f.ll.length; q++) {
+        var parca = f.ll[q];
+        for (var j = 1; j < parca.length; j++) {
+          var a = D.harita.latLngToContainerPoint(parca[j - 1]);
+          var b = D.harita.latLngToContainerPoint(parca[j]);
+          var d = L.LineUtil.pointToSegmentDistance(p, a, b);
+          if (d < enIyiD) { enIyiD = d; enIyi = f; }
+        }
+      }
+    }
+    return enIyi;
+  }
+
+  /* ------------------------------------------------------------ çizgiler */
+  function agirlik() {
+    var z = D.harita.getZoom();
+    if (z >= 16) return 5;
+    if (z >= 14) return 3.8;
+    if (z >= 12) return 2.6;
+    if (z >= 10) return 1.9;
+    return 1.4;
   }
 
   function gecerliMi(p) {
@@ -173,50 +310,88 @@
     return true;
   }
 
-  function katmanlariYenile() {
-    var toplamKm = 0, toplamAdet = 0;
-    var tipSayaci = {};
-
-    Object.keys(D.duruma_gore).forEach(function (durum) {
-      if (D.katmanlar[durum]) {
-        D.harita.removeLayer(D.katmanlar[durum]);
-        delete D.katmanlar[durum];
-      }
-      if (!D.seciliKategori.has(durum)) return;
-
-      var secilenler = D.duruma_gore[durum].filter(function (f) { return gecerliMi(f.properties); });
-      secilenler.forEach(function (f) {
-        toplamKm += f.properties.uzunluk_m / 1000;
-        toplamAdet++;
-        var t = f.properties.tip || "Belirtilmemiş";
-        tipSayaci[t] = (tipSayaci[t] || 0) + f.properties.uzunluk_m / 1000;
-      });
-      if (!secilenler.length) return;
-
-      var katman = L.geoJSON({ type: "FeatureCollection", features: secilenler }, {
-        renderer: D.cizer,
-        style: stilUret(durum),
-        onEachFeature: function (f, l) {
-          l.on("click", function (e) {
-            L.DomEvent.stopPropagation(e);
-            yolSec(f, e.latlng);
-          });
-          l.on("mouseover", function () {
-            l.setStyle({ weight: agirlik(D.harita.getZoom()) + 3, opacity: 1 });
-          });
-          l.on("mouseout", function () { l.setStyle(stilUret(durum)); });
-        }
-      });
-      katman.addTo(D.harita);
-      D.katmanlar[durum] = katman;
+  function kategoriSiralari() {
+    return Object.keys(D.ozet.kategoriler).sort(function (a, b) {
+      return (D.ozet.kategoriler[a].sira || 999) - (D.ozet.kategoriler[b].sira || 999);
     });
+  }
 
-    if (D.vurgu) D.vurgu.bringToFront();
+  function katmanlariYenile() {
+    istatistikGuncelle();
+    katmanlariCiz(true);
+  }
 
+  // İstatistikler seçili filtrenin TAMAMINI kapsar (ekranda görünenle sınırlı değildir).
+  function istatistikGuncelle() {
+    var toplamKm = 0, adSayisi = 0;
+    var adlar = Object.create(null), tipSayaci = {};
+    Object.keys(D.durumaGore).forEach(function (durum) {
+      if (!D.seciliKategori.has(durum)) return;
+      D.durumaGore[durum].forEach(function (f) {
+        var p = f.properties;
+        if (!gecerliMi(p)) return;
+        toplamKm += p.uzunluk_m / 1000;
+        if (!adlar[p.ad]) { adlar[p.ad] = 1; adSayisi++; }
+        var t = p.tip || "Belirtilmemiş";
+        tipSayaci[t] = (tipSayaci[t] || 0) + p.uzunluk_m / 1000;
+      });
+    });
     $("#ist-km").textContent = sayi(toplamKm, 1);
-    $("#ist-adet").textContent = sayi(toplamAdet, 0);
+    $("#ist-ad").textContent = sayi(adSayisi, 0);
     tipTablosuYaz(tipSayaci);
     kategoriSayilariYaz();
+  }
+
+  // Ekranda görünmeyen yolları Leaflet'e hiç vermiyoruz: asıl maliyet çizim değil,
+  // her hareket/zoomda bütün noktaların yeniden projeksiyonu.
+  function cizimGerekliMi() {
+    if (!D.cizimSiniri) return true;
+    if (D.cizimZoom !== D.harita.getZoom()) return true;
+    return !D.cizimSiniri.contains(D.harita.getBounds());
+  }
+
+  function katmanlariCiz(zorla) {
+    if (!D.ozellikler.length) return;
+    if (!zorla && !cizimGerekliMi()) return;
+
+    var sinir = D.harita.getBounds().pad(0.6);
+    D.cizimSiniri = sinir;
+    D.cizimZoom = D.harita.getZoom();
+    var bati = sinir.getWest(), dogu = sinir.getEast();
+    var guney = sinir.getSouth(), kuzey = sinir.getNorth();
+    var w = agirlik();
+
+    Object.keys(D.katmanlar).forEach(function (d) {
+      D.harita.removeLayer(D.katmanlar[d]);
+      delete D.katmanlar[d];
+    });
+
+    // Sıra numarası büyük olan altta kalsın diye tersten ekliyoruz
+    kategoriSiralari().reverse().forEach(function (durum) {
+      if (!D.seciliKategori.has(durum)) return;
+      var cizgiler = [];
+      var liste = D.durumaGore[durum] || [];
+      for (var n = 0; n < liste.length; n++) {
+        var f = liste[n], b = f.bbox;
+        if (b[0] > dogu || b[2] < bati || b[1] > kuzey || b[3] < guney) continue;
+        if (!gecerliMi(f.properties)) continue;
+        for (var i = 0; i < f.ll.length; i++) cizgiler.push(f.ll[i]);
+      }
+      if (!cizgiler.length) return;
+      D.katmanlar[durum] = L.polyline(cizgiler, {
+        renderer: D.cizer,
+        color: katRenk(durum),
+        weight: w,
+        opacity: 0.92,
+        smoothFactor: 1.5,
+        interactive: false,
+        lineCap: "round",
+        lineJoin: "round"
+      }).addTo(D.harita);
+    });
+
+    if (D.vurgu) { D.vurgu.setStyle({ weight: w + 9 }); D.vurgu.bringToBack(); }
+    if (D.hoverKatman) { D.harita.removeLayer(D.hoverKatman); D.hoverKatman = null; D.hover = null; }
     hashYaz();
   }
 
@@ -232,25 +407,15 @@
     }).join("");
   }
 
-  function agirlikGuncelle() {
-    var kademe = agirlik(D.harita.getZoom());
-    if (kademe === D.agirlikKademe) return;
-    D.agirlikKademe = kademe;
-    Object.keys(D.katmanlar).forEach(function (durum) {
-      D.katmanlar[durum].setStyle(stilUret(durum));
-    });
-    if (D.vurgu) D.vurgu.setStyle({ weight: kademe + 9 });
-  }
-
-  /* ------------------------------------------------------------ yol seçimi */
+  /* ------------------------------------------------------ yol seçimi/popup */
   function yolSec(f, latlng) {
     var p = f.properties;
-    var k = D.ozet.kategoriler[p.durum] || { ad: "Bilinmiyor" };
-    var orta = latlng || haritaMerkeziBul(f);
+    var orta = latlng || ortaNokta(f);
     var koord = orta.lat.toFixed(6) + ", " + orta.lng.toFixed(6);
 
     var html = '<div class="pop-ad">' + kacar(p.ad) + "</div>" +
-      '<div class="pop-kat"><i style="background:' + kacar(katRenk(p.durum)) + '"></i>' + kacar(k.ad) + "</div>" +
+      '<div class="pop-kat"><i style="background:' + kacar(katRenk(p.durum)) + '"></i>' +
+      kacar(katAd(p.durum)) + "</div>" +
       '<table class="pop-tablo">' +
       "<tr><td>Yol tipi</td><td>" + kacar(p.tip) + "</td></tr>" +
       "<tr><td>Uzunluk</td><td>" + uzunlukYazi(p.uzunluk_m) + "</td></tr>" +
@@ -263,45 +428,116 @@
       '<a href="https://www.google.com/maps?q=' + orta.lat.toFixed(6) + "," + orta.lng.toFixed(6) +
       '" target="_blank" rel="noopener">Google Maps</a>' +
       "</div>" +
-      '<div class="pop-eylem"><button data-ayniad="' + kacar(p.ad) + '">Bu isimli tüm parçaları göster</button></div>';
+      '<div class="pop-eylem"><button data-ayniad="' + kacar(p.ad) +
+      '">Bu isimli tüm yolları göster</button></div>';
 
     L.popup({ maxWidth: 320, autoPanPadding: [30, 30] })
       .setLatLng(orta).setContent(html).openOn(D.harita);
   }
 
-  function haritaMerkeziBul(f) {
-    var c = f.geometry.type === "LineString" ? f.geometry.coordinates : f.geometry.coordinates[0];
-    var n = c[Math.floor(c.length / 2)];
-    return L.latLng(n[1], n[0]);
+  function ortaNokta(f) {
+    var parca = f.ll[0];
+    return parca[Math.floor(parca.length / 2)];
   }
 
   document.addEventListener("click", function (e) {
     var t = e.target;
-    if (t && t.dataset && t.dataset.kopyala) {
+    if (!t || !t.dataset) return;
+    if (t.dataset.kopyala) {
       panoyaKopyala(t.dataset.kopyala);
       bildir("Koordinat kopyalandı: " + t.dataset.kopyala);
     }
-    if (t && t.dataset && t.dataset.ayniad) {
+    if (t.dataset.ayniad) {
       adaGit(t.dataset.ayniad);
       D.harita.closePopup();
     }
   });
 
-  function panoyaKopyala(metin) {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(metin).catch(function () {});
-      return;
+  /* ------------------------------------------------------------- vurgular */
+  function vurguyuKaldir() {
+    if (D.vurgu) { D.harita.removeLayer(D.vurgu); D.vurgu = null; }
+  }
+
+  function hoverGoster(f) {
+    if (D.hover === f) return;
+    D.hover = f;
+    if (D.hoverKatman) { D.harita.removeLayer(D.hoverKatman); D.hoverKatman = null; }
+    D.harita.getContainer().style.cursor = f ? "pointer" : "";
+    if (!f) return;
+    D.hoverKatman = L.polyline(f.ll, {
+      renderer: D.cizer, color: katRenk(f.properties.durum),
+      weight: agirlik() + 4, opacity: 1, interactive: false,
+      lineCap: "round", lineJoin: "round"
+    }).addTo(D.harita);
+  }
+
+  /* -------------------------------------------------------- mesafe ölçümü */
+  function olcumAcKapat() {
+    if (D.olcum) { olcumBitir(); return; }
+    D.olcum = { noktalar: [], cizgi: null, isaretler: [] };
+    D.harita.doubleClickZoom.disable();
+    D.harita.getContainer().classList.add("olcum-modu");
+    $("#btn-olcum").classList.add("etkin");
+    $("#olcum-kutu").hidden = false;
+    olcumYaz();
+    bildir("Ölçmek için haritaya tıklayın. Bitirmek için çift tıklayın.");
+  }
+
+  function olcumBitir() {
+    if (!D.olcum) return;
+    olcumTemizle();
+    D.olcum = null;
+    D.harita.doubleClickZoom.enable();
+    D.harita.getContainer().classList.remove("olcum-modu");
+    $("#btn-olcum").classList.remove("etkin");
+    $("#olcum-kutu").hidden = true;
+  }
+
+  function olcumTemizle() {
+    if (!D.olcum) return;
+    if (D.olcum.cizgi) D.harita.removeLayer(D.olcum.cizgi);
+    D.olcum.isaretler.forEach(function (m) { D.harita.removeLayer(m); });
+    D.olcum.cizgi = null;
+    D.olcum.isaretler = [];
+    D.olcum.noktalar = [];
+    olcumYaz();
+  }
+
+  function olcumNoktaEkle(latlng) {
+    var o = D.olcum;
+    o.noktalar.push(latlng);
+    var m = L.circleMarker(latlng, {
+      radius: 4, color: "#fff", weight: 2, fillColor: "#f59e0b", fillOpacity: 1
+    }).addTo(D.harita);
+    o.isaretler.push(m);
+    if (o.cizgi) D.harita.removeLayer(o.cizgi);
+    if (o.noktalar.length > 1) {
+      o.cizgi = L.polyline(o.noktalar, {
+        color: "#f59e0b", weight: 3, dashArray: "6 5", interactive: false
+      }).addTo(D.harita);
     }
-    var ta = document.createElement("textarea");
-    ta.value = metin; document.body.appendChild(ta); ta.select();
-    try { document.execCommand("copy"); } catch (err) {}
-    document.body.removeChild(ta);
+    olcumYaz();
+  }
+
+  function olcumToplam() {
+    var o = D.olcum, t = 0;
+    if (!o) return 0;
+    for (var i = 1; i < o.noktalar.length; i++) t += o.noktalar[i - 1].distanceTo(o.noktalar[i]);
+    return t;
+  }
+
+  function olcumYaz() {
+    var o = D.olcum;
+    if (!o) return;
+    var t = olcumToplam();
+    $("#olcum-deger").textContent = o.noktalar.length < 2 ? "Haritaya tıklayın" : uzunlukYazi(t);
+    $("#olcum-adet").textContent = o.noktalar.length
+      ? o.noktalar.length + " nokta" : "";
   }
 
   /* ---------------------------------------------------------------- arama */
   function aramaKur() {
-    var giris = $("#arama"), temizle = $("#arama-temizle");
-    var zaman;
+    var giris = $("#arama"), temizle = $("#arama-temizle"), zaman;
     giris.addEventListener("input", function () {
       temizle.style.display = giris.value ? "block" : "none";
       clearTimeout(zaman);
@@ -327,19 +563,16 @@
       var ab = a.arama.indexOf(q) === 0 ? 0 : 1, bb = b.arama.indexOf(q) === 0 ? 0 : 1;
       return ab - bb || b.km - a.km;
     });
-    if (!sonuc.length) {
-      kap.innerHTML = '<div class="bos">Sonuç bulunamadı.</div>';
-      return;
-    }
+    if (!sonuc.length) { kap.innerHTML = '<div class="bos">Sonuç bulunamadı.</div>'; return; }
+
     kap.innerHTML = sonuc.slice(0, 60).map(function (a) {
       var noktalar = Object.keys(a.durumlar).sort().map(function (d) {
-        var k = D.ozet.kategoriler[d];
         return '<i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' +
-          kacar(k ? katRenk(d) : "#888") + ';margin-right:3px" title="' + kacar(k ? k.ad : d) + '"></i>';
+          kacar(katRenk(d)) + ';margin-right:3px" title="' + kacar(katAd(d)) + '"></i>';
       }).join("");
       return '<div class="satir" data-ad="' + kacar(a.ad) + '">' + noktalar +
         '<span class="ad">' + kacar(a.ad) + '</span>' +
-        '<span class="bilgi">' + sayi(a.km, 1) + " km · " + a.n + " parça</span></div>";
+        '<span class="bilgi">' + sayi(a.km, 1) + " km</span></div>";
     }).join("") + (sonuc.length > 60
       ? '<div class="bos">… ve ' + (sonuc.length - 60) + " sonuç daha. Aramayı daraltın.</div>" : "");
 
@@ -348,66 +581,70 @@
     });
   }
 
-  function vurguyuKaldir() {
-    if (D.vurgu) { D.harita.removeLayer(D.vurgu); D.vurgu = null; }
-  }
-
   function adaGit(ad) {
     var secilenler = D.ozellikler.filter(function (f) { return f.properties.ad === ad; });
     if (!secilenler.length) return;
 
-    // ilgili kategoriler kapalıysa aç
-    var acildi = false;
+    var degisti = false;
     secilenler.forEach(function (f) {
-      if (!D.seciliKategori.has(f.properties.durum)) { D.seciliKategori.add(f.properties.durum); acildi = true; }
+      if (!D.seciliKategori.has(f.properties.durum)) {
+        D.seciliKategori.add(f.properties.durum); degisti = true;
+      }
     });
-    if (D.seciliTip.size || D.seciliIlce.size) { D.seciliTip.clear(); D.seciliIlce.clear(); acildi = true; }
-    if (acildi) { kategoriListesiCiz(); tipListesiCiz(); ilceListesiCiz(); }
+    if (D.seciliTip.size || D.seciliIlce.size) {
+      D.seciliTip.clear(); D.seciliIlce.clear(); degisti = true;
+    }
+    if (degisti) { kategoriListesiCiz(); tipListesiCiz(); ilceListesiCiz(); }
     katmanlariYenile();
 
     vurguyuKaldir();
-    D.vurgu = L.geoJSON({ type: "FeatureCollection", features: secilenler }, {
-      renderer: D.cizer,
-      style: { color: "#f59e0b", weight: agirlik(D.harita.getZoom()) + 9, opacity: 0.5, lineCap: "round" },
-      interactive: false
+    var cizgiler = [];
+    secilenler.forEach(function (f) { for (var i = 0; i < f.ll.length; i++) cizgiler.push(f.ll[i]); });
+    D.vurgu = L.polyline(cizgiler, {
+      renderer: D.cizer, color: "#f59e0b", weight: agirlik() + 9,
+      opacity: 0.5, interactive: false, lineCap: "round"
     }).addTo(D.harita);
     D.vurgu.bringToBack();
 
-    var sinir = L.geoJSON({ type: "FeatureCollection", features: secilenler }).getBounds();
-    D.harita.fitBounds(sinir, { padding: [60, 60], maxZoom: 16 });
-
+    D.harita.fitBounds(D.vurgu.getBounds(), { padding: [60, 60], maxZoom: 16 });
     var km = secilenler.reduce(function (t, f) { return t + f.properties.uzunluk_m; }, 0);
-    bildir(ad + " — " + secilenler.length + " parça, " + uzunlukYazi(km));
+    bildir(ad + " — " + uzunlukYazi(km));
     if (window.innerWidth <= 860) $("#panel").classList.add("kapali");
   }
 
-  /* ------------------------------------------------------------ arayüz çizim */
-  function kategoriSiralari() {
-    return Object.keys(D.ozet.kategoriler).sort(function (a, b) {
-      return (D.ozet.kategoriler[a].sira || 999) - (D.ozet.kategoriler[b].sira || 999);
-    });
-  }
+  /* -------------------------------------------------- kategori listesi/düzenleyici */
+  var HAZIR_RENKLER = ["#a855f7", "#e11d48", "#2563eb", "#1f2937", "#059669",
+                       "#ea580c", "#0891b2", "#ca8a04", "#be185d", "#4338ca"];
 
   function kategoriListesiCiz() {
     var kap = $("#kategori-liste");
-    var enBuyuk = Math.max.apply(null, Object.keys(D.ozet.kategoriler).map(function (d) {
-      return D.ozet.kategoriler[d].uzunluk_km;
+    var kategoriler = D.ozet.kategoriler;
+    var enBuyuk = Math.max.apply(null, Object.keys(kategoriler).map(function (d) {
+      return kategoriler[d].uzunluk_km;
     }).concat([1]));
 
     kap.innerHTML = kategoriSiralari().map(function (durum) {
-      var k = D.ozet.kategoriler[durum];
+      var k = kategoriler[durum];
       var acik = D.seciliKategori.has(durum);
-      return '<label class="kat">' +
-        '<span class="ust">' +
-        '<input type="checkbox" data-durum="' + kacar(durum) + '"' + (acik ? " checked" : "") + ">" +
-        '<span class="cizgi-ornek" style="background:' + kacar(katRenk(durum)) + '"></span>' +
-        '<span class="ad">' + kacar(k.ad) + (k.tanimli === false ? " ⚠️" : "") + "</span>" +
-        '<span class="sayi">' + sayi(k.uzunluk_km, 1) + " km</span>" +
-        "</span>" +
-        '<span class="aciklama">' + kacar(k.aciklama) + " (" + sayi(k.adet) + " parça)</span>" +
-        '<span class="bar"><i style="width:' + (k.uzunluk_km / enBuyuk * 100).toFixed(1) +
-        '%;background:' + kacar(katRenk(durum)) + '"></i></span>' +
-        "</label>";
+      var ozel = D.ozelKategori[durum];
+      return '<div class="kat" data-kat="' + kacar(durum) + '">' +
+        '<div class="ust">' +
+          '<label class="kat-etiket">' +
+            '<input type="checkbox" data-durum="' + kacar(durum) + '"' + (acik ? " checked" : "") + ">" +
+            '<span class="cizgi-ornek" style="background:' + kacar(katRenk(durum)) + '"></span>' +
+            '<span class="ad">' + kacar(katAd(durum)) +
+              (k.tanimli === false ? " ⚠️" : "") + (ozel ? ' <em title="Siz değiştirdiniz">•</em>' : "") +
+            "</span>" +
+          "</label>" +
+          '<span class="sayi">' + sayi(k.uzunluk_km, 1) + " km</span>" +
+          '<button class="kat-duzenle" data-duzenle="' + kacar(durum) +
+            '" title="Adını ve rengini değiştir" aria-label="Adını ve rengini değiştir">✎</button>' +
+        "</div>" +
+        '<div class="aciklama">' + kacar(k.aciklama) + "</div>" +
+        '<div class="bar"><i style="width:' + (k.uzunluk_km / enBuyuk * 100).toFixed(1) +
+          "%;background:" + kacar(katRenk(durum)) + '"></i></div>' +
+        '<div class="kat-editor" data-editor="' + kacar(durum) + '" hidden></div>' +
+      "</div>";
     }).join("");
 
     kap.querySelectorAll("input[data-durum]").forEach(function (el) {
@@ -417,7 +654,110 @@
         katmanlariYenile();
       };
     });
+    kap.querySelectorAll("[data-duzenle]").forEach(function (b) {
+      b.onclick = function (e) {
+        e.preventDefault(); e.stopPropagation();
+        duzenleyiciAcKapat(b.dataset.duzenle);
+      };
+    });
     kategoriSayilariYaz();
+    ozelSatirGuncelle();
+  }
+
+  function duzenleyiciAcKapat(durum) {
+    var kutu = $('[data-editor="' + CSS.escape(durum) + '"]');
+    if (!kutu) return;
+    if (!kutu.hidden) { kutu.hidden = true; kutu.innerHTML = ""; return; }
+    $$(".kat-editor").forEach(function (e) { e.hidden = true; e.innerHTML = ""; });
+
+    var renk = katTemelRenk(durum);
+    kutu.innerHTML =
+      '<label class="ed-etiket">Görünen ad</label>' +
+      '<input type="text" class="ed-ad" value="' + kacar(katAd(durum)) + '" maxlength="80">' +
+      '<label class="ed-etiket">Çizgi rengi</label>' +
+      '<div class="renk-satir">' +
+        '<input type="color" class="ed-renk" value="' + kacar(renk) + '">' +
+        '<div class="hazir-renkler">' + HAZIR_RENKLER.map(function (h) {
+          return '<button class="hazir" data-renk="' + h + '" style="background:' + h +
+            '" title="' + h + '"></button>';
+        }).join("") + "</div>" +
+      "</div>" +
+      '<div class="ed-dugmeler">' +
+        '<button class="dbtn ed-sifirla">Varsayılana dön</button>' +
+        '<button class="dbtn ed-kapat">Kapat</button>' +
+      "</div>" +
+      '<p class="kucuk" style="margin:8px 0 0">Değişiklik anında uygulanır ve bu tarayıcıda saklanır. ' +
+      "Herkes için kalıcı yapmak isterseniz listenin altındaki düğmeyi kullanın.</p>";
+    kutu.hidden = false;
+
+    var adGiris = kutu.querySelector(".ed-ad");
+    var renkGiris = kutu.querySelector(".ed-renk");
+    var zaman;
+
+    var uygula = function (yeniAd, yeniRenk) {
+      var o = D.ozelKategori[durum] || {};
+      if (yeniAd !== undefined) {
+        var varsayilan = (D.ozet.kategoriler[durum] || {}).ad;
+        if (yeniAd && yeniAd !== varsayilan) o.ad = yeniAd; else delete o.ad;
+      }
+      if (yeniRenk !== undefined) {
+        var vr = (D.ozet.kategoriler[durum] || {}).renk;
+        if (yeniRenk && yeniRenk.toLowerCase() !== String(vr).toLowerCase()) o.renk = yeniRenk;
+        else delete o.renk;
+      }
+      if (Object.keys(o).length) D.ozelKategori[durum] = o;
+      else delete D.ozelKategori[durum];
+      yerelYaz("kategoriOzel", D.ozelKategori);
+      katmanlariYenile();
+      rozetleriTazele(durum);
+      ozelSatirGuncelle();
+      yardimCiz();
+    };
+
+    adGiris.addEventListener("input", function () {
+      clearTimeout(zaman);
+      zaman = setTimeout(function () { uygula(adGiris.value.trim(), undefined); }, 250);
+    });
+    renkGiris.addEventListener("input", function () { uygula(undefined, renkGiris.value); });
+    kutu.querySelectorAll(".hazir").forEach(function (b) {
+      b.onclick = function (e) {
+        e.preventDefault();
+        renkGiris.value = b.dataset.renk;
+        uygula(undefined, b.dataset.renk);
+      };
+    });
+    kutu.querySelector(".ed-sifirla").onclick = function (e) {
+      e.preventDefault();
+      delete D.ozelKategori[durum];
+      yerelYaz("kategoriOzel", D.ozelKategori);
+      katmanlariYenile(); kategoriListesiCiz(); yardimCiz();
+      bildir("Kategori varsayılana döndürüldü.");
+    };
+    kutu.querySelector(".ed-kapat").onclick = function (e) {
+      e.preventDefault(); kutu.hidden = true; kutu.innerHTML = "";
+    };
+    adGiris.focus();
+  }
+
+  // Düzenleyici açıkken listeyi baştan çizmeden rengi/adı tazeler
+  function rozetleriTazele(durum) {
+    var satir = document.querySelector('.kat[data-kat="' + CSS.escape(durum) + '"]');
+    if (!satir) return;
+    satir.querySelector(".cizgi-ornek").style.background = katRenk(durum);
+    var bar = satir.querySelector(".bar > i");
+    if (bar) bar.style.background = katRenk(durum);
+    var ad = satir.querySelector(".ad");
+    if (ad) {
+      ad.innerHTML = kacar(katAd(durum)) +
+        ((D.ozet.kategoriler[durum] || {}).tanimli === false ? " ⚠️" : "") +
+        (D.ozelKategori[durum] ? ' <em title="Siz değiştirdiniz">•</em>' : "");
+    }
+  }
+
+  function ozelSatirGuncelle() {
+    var satir = $("#kat-ozel-satir");
+    if (!satir) return;
+    satir.hidden = !ozelVarMi();
   }
 
   function kategoriSayilariYaz() {
@@ -425,10 +765,45 @@
     $("#kategori-hepsi").textContent = D.seciliKategori.size === hepsi ? "tümünü kapat" : "tümünü seç";
   }
 
+  /* ------------------------------------------- ayarları kalıcı yapma penceresi */
+  function kaliciPencereAc() {
+    var ham = JSON.parse(JSON.stringify(D.ozet.ayar_ham || { kategoriler: {} }));
+    if (!ham.kategoriler) ham.kategoriler = {};
+    Object.keys(D.ozelKategori).forEach(function (durum) {
+      var o = D.ozelKategori[durum];
+      var hedef = ham.kategoriler[durum] || (ham.kategoriler[durum] = {});
+      if (o.ad) hedef.ad = o.ad;
+      if (o.renk) { hedef.renk = o.renk; delete hedef.renk_koyu; }
+    });
+    var metin = JSON.stringify(ham, null, 2);
+    $("#kalici-json").value = metin;
+
+    var d = D.ozet.depo || {};
+    var baglanti = d.sahip && d.depo
+      ? "https://github.com/" + d.sahip + "/" + d.depo + "/edit/" +
+        encodeURIComponent(d.dal || "main") + "/veri/kategoriler.json"
+      : null;
+    var a = $("#kalici-link");
+    if (baglanti) { a.href = baglanti; a.hidden = false; $("#kalici-linkyok").hidden = true; }
+    else { a.hidden = true; $("#kalici-linkyok").hidden = false; }
+
+    $("#kalici-ozet").innerHTML = Object.keys(D.ozelKategori).length
+      ? "<ul>" + Object.keys(D.ozelKategori).map(function (durum) {
+          var o = D.ozelKategori[durum];
+          return "<li><strong>" + kacar(katAd(durum)) + "</strong>: " +
+            (o.ad ? "ad değişti" : "") + (o.ad && o.renk ? ", " : "") +
+            (o.renk ? 'renk <span style="display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;background:' +
+              kacar(o.renk) + '"></span> ' + kacar(o.renk) : "") + "</li>";
+        }).join("") + "</ul>"
+      : "<p>Henüz bir değişiklik yapmadınız.</p>";
+
+    $("#perde-kalici").classList.add("acik");
+  }
+
+  /* ---------------------------------------------------------- tip / ilçe */
   function tipListesiCiz() {
     var kap = $("#tip-liste");
-    var tipler = Object.keys(D.ozet.tipler);
-    kap.innerHTML = tipler.map(function (t) {
+    kap.innerHTML = Object.keys(D.ozet.tipler).map(function (t) {
       return '<button class="rozet-secim' + (D.seciliTip.has(t) ? " secili" : "") +
         '" data-tip="' + kacar(t) + '">' + kacar(t) +
         "<small>" + sayi(D.ozet.tipler[t].uzunluk_km, 0) + " km</small></button>";
@@ -464,12 +839,14 @@
   function baslikSayisi(secici, adet) {
     var h = document.querySelector(secici + " h2");
     if (!h) return;
-    var temel = h.textContent.replace(/\s*\(\d+ seçili\)/, "").replace(/▾/, "").trim();
+    var temel = h.dataset.temel || h.textContent.trim();
+    h.dataset.temel = temel;
     h.textContent = adet ? temel + " (" + adet + " seçili)" : temel;
   }
 
+  /* ------------------------------------------------------- kalite / yardım */
   function kaliteCiz() {
-    var u = (D.ozet.uyarilar || []);
+    var u = D.ozet.uyarilar || [];
     if (!u.length) return;
     $("#bolum-kalite").style.display = "";
     $("#kalite-liste").innerHTML = u.map(function (x) {
@@ -482,12 +859,13 @@
   }
 
   function yardimCiz() {
-    $("#yardim-kategoriler").innerHTML = "<ul>" + kategoriSiralari().map(function (d) {
+    var el = $("#yardim-kategoriler");
+    if (!el) return;
+    el.innerHTML = "<ul>" + kategoriSiralari().map(function (d) {
       var k = D.ozet.kategoriler[d];
       return "<li><span style='display:inline-block;width:14px;height:5px;border-radius:3px;background:" +
         kacar(katRenk(d)) + ";vertical-align:middle;margin-right:7px'></span><strong>" +
-        kacar(k.ad) + "</strong> — " + kacar(k.aciklama) + " (" + sayi(k.adet) + " parça, " +
-        sayi(k.uzunluk_km, 1) + " km)</li>";
+        kacar(katAd(d)) + "</strong> — " + kacar(k.aciklama) + " (" + sayi(k.uzunluk_km, 1) + " km)</li>";
     }).join("") + "</ul>";
     $("#yardim-not").textContent = D.ozet.site["not"] || "";
   }
@@ -496,26 +874,21 @@
   function hashYaz() {
     if (!D.harita) return;
     var c = D.harita.getCenter();
-    var kume = function (s) {
-      return Array.from(s).map(encodeURIComponent).join(",");
-    };
-    var parcalar = ["h=" + Math.round(D.harita.getZoom() * 100) / 100 +
+    var kume = function (s) { return Array.from(s).map(encodeURIComponent).join(","); };
+    var p = ["h=" + Math.round(D.harita.getZoom() * 100) / 100 +
       "/" + c.lat.toFixed(5) + "/" + c.lng.toFixed(5)];
     if (D.seciliKategori.size !== Object.keys(D.ozet.kategoriler).length) {
-      parcalar.push("k=" + kume(D.seciliKategori));
+      p.push("k=" + kume(D.seciliKategori));
     }
-    if (D.seciliTip.size) parcalar.push("t=" + kume(D.seciliTip));
-    if (D.seciliIlce.size) parcalar.push("i=" + kume(D.seciliIlce));
-    D.hashYaziliyor = true;
-    history.replaceState(null, "", "#" + parcalar.join("&"));
-    setTimeout(function () { D.hashYaziliyor = false; }, 0);
+    if (D.seciliTip.size) p.push("t=" + kume(D.seciliTip));
+    if (D.seciliIlce.size) p.push("i=" + kume(D.seciliIlce));
+    history.replaceState(null, "", "#" + p.join("&"));
   }
 
   function hashOku() {
     var h = location.hash.replace(/^#/, "");
     if (!h) return null;
-    var p = new URLSearchParams(h);
-    var sonuc = {};
+    var p = new URLSearchParams(h), sonuc = {};
     if (p.get("h")) {
       var b = p.get("h").split("/");
       if (b.length === 3) sonuc.gorunum = { z: +b[0], lat: +b[1], lng: +b[2] };
@@ -526,49 +899,67 @@
     return sonuc;
   }
 
-  /* ------------------------------------------------------------- başlangıç */
+  /* -------------------------------------------------------------- başlangıç */
   function haritaKur(ozet) {
     D.harita = L.map("harita", {
       zoomControl: false,
       preferCanvas: true,
       minZoom: 7,
       maxZoom: 19,
-      zoomSnap: 0.25,
-      zoomDelta: 0.5,
-      wheelPxPerZoomLevel: 90,
-      worldCopyJump: false
+      zoomSnap: 0.5,
+      zoomDelta: 0.5
     });
     L.control.zoom({ position: "topright" }).addTo(D.harita);
-    L.control.scale({ imperial: false, position: "bottomright" }).addTo(D.harita);
-    D.cizer = L.canvas({ padding: 0.4 });
+    L.control.scale({ imperial: false, position: "bottomright", maxWidth: 120 }).addTo(D.harita);
+    D.cizer = L.canvas({ padding: 0.2 });
     altlikKur();
 
     var b = ozet.bbox;
     D.harita.fitBounds([[b[1], b[0]], [b[3], b[2]]], { padding: [24, 24] });
 
-    D.harita.on("zoomend", agirlikGuncelle);
-    D.harita.on("moveend", hashYaz);
+    D.harita.on("moveend", function () { katmanlariCiz(false); hashYaz(); });
+
+    var beklemede = false, sonLatLng = null;
     D.harita.on("mousemove", function (e) {
       $("#koordinat").textContent = e.latlng.lat.toFixed(5) + ", " + e.latlng.lng.toFixed(5);
+      if (D.olcum) return;
+      sonLatLng = e.latlng;
+      if (beklemede) return;
+      beklemede = true;
+      requestAnimationFrame(function () {
+        beklemede = false;
+        hoverGoster(yolBul(sonLatLng, 10));
+      });
     });
+    D.harita.on("mouseout", function () { hoverGoster(null); });
+
     D.harita.on("click", function (e) {
-      vurguyuKaldir();
+      if (D.olcum) { olcumNoktaEkle(e.latlng); return; }
       if (e.originalEvent && e.originalEvent.altKey) {
         var k = e.latlng.lat.toFixed(6) + ", " + e.latlng.lng.toFixed(6);
         panoyaKopyala(k); bildir("Koordinat kopyalandı: " + k);
+        return;
       }
+      var f = yolBul(e.latlng, TIKLAMA_ESIGI);
+      if (f) { yolSec(f, e.latlng); }
+      else { vurguyuKaldir(); D.harita.closePopup(); }
     });
+    D.harita.on("dblclick", function () { if (D.olcum) olcumBitir(); });
   }
 
   function dugmeleriKur() {
     $("#btn-tema").onclick = function () {
-      temaUygula(document.documentElement.getAttribute("data-tema") === "koyu" ? "acik" : "koyu");
+      temaUygula(koyuMu() ? "acik" : "koyu");
     };
 
     $("#btn-konum").onclick = function () {
       bildir("Konum alınıyor…");
       D.harita.locate({ setView: true, maxZoom: 16, enableHighAccuracy: true });
     };
+
+    $("#btn-olcum").onclick = olcumAcKapat;
+    $("#olcum-temizle").onclick = olcumTemizle;
+    $("#olcum-bitir").onclick = olcumBitir;
 
     $("#btn-indir").onclick = function (e) {
       e.stopPropagation();
@@ -578,8 +969,7 @@
     $("#menu-indir").addEventListener("click", function (e) { e.stopPropagation(); });
 
     $("#btn-link").onclick = function () {
-      hashYaz();
-      panoyaKopyala(location.href);
+      hashYaz(); panoyaKopyala(location.href);
       bildir("Bağlantı kopyalandı — bu görünümü paylaşabilirsiniz.");
       $("#menu-indir").classList.remove("acik");
     };
@@ -587,16 +977,19 @@
     function yardimAc(e) { if (e) e.preventDefault(); $("#perde-yardim").classList.add("acik"); }
     $("#btn-yardim").onclick = yardimAc;
     $("#link-yardim").onclick = yardimAc;
+
     $$("[data-kapat]").forEach(function (b) {
       b.onclick = function () { document.getElementById(b.dataset.kapat).classList.remove("acik"); };
     });
-    $("#perde-yardim").addEventListener("click", function (e) {
-      if (e.target === this) this.classList.remove("acik");
+    $$(".perde").forEach(function (p) {
+      p.addEventListener("click", function (e) { if (e.target === p) p.classList.remove("acik"); });
     });
+
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape") {
-        $("#perde-yardim").classList.remove("acik");
+        $$(".perde").forEach(function (p) { p.classList.remove("acik"); });
         $("#menu-indir").classList.remove("acik");
+        if (D.olcum) olcumBitir();
         vurguyuKaldir();
         D.harita.closePopup();
       }
@@ -612,6 +1005,18 @@
       if (D.seciliKategori.size === hepsi.length) D.seciliKategori.clear();
       else hepsi.forEach(function (d) { D.seciliKategori.add(d); });
       kategoriListesiCiz(); katmanlariYenile();
+    };
+
+    $("#btn-kalici").onclick = kaliciPencereAc;
+    $("#btn-ozel-sifirla").onclick = function () {
+      D.ozelKategori = {};
+      yerelYaz("kategoriOzel", D.ozelKategori);
+      kategoriListesiCiz(); katmanlariYenile(); yardimCiz();
+      bildir("Tüm kategori değişiklikleri sıfırlandı.");
+    };
+    $("#kalici-kopyala").onclick = function () {
+      panoyaKopyala($("#kalici-json").value);
+      bildir("JSON panoya kopyalandı.");
     };
 
     $$(".bolum.kapanabilir h2").forEach(function (h) {
@@ -635,14 +1040,16 @@
     $("#site-altbaslik").textContent = ozet.site.alt_baslik;
     $("#site-not").textContent = ozet.site["not"];
     $("#guncelleme").textContent = ozet.guncelleme;
-    $("#kaynak").textContent = ozet.kaynak_dosya + " · " + sayi(ozet.toplam_yol) +
-      " yol parçası · " + sayi(ozet.toplam_km, 1) + " km";
+    $("#kaynak").textContent = ozet.kaynak_dosya + " · " + sayi(ozet.toplam_km, 1) +
+      " km · " + sayi(ozet.adlar.length) + " farklı yol adı";
     $("#boyut-geojson").textContent = ozet.veri_boyut_mb + " MB";
     $("#boyut-kml").textContent = ozet.kaynak_boyut_mb + " MB";
   }
 
   function baslat() {
     temaBaslat();
+    D.ozelKategori = yerelOku("kategoriOzel", {}) || {};
+
     fetch("veri/ozet.json", { cache: "no-cache" })
       .then(function (r) {
         if (!r.ok) throw new Error("ozet.json bulunamadı (" + r.status + ")");
@@ -665,8 +1072,8 @@
         if (h.gorunum) D.harita.setView([h.gorunum.lat, h.gorunum.lng], h.gorunum.z);
 
         if (ozet.ilce_verisi_var) $("#bolum-ilce").style.display = "";
-        kategoriListesiCiz(); tipListesiCiz(); ilceListesiCiz(); kaliteCiz(); yardimCiz();
-        aramaKur(); aramaCiz(""); dugmeleriKur();
+        kategoriListesiCiz(); tipListesiCiz(); ilceListesiCiz();
+        kaliteCiz(); yardimCiz(); aramaKur(); aramaCiz(""); dugmeleriKur();
 
         return fetch("veri/yollar.geojson", { cache: "no-cache" });
       })
@@ -676,16 +1083,30 @@
       })
       .then(function (gj) {
         D.ozellikler = gj.features;
-        gj.features.forEach(function (f) {
+        D.ozellikler.forEach(function (f) {
+          var g = f.geometry;
+          f.parcalar = g.type === "LineString" ? [g.coordinates] : g.coordinates;
+          f.ll = f.parcalar.map(function (p) {
+            return p.map(function (c) { return L.latLng(c[1], c[0]); });
+          });
+          var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+          f.parcalar.forEach(function (p) {
+            for (var i = 0; i < p.length; i++) {
+              if (p[i][0] < x0) x0 = p[i][0];
+              if (p[i][0] > x1) x1 = p[i][0];
+              if (p[i][1] < y0) y0 = p[i][1];
+              if (p[i][1] > y1) y1 = p[i][1];
+            }
+          });
+          f.bbox = [x0, y0, x1, y1];
           var d = f.properties.durum;
-          (D.duruma_gore[d] = D.duruma_gore[d] || []).push(f);
+          (D.durumaGore[d] = D.durumaGore[d] || []).push(f);
         });
-        D.agirlikKademe = agirlik(D.harita.getZoom());
+        izgaraKur();
         katmanlariYenile();
         $("#yukleniyor").style.display = "none";
         if (window.innerWidth <= 860) $("#panel").classList.add("kapali");
-        // İleri düzey kullanım / hata ayıklama için harita nesnesini dışarı ver
-        window.IZMIR_HARITA = D;
+        window.IZMIR_HARITA = D;                 // ileri düzey kullanım / hata ayıklama
         document.body.dataset.hazir = "1";
       })
       .catch(function (e) {

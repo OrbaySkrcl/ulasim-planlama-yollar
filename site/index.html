@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
 <title>İzmir Köy Yolları Devir Haritası</title>
-<meta name="description" content="İzmir'de İl Özel İdaresi'nden Büyükşehir Belediyesi'ne geçen mahalle ve köy yollarının güncel haritası. Kategorilere göre filtreleyin, yol arayın, veriyi indirin.">
+<meta name="description" content="İzmir'de İl Özel İdaresi'nden Büyükşehir Belediyesi'ne geçen mahalle ve köy yollarının güncel haritası. Kategorilere göre filtreleyin, yol arayın, mesafe ölçün, veriyi indirin.">
 <meta property="og:title" content="İzmir Köy Yolları Devir Haritası">
 <meta property="og:description" content="İl Özel İdaresi'nden Büyükşehir Belediyesi'ne geçen mahalle ve köy yolları — açık, güncellenen harita.">
 <meta property="og:type" content="website">
@@ -25,6 +25,7 @@
     </div>
     <div class="bosluk"></div>
     <div class="arac">
+      <button class="dbtn ikon" id="btn-olcum" title="Mesafe ölç">📏<span class="etiket-gizle" style="margin-left:5px">Mesafe ölç</span></button>
       <button class="dbtn ikon" id="btn-konum" title="Konumuma git">📍<span class="etiket-gizle" style="margin-left:5px">Konumum</span></button>
       <button class="dbtn ikon" id="btn-tema" title="Açık / koyu tema">🌙</button>
       <div class="menu-sarma">
@@ -57,8 +58,18 @@
       </section>
 
       <section class="bolum" id="bolum-kategori">
-        <h2>Kategoriler <span id="kategori-hepsi" style="text-transform:none;letter-spacing:0;font-weight:600;cursor:pointer;color:var(--vurgu)">tümünü seç</span></h2>
+        <h2>Kategoriler <span id="kategori-hepsi">tümünü seç</span></h2>
         <div id="kategori-liste"></div>
+        <div id="kat-ozel-satir" hidden>
+          <p class="kucuk" style="margin:0 0 8px">
+            Kategori adı/rengini değiştirdiniz. Bu değişiklikler şimdilik yalnızca
+            <strong>sizin tarayıcınızda</strong> saklı.
+          </p>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="dbtn" id="btn-kalici">Herkes için kalıcı yap</button>
+            <button class="dbtn" id="btn-ozel-sifirla">Tümünü sıfırla</button>
+          </div>
+        </div>
       </section>
 
       <section class="bolum kapanabilir kapali" id="bolum-tip">
@@ -74,8 +85,8 @@
       <section class="bolum">
         <h2>Özet</h2>
         <div class="ist-kutular">
-          <div class="ist-kutu"><div class="deger" id="ist-km">–</div><div class="etiket">Görünen uzunluk (km)</div></div>
-          <div class="ist-kutu"><div class="deger" id="ist-adet">–</div><div class="etiket">Görünen yol parçası</div></div>
+          <div class="ist-kutu"><div class="deger" id="ist-km">–</div><div class="etiket">Seçili toplam (km)</div></div>
+          <div class="ist-kutu"><div class="deger" id="ist-ad">–</div><div class="etiket">Farklı yol adı</div></div>
         </div>
         <table class="tablo" id="tip-tablo" style="margin-top:12px"></table>
       </section>
@@ -100,6 +111,19 @@
       <button class="dbtn" id="panel-ac">☰ Filtreler</button>
       <div id="altlik-secim" class="harita-kontrol"></div>
       <div id="koordinat">–</div>
+
+      <div id="olcum-kutu" hidden>
+        <div class="olcum-ust">
+          <span class="olcum-baslik">📏 Mesafe ölçümü</span>
+          <span id="olcum-adet" class="kucuk"></span>
+        </div>
+        <div id="olcum-deger">Haritaya tıklayın</div>
+        <div class="olcum-dugmeler">
+          <button class="dbtn" id="olcum-temizle">Temizle</button>
+          <button class="dbtn" id="olcum-bitir">Bitir</button>
+        </div>
+      </div>
+
       <div id="yukleniyor">
         <div>
           <div class="halka"></div>
@@ -130,10 +154,11 @@
       <h4>Haritayı nasıl kullanırım?</h4>
       <ul>
         <li>Soldaki kutucuklarla kategorileri açıp kapatabilirsiniz.</li>
+        <li>Kategorinin yanındaki <strong>✎</strong> ile adını ve çizgi rengini değiştirebilirsiniz.</li>
         <li>Arama kutusuna yol adı yazıp sonuca tıklayınca harita o yola gider.</li>
         <li>Bir yola tıklayınca adı, tipi, uzunluğu ve koordinatı görünür.</li>
+        <li><strong>📏 Mesafe ölç</strong> ile harita üzerinde çok noktalı mesafe ölçebilirsiniz.</li>
         <li><strong>Veriyi indir</strong> ile GeoJSON veya KML dosyasını bilgisayarınıza alabilirsiniz.</li>
-        <li><strong>Bağlantıyı kopyala</strong> ile o anki görünümü (konum + filtreler) paylaşabilirsiniz.</li>
       </ul>
 
       <h4>Veriyi güncellemek (çalışmayı yürüten kişi için)</h4>
@@ -142,13 +167,45 @@
             → biçim <strong>KML</strong>, dosya adı <code>ibb_yollar.kml</code>.</li>
         <li>GitHub deposunda <code>veri</code> klasörünü açın → <strong>Add file → Upload files</strong>.</li>
         <li>Yeni <code>ibb_yollar.kml</code> dosyasını sürükleyip <strong>Commit changes</strong> deyin.</li>
-        <li>2–3 dakika içinde bu site otomatik olarak yenilenir. Başka hiçbir şey yapmanız gerekmez.</li>
+        <li>2–3 dakika içinde bu site otomatik olarak yenilenir.</li>
       </ol>
-      <p class="kucuk">Kategori adlarını, renklerini veya sıralamasını değiştirmek için
-         <code>veri/kategoriler.json</code> dosyasını GitHub üzerinden düzenlemeniz yeterlidir.</p>
 
       <h4>Sorumluluk</h4>
       <p class="kucuk" id="yardim-not"></p>
+    </div>
+  </div>
+</div>
+
+<div class="perde" id="perde-kalici">
+  <div class="pencere">
+    <header>
+      <h3>Kategori değişikliklerini herkes için kalıcı yapmak</h3>
+      <button class="kapat" data-kapat="perde-kalici" aria-label="Kapat">×</button>
+    </header>
+    <div class="govde">
+      <p>Yaptığınız değişiklikler şu an yalnızca sizin tarayıcınızda saklı. Siteyi açan
+         herkeste geçerli olması için <code>veri/kategoriler.json</code> dosyasının
+         güncellenmesi gerekiyor. Aşağıdaki iki adım bunu yapar:</p>
+
+      <div id="kalici-ozet"></div>
+
+      <h4>1. Aşağıdaki metni kopyalayın</h4>
+      <textarea id="kalici-json" readonly rows="12" spellcheck="false"></textarea>
+      <button class="dbtn" id="kalici-kopyala" style="margin-top:8px">📋 Panoya kopyala</button>
+
+      <h4>2. GitHub'da dosyayı açıp yapıştırın</h4>
+      <p>
+        <a id="kalici-link" class="dbtn" target="_blank" rel="noopener" hidden>
+          kategoriler.json dosyasını GitHub'da aç ✎
+        </a>
+        <span id="kalici-linkyok" class="kucuk" hidden>
+          Depo bilgisi bulunamadı. GitHub deponuzda <code>veri/kategoriler.json</code>
+          dosyasını açıp kalem simgesine tıklayın.
+        </span>
+      </p>
+      <p class="kucuk">Açılan sayfada eski içeriğin tamamını silin, kopyaladığınız metni
+         yapıştırın ve alttaki <strong>Commit changes</strong> düğmesine basın.
+         2–3 dakika içinde site herkes için güncellenir.</p>
     </div>
   </div>
 </div>

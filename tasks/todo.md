@@ -108,3 +108,67 @@ Settings → Pages → Source: **GitHub Actions** → Actions sekmesinde **Re-ru
   indirilemedi (Overpass ve CDN'ler engelli). Kullanıcının QGIS'inde bu katman zaten
   bulunduğu için, dosyayı bırakması yeterli olacak şekilde altyapı hazırlandı.
 - Vektör karo (PMTiles) üretimi: 2,1 MB / gzip 395 KB veri için gereksiz karmaşıklık.
+
+---
+
+# 2. Tur — kullanıcı geri bildirimleri (07.09.2026)
+
+## Talepler
+1. Çalışmayı müdürlük adına açılacak yeni bir GitHub hesabına taşımak
+   (`ulasim-planlama` → `ulasim-planlama.github.io` tarzı adres)
+2. "Yol parçası" sayısal göstergesini kaldırmak (anlam ifade etmiyor)
+3. Zoom akıcı değil
+4. Sağ alttaki mesafe ölçer hatalı ölçüyor
+5. "Koyu" ve "Sade" altlıklarında "API KEY REQUIRED" filigranı
+6. Kategorilerden yol çizgi rengini ve adını site üzerinden değiştirebilme
+
+## Ölçüm sonuçları (varsayım değil, veri)
+- **Ölçek çubuğu doğru:** "1 km" etiketi 67 px; Leaflet mesafesi 1001,9 m,
+  bağımsız Web-Mercator hesabı 1003 m → sapma %0,19 (yalnızca yuvarlama).
+  Gerçek sorun: koordinat kutusunun çubuğun üstüne binmesi + kullanıcının
+  ihtiyacının aslında **ölçme aracı** olması.
+- **Zoom takılması gerçek:** tek zoom adımı 105–145 ms, tam çizim 128 ms
+  (60 fps için bütçe 16 ms). Sebep: 6.647 ayrı Leaflet çizgi nesnesi;
+  toplam kırılma noktası yalnızca 53.086 → darboğaz geometri değil, nesne sayısı.
+- **CARTO altlıkları artık anahtar istiyor** (ekran görüntüsüyle doğrulandı).
+
+## Plan
+- [x] Altlıklar: CARTO kaldırıldı; Sade ve Koyu, OpenStreetMap karolarından
+      CSS filtresiyle üretiliyor → anahtar gerekmiyor, ek sunucu yok
+- [x] Çizim mimarisi: kategori başına tek birleşik çizgi nesnesi (6.647 → 4)
+- [x] Tıklama/üzerine gelme için kendi ızgara indeksli en yakın-yol testim
+- [x] Zoom ayarları yeniden düzenlendi (zoomSnap 0.5, tuval dolgusu 0.4 → 0.2)
+- [x] "Yol parçası" sayacı kaldırıldı; yerine "farklı yol adı" geldi
+- [x] Gerçek mesafe ölçme aracı (çok noktalı, canlı toplam)
+- [x] Ölçek çubuğu ile koordinat kutusunun çakışması giderildi
+- [x] Kategori düzenleyici: ad + renk değiştirme, anında önizleme
+- [x] Düzenlemeyi kalıcı yapma: hazır JSON + doğrudan GitHub düzenleme bağlantısı
+- [x] Depo bilgisi (sahip/depo/dal) derleme sırasında ozet.json'a yazılıyor
+- [x] README: hesap/organizasyon taşıma rehberi ve adres kuralları
+
+## 2. Tur — Sonuç / Review
+
+### Ölçülen sonuçlar (öncesi → sonrası, aynı ortam)
+| Ölçüm | Önce | Sonra |
+|-------|------|-------|
+| Zoom adımı, z13 | ~140 ms | **6,4 ms** |
+| Zoom adımı, z15 | ~90 ms | **4,9 ms** |
+| Zoom adımı, z17 | ~90 ms | **1,2 ms** |
+| Zoom adımı, z9 (tüm il) | ~250 ms | **68 ms** |
+| Küçük kaydırma | — | **0,5 ms** |
+| Leaflet çizgi nesnesi | 6.647 | **4** |
+| Fare hareketi (vurgulama) | — | 0,23 ms |
+
+### Doğrulama
+- Tıklama testi: doğru yol bulunuyor (AŞAĞICUMA), 17 ms.
+- Mesafe aracı: 8,71 km gösterdi, gerçek 8.714 m → tam isabet.
+- Kategori düzenleyici: renk + ad değişikliği anında uygulanıyor, localStorage'a yazılıyor,
+  üretilen JSON geçerli, GitHub düzenleme bağlantısı doğru, sıfırlama çalışıyor.
+- Altlıklar: dördü de OSM/Esri; CARTO tamamen kaldırıldı, filtreler DOM'da doğrulandı.
+- 8 tema × altlık kombinasyonunda yol renkleri doğru (siyah yol yalnızca koyu altlıkta açılıyor).
+- Konsolda hata yok.
+
+### Kullanıcıya kalan
+Depo taşıması GitHub hesabı gerektirdiği için kod tarafında hazırlık yapıldı
+(bağlantılar göreceli, GitHub düzenleme bağlantısı derlemede üretiliyor);
+adım adım rehber README 7. bölümde.

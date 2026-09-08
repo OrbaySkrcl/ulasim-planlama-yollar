@@ -36,6 +36,30 @@ TR_SAAT = timezone(timedelta(hours=3))  # Türkiye saati
 YEDEK_RENKLER = ["#0891b2", "#ea580c", "#65a30d", "#c026d3", "#0f766e", "#b45309"]
 
 
+def depo_bilgisi():
+    """Sitedeki 'GitHub'da düzenle' bağlantısı için sahip/depo/dal bilgisi."""
+    sahip = depo = dal = None
+    tam = os.environ.get("GITHUB_REPOSITORY")          # GitHub Actions içinde
+    if tam and "/" in tam:
+        sahip, depo = tam.split("/", 1)
+        dal = os.environ.get("GITHUB_REF_NAME")
+    if not sahip:                                       # yerelde: git uzak adresi
+        try:
+            import subprocess
+            url = subprocess.check_output(
+                ["git", "-C", str(KOK), "remote", "get-url", "origin"],
+                stderr=subprocess.DEVNULL).decode().strip()
+            m = re.search(r"github\.com[:/]+([^/]+)/(.+?)(?:\.git)?$", url)
+            if m:
+                sahip, depo = m.group(1), m.group(2)
+            dal = subprocess.check_output(
+                ["git", "-C", str(KOK), "rev-parse", "--abbrev-ref", "HEAD"],
+                stderr=subprocess.DEVNULL).decode().strip()
+        except Exception:
+            pass
+    return {"sahip": sahip or "", "depo": depo or "", "dal": dal or "main"}
+
+
 def log(msg):
     print(msg, flush=True)
 
@@ -501,6 +525,8 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
                     for i, v in sorted(ilce_istatistik.items(), key=lambda x: -x[1]["uzunluk_m"])},
         "ilce_verisi_var": bool(ilceler),
         "uyarilar": uyarilar,
+        "depo": depo_bilgisi(),
+        "ayar_ham": ayar,
         "adlar": ad_listesi,
         "veri_boyut_mb": round(gj_yolu.stat().st_size / 1048576, 2),
     }
