@@ -84,3 +84,31 @@ Bu dosya, aynı hataların tekrarlanmaması için tutulur.
 - GitHub Pages adresi `https://<hesap>.github.io/<depo>/` kalıbındadır; kök adres için
   depo adının tam olarak `<hesap>.github.io` olması gerekir. Depo taşımasında Pages
   ayarı taşınmaz, yeniden açılması gerekir.
+
+## 3. Tur — ilçe sınırları (09.09.2026)
+
+- **Sessiz başarısızlık en kötü hata türü.** Yüklenen ilçe dosyası kabul edildi,
+  "30 ilçe yüklendi" yazdı, ama tüm yollar "Belirlenemedi" oldu ve kullanıcı
+  "bir şey değişmedi" diye geri döndü. Ders: bir eşleştirme adımının **başarı
+  oranını ölç** ve düşükse yüksek sesle uyar. Artık eşleşme oranı hem derleme
+  günlüğüne hem siteye yazılıyor, %95 altındaysa veri kalitesi uyarısı çıkıyor.
+- **Türkiye'deki kurumsal GIS verisi genellikle projeksiyonlu gelir.** Bu dosya
+  EPSG:5253 (TUREF / TM27) idi; kod enlem/boylam bekliyordu. GeoJSON'da `crs`
+  alanı yoktu, yani biçimden anlaşılmıyordu — koordinat büyüklüğüne bakmak gerekti
+  (|x| > 180 ise projeksiyonlu).
+- **Projeksiyonu tahmin etmek yerine ölçmek çalıştı.** 22 aday ters TM ile
+  denendi ve "yol orta noktalarının ilçe poligonlarına düşme oranı" ile puanlandı:
+  doğru aday %99,8, en yakın yanlış aday %97,9. Ayırt edici olan k0 farkı
+  (1,0 vs 0,9996) — kuzey yönünde ~1,7 km kayma yapıyor.
+- **Alan adına güvenme, içeriğine bak.** `NAME` alanında ilçe adı yerine nesne
+  numarası ("536") vardı; gerçek ad, KML dönüşümünde bozulmuş `__L__E_AD_`
+  alanındaydı. Sayısal/bağlantı/sistem alanlarını ayıklayıp farklı değer sayısı
+  ve harf oranına göre puanlamak doğru alanı buldu.
+- **Leaflet divIcon'da `transform` ile ortalama yapılamaz:** Leaflet ikonu
+  `translate3d` ile konumlandırdığı için CSS `transform`'u ezer. Çözüm, etiketi
+  bir iç `<span>` içine alıp ortalamayı ona uygulamak.
+- Sınır katmanının yolların altında kalması için ayrı bir Leaflet **pane**
+  (`zIndex: 380`) kullanmak gerekiyor; aynı tuvalde çizim sırası her yeniden
+  kurulumda değiştiği için güvenilmez.
+- Türkçe başlık biçimi için `str.title()` kullanılamaz: `I`→`ı`, `İ`→`i`
+  eşlemesi elle yapılmalı (ALİAĞA → Aliağa).

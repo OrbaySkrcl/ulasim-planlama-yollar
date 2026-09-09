@@ -172,3 +172,54 @@ Settings → Pages → Source: **GitHub Actions** → Actions sekmesinde **Re-ru
 Depo taşıması GitHub hesabı gerektirdiği için kod tarafında hazırlık yapıldı
 (bağlantılar göreceli, GitHub düzenleme bağlantısı derlemede üretiliyor);
 adım adım rehber README 7. bölümde.
+
+---
+
+# 3. Tur — İlçe sınırları (09.09.2026)
+
+## Bildirilen sorun
+Kullanıcı `ilce_sinirlari.geojson` dosyasını GitHub'da iki farklı klasöre yükledi,
+"bir şey değişmedi, ilçe sınırları gelmedi".
+
+## Teşhis (yerelde birebir tekrarlandı)
+Derleme başarılıydı ve Pages yayındaydı; hata veri hattındaydı:
+`İlçe sınırları yüklendi: 30 ilçe` → `İlçe sayısı: 1` (hepsi "Belirlenemedi").
+
+- [x] **Sebep 1:** Koordinatlar projeksiyonlu (508757, 4312424), kod enlem/boylam
+      bekliyordu → hiçbir yol hiçbir ilçenin sınır kutusuna düşmedi.
+- [x] **Sebep 2:** İlçe adı `NAME`'de değil `__L__E_AD_`'de; `NAME`'de nesne
+      numarası (536) var.
+- [x] **Sebep 3 (asıl kusur):** Bu iki hata da sessizce yutuldu.
+
+## Yapılanlar
+- [x] Ters Transverse Mercator dönüşümü (harici kütüphane yok)
+- [x] 22 aday projeksiyon; doğru olan, yol/ilçe çakışma oranı ölçülerek seçiliyor
+- [x] Ad alanı, alan adına değil içeriğine bakılarak bulunuyor
+- [x] Türkçe başlık biçimi (ALİAĞA → Aliağa)
+- [x] İlçe sınırları haritada çiziliyor (ayrı pane, yolların altında)
+- [x] İlçe adı etiketleri, aç/kapa anahtarı, seçili ilçe vurgusu
+- [x] İlçe bölümü veri varken kendiliğinden açılıyor; projeksiyon + eşleşme yazılı
+- [x] Düşük eşleşme / çözülemeyen projeksiyon artık uyarı üretiyor
+- [x] Depo kökündeki gereksiz 4,3 MB'lık kopya kaldırıldı
+- [x] README 5. bölüm ve veri/BENIOKU.md yenilendi
+
+## Ölçülen sonuç
+| Aday projeksiyon | Yol eşleşmesi |
+|---|---|
+| **EPSG:5253 TUREF / TM27** | **%99,8** ← seçildi |
+| EPSG:2319 ED50 / TM27 | %97,9 |
+| EPSG:32635 WGS84 / UTM 35N | %96,7 |
+| EPSG:23035 ED50 / UTM 35N | %96,5 |
+
+6.647 yolun 6.644'ü (%99,95) bir ilçeye atandı; 3 yol (2,6 km) sınır dışında kaldı.
+Yol bulunan 11 ilçe: Bergama 738,6 km · Menemen 349,1 · Aliağa 339,4 · Kınık 205,3
+· Urla 174,9 · Dikili 173,3 · Foça 102,2 · Karaburun 100,1 · Narlıdere 63,2
+· Güzelbahçe 52,3 · Çeşme 46,8.
+
+`ilceler.geojson`: 223 KB (gzip 70 KB), 30 alan, 11.591 nokta.
+
+## Doğrulama
+Tarayıcı testi: bölüm açık, 30 sınır + 30 etiket haritada, 12 filtre rozeti,
+Bergama seçilince sınır vurgulanıyor (kalınlık 2,6 / #0a5f6a) ve yollar 738,6 km'ye
+düşüyor, aç/kapa anahtarı iki yönde çalışıyor, koyu altlıkta sınır ve etiket
+renkleri değişiyor. Önceki turların tüm testleri de geçiyor. Konsol temiz.

@@ -17,7 +17,7 @@ _(Aşağıdaki "Tek seferlik kurulum" adımını yaptıktan birkaç dakika sonra
 2. [Veriyi güncelleme](#2-veriyi-güncelleme-her-değişiklikte)
 3. [QGIS'ten doğru KML nasıl çıkarılır](#3-qgisten-doğru-kml-nasıl-çıkarılır)
 4. [Kategori adı, renk ve başlıkları değiştirme](#4-kategori-adı-renk-ve-başlıkları-değiştirme)
-5. [İlçe filtresi ekleme (isteğe bağlı)](#5-ilçe-filtresi-ekleme-isteğe-bağlı)
+5. [İlçe sınırları ekleme (isteğe bağlı)](#5-ilçe-sınırları-ekleme-isteğe-bağlı)
 6. [Kategori adı ve rengini site üzerinden değiştirme](#6-kategori-adı-ve-rengini-site-üzerinden-değiştirme)
 7. [Depoyu müdürlük hesabına taşımak](#7-depoyu-müdürlük-hesabına-taşımak)
 8. [Sitede neler var](#8-sitede-neler-var)
@@ -141,18 +141,43 @@ site üzerinden düzenleme yolunu kullanın — hazır JSON'u sizin için üreti
 
 ---
 
-## 5. İlçe filtresi ekleme (isteğe bağlı)
+## 5. İlçe sınırları ekleme (isteğe bağlı)
 
-Elinizdeki İzmir **ilçe sınırları** katmanını eklerseniz site otomatik olarak
-**ilçe filtresi** ve ilçe bazlı km istatistikleri kazanır:
+İzmir **ilçe sınırları** katmanını `veri` klasörüne eklerseniz site üç şey kazanır:
 
-1. QGIS'te ilçe sınırları katmanını **GeoJSON** olarak dışa aktarın
-   (KRS: `EPSG:4326`), ilçe adı alanı `ilce`, `ADI`, `NAME` gibi bir isim taşısın.
+- Haritada **ilçe sınırları ve ilçe adları** (aç/kapa anahtarıyla)
+- **İlçe filtresi** — tek tıkla o ilçenin yollarını görmek
+- İlçe bazlı **kilometre istatistikleri**
+
+### Nasıl eklenir
+
+1. QGIS'te ilçe sınırları katmanını **GeoJSON** olarak dışa aktarın.
 2. Dosyayı **`veri/ilce_sinirlari.geojson`** adıyla `veri` klasörüne yükleyin.
 
-Hepsi bu. Derleme sırasında her yol parçası, orta noktasına göre bir ilçeye atanır;
-ilçe dışında kalanlar "Belirlenemedi" olarak işaretlenir. Dosyayı silerseniz filtre
-kendiliğinden kaybolur.
+Hepsi bu. Dosyayı silerseniz özellik kendiliğinden kaybolur.
+
+> **Dosyayı yalnızca `veri` klasörüne koyun.** Depo kökündeki veya başka bir
+> klasördeki kopyalar okunmaz.
+
+### Projeksiyon ve alan adı önemli değil
+
+- **Projeksiyon otomatik çözülür.** Dosya EPSG:4326 (enlem/boylam) olmak zorunda
+  değil. Derleme; TUREF/TM 3 derece dilimleri, WGS84 UTM ve ED50 karşılıkları
+  dahil 22 yaygın Türkiye projeksiyonunu dener ve **yolların ilçelerin içine
+  düşme oranı en yüksek olanı** seçer. Seçilen projeksiyon ve eşleşme oranı hem
+  Actions özetinde hem sitenin İlçe bölümünde yazılıdır.
+- **İlçe adının hangi alanda olduğu da otomatik bulunur.** Alanın adına değil
+  içeriğine bakılır; sayısal alanlar, bağlantılar ve iç sistem alanları ayıklanır.
+  Bu sayede KML dönüşümlerinde bozulmuş alan adları (`__L__E_AD_` gibi) veya
+  `NAME` alanında ad yerine nesne numarası bulunması sorun olmaz.
+  Adlar Türkçe kurallarıyla başlık biçimine çevrilir (`ALİAĞA` → `Aliağa`).
+
+### Bir şey ters giderse
+
+Site sessizce yanlış sonuç üretmez. Projeksiyon çözülemezse ya da yolların
+%95'inden azı bir ilçeye düşerse, sitenin sol panelindeki **Veri kalitesi
+uyarıları** bölümünde ne yapmanız gerektiği yazar. Bu durumda dosyayı QGIS'ten
+**EPSG:4326 (WGS 84)** seçerek yeniden kaydetmek çözer.
 
 ---
 
@@ -249,6 +274,7 @@ güncellemeniz iyi olur.
   hiçbiri üyelik/anahtar gerektirmez
 - **Kategori aç/kapat** — her kategorinin yol sayısı ve toplam kilometresiyle
 - **Yol tipi filtresi** (Cadde, Sokak, Bulvar, Küme Evler, Otoyol, Meydan)
+- **İlçe sınırları, adları ve filtresi** (ilçe sınırları dosyası eklendiğinde)
 - **Yol adı arama** — Türkçe karaktere duyarsız (`sarikoy` yazınca `SARIKÖY` bulunur)
 - **Yola tıklayınca** ad, tip, kategori, uzunluk, kayıt no, koordinat; koordinatı kopyalama
   ve Google Maps'te açma; fareyle üzerine gelince yol vurgulanır
@@ -272,7 +298,7 @@ güncellemeniz iyi olur.
 veri/                       ← SİZİN DOKUNACAĞINIZ KLASÖR
   ibb_yollar.kml            QGIS'ten çıkan katman (üzerine yazın)
   kategoriler.json          kategori adları, renkler, site başlıkları
-  ilce_sinirlari.geojson    (isteğe bağlı) ilçe filtresi için
+  ilce_sinirlari.geojson    (isteğe bağlı) ilçe sınırları / filtresi için
 
 site/                       web sitesinin kaynağı (HTML/CSS/JS)
 araclar/derle.py            KML'i siteye çeviren betik
@@ -292,6 +318,8 @@ tasks/                      çalışma planı ve notlar
 | Yeni yollar haritada yok | KML'i `veri` klasörüne yüklediğinizden ve **Commit changes**'e bastığınızdan emin olun. Tarayıcıda `Ctrl+F5` ile sayfayı yenileyin. |
 | Bir kategori hiç görünmüyor | Sol paneldeki kutucuğu işaretleyin; ya da o `DURUM` değeri KML'de hiç yoksa kategori listelenmez. |
 | "Tanımsız durum kodu" uyarısı | KML'de `veri/kategoriler.json`'da tanımlı olmayan bir `DURUM` var. 4. bölümdeki gibi ekleyin. |
+| İlçe sınırları geldi ama tüm yollar "Belirlenemedi" | Sınırlar başka bir bölgeye ait olabilir. Sol panelin **Veri kalitesi uyarıları** bölümünü ve İlçe bölümündeki eşleşme oranını okuyun. |
+| İlçe filtresi hiç çıkmadı | Dosya adı tam olarak `ilce_sinirlari.geojson` ve **`veri` klasöründe** olmalı. |
 | Renkler QGIS'tekiyle aynı değil | Renkler `kategoriler.json`'dan gelir. Oradaki `renk` değerini `null` yaparsanız KML'deki renk kullanılır. |
 | Site adresi 404 veriyor | Yayın henüz tamamlanmamış olabilir; **Actions** sekmesinden son çalışmayı kontrol edin. Sürekli 404 ise 1. bölümdeki elle açma adımlarını uygulayın. |
 
@@ -304,6 +332,9 @@ tasks/                      çalışma planı ve notlar
   Yani site, dış bir kütüphane sunucusu çökse bile açılır.
 - **Veri boyutu.** 6.600 yol parçası ≈ 2,1 MB GeoJSON; sunucu sıkıştırmasıyla
   tarayıcıya ≈ 0,4 MB iner. Koordinatlar 6 haneye yuvarlanır (≈ 11 cm hassasiyet).
+- **Projeksiyon dönüşümü** ters Transverse Mercator formülleriyle, standart
+  kütüphane dışında bir bağımlılık olmadan yapılır; doğru projeksiyon tahminle
+  değil, yol/ilçe çakışma oranı ölçülerek seçilir.
 - **Uzunluklar** WGS84 üzerinde haversine formülüyle hesaplanır; eğim dikkate alınmaz.
   Sağ alttaki ölçek çubuğu ve mesafe ölçme aracı da aynı yöntemi kullanır
   (doğrulama: 1 km'lik çubuk için sapma %0,2).

@@ -17,6 +17,9 @@ Site 2–3 dakika içinde kendiliğinden güncellenir.
 |-------|--------------|
 | `ibb_yollar.kml` | QGIS'ten çıkan yol katmanı. **Üzerine yazın.** |
 | `kategoriler.json` | Kategori adları, renkleri, sırası ve site başlıkları. |
-| `ilce_sinirlari.geojson` | *(isteğe bağlı)* Eklerseniz site ilçe filtresi kazanır. |
+| `ilce_sinirlari.geojson` | *(isteğe bağlı)* Eklerseniz haritaya ilçe sınırları, adları ve ilçe filtresi gelir. Projeksiyonu ve ilçe adı alanı otomatik algılanır. |
+
+> Dosyaları **yalnızca bu klasöre** koyun. Depo kökündeki veya başka klasörlerdeki
+> kopyalar okunmaz.
 
 Ayrıntılar için deponun ana sayfasındaki [README](../README.md) dosyasına bakın.
