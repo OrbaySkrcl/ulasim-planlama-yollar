@@ -36,6 +36,14 @@
       "varsayilan_acik": true
     }
   },
+  "ilce_sinir": {
+    "_aciklama": "Ilce sinir cizgisinin gorunumu. renk_koyu, koyu altlik haritalarda (Koyu/Uydu) kullanilir. Site uzerinden de degistirilebilir.",
+    "renk": "#6b7280",
+    "renk_koyu": "#9ca3af",
+    "kalinlik": 1.2,
+    "kesikli": true,
+    "etiket_goster": true
+  },
   "site": {
     "baslik": "İzmir Köy Yolları Devir Haritası",
     "alt_baslik": "İl Özel İdaresi'nden Büyükşehir Belediyesi'ne geçen mahalle ve köy yolları",

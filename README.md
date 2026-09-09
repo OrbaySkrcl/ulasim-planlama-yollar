@@ -18,7 +18,7 @@ _(Aşağıdaki "Tek seferlik kurulum" adımını yaptıktan birkaç dakika sonra
 3. [QGIS'ten doğru KML nasıl çıkarılır](#3-qgisten-doğru-kml-nasıl-çıkarılır)
 4. [Kategori adı, renk ve başlıkları değiştirme](#4-kategori-adı-renk-ve-başlıkları-değiştirme)
 5. [İlçe sınırları ekleme (isteğe bağlı)](#5-ilçe-sınırları-ekleme-isteğe-bağlı)
-6. [Kategori adı ve rengini site üzerinden değiştirme](#6-kategori-adı-ve-rengini-site-üzerinden-değiştirme)
+6. [Görünümü site üzerinden değiştirme](#6-görünümü-site-üzerinden-değiştirme-kategoriler-ve-ilçe-sınırı)
 7. [Depoyu müdürlük hesabına taşımak](#7-depoyu-müdürlük-hesabına-taşımak)
 8. [Sitede neler var](#8-sitede-neler-var)
 9. [Klasör yapısı](#9-klasör-yapısı)
@@ -136,7 +136,7 @@ değiştirebilirsiniz.
 > ⚠️ JSON dosyasında virgül ve tırnak işaretlerini bozmayın. Bozulursa Actions sekmesinde
 > kırmızı ✗ görürsünüz ve site eski hâliyle yayında kalır (veri kaybolmaz).
 
-💡 Bu dosyayı elle düzenlemek istemiyorsanız, [6. bölümdeki](#6-kategori-adı-ve-rengini-site-üzerinden-değiştirme)
+💡 Bu dosyayı elle düzenlemek istemiyorsanız, [6. bölümdeki](#6-görünümü-site-üzerinden-değiştirme-kategoriler-ve-ilçe-sınırı)
 site üzerinden düzenleme yolunu kullanın — hazır JSON'u sizin için üretir.
 
 ---
@@ -181,7 +181,7 @@ uyarıları** bölümünde ne yapmanız gerektiği yazar. Bu durumda dosyayı QG
 
 ---
 
-## 6. Kategori adı ve rengini site üzerinden değiştirme
+## 6. Görünümü site üzerinden değiştirme (kategoriler ve ilçe sınırı)
 
 Dosya düzenlemeden, doğrudan harita üzerinden de değiştirebilirsiniz:
 
@@ -204,6 +204,13 @@ düğmesi tarayıcınızdaki değişiklikleri geri alır.
 
 > Renk seçerken çok koyu bir ton seçerseniz, site koyu altlık haritalarda
 > (Koyu / Uydu) o rengi otomatik olarak açar; yollar görünmez kalmaz.
+
+### İlçe sınır çizgisi
+
+İlçe bölümündeki **✎** simgesi sınır çizgisi için aynı şeyi yapar:
+**renk**, **kalınlık** (0,4–6 px), **kesikli/düz** ve **ilçe adlarının görünmesi**.
+Bu ayarlar da aynı "Herkes için kalıcı yap" düğmesiyle kalıcı hâle gelir
+(`kategoriler.json` içindeki `ilce_sinir` bölümüne yazılır).
 
 ---
 
@@ -274,12 +281,16 @@ güncellemeniz iyi olur.
   hiçbiri üyelik/anahtar gerektirmez
 - **Kategori aç/kapat** — her kategorinin yol sayısı ve toplam kilometresiyle
 - **Yol tipi filtresi** (Cadde, Sokak, Bulvar, Küme Evler, Otoyol, Meydan)
-- **İlçe sınırları, adları ve filtresi** (ilçe sınırları dosyası eklendiğinde)
+- **İlçe sınırları, adları ve filtresi** (ilçe sınırları dosyası eklendiğinde) —
+  sınır çizgisinin rengi, kalınlığı ve tipi site üzerinden ayarlanabilir;
+  **henüz yolu olmayan ilçeler soluk gösterilir**, böylece çalışmanın kapsamı
+  bir bakışta görülür
 - **Yol adı arama** — Türkçe karaktere duyarsız (`sarikoy` yazınca `SARIKÖY` bulunur)
 - **Yola tıklayınca** ad, tip, kategori, uzunluk, kayıt no, koordinat; koordinatı kopyalama
   ve Google Maps'te açma; fareyle üzerine gelince yol vurgulanır
 - **📏 Mesafe ölçme:** haritada çok noktalı, canlı toplamlı mesafe ölçümü
-- **Kategori düzenleme:** kategori adını ve çizgi rengini site üzerinden değiştirme
+- **Görünüm düzenleme:** kategori adı/rengi ve ilçe sınır çizgisinin
+  rengi/kalınlığı/tipi site üzerinden değiştirilebilir
 - **Anlık istatistik** — seçili filtreye uyan toplam kilometre ve farklı yol adı sayısı
 - **Paylaşılabilir bağlantı** — harita konumu ve filtreler bağlantıya işlenir
 - **Veri indirme** — GeoJSON (QGIS/ArcGIS/Google Earth) ve orijinal KML
@@ -320,6 +331,7 @@ tasks/                      çalışma planı ve notlar
 | "Tanımsız durum kodu" uyarısı | KML'de `veri/kategoriler.json`'da tanımlı olmayan bir `DURUM` var. 4. bölümdeki gibi ekleyin. |
 | İlçe sınırları geldi ama tüm yollar "Belirlenemedi" | Sınırlar başka bir bölgeye ait olabilir. Sol panelin **Veri kalitesi uyarıları** bölümünü ve İlçe bölümündeki eşleşme oranını okuyun. |
 | İlçe filtresi hiç çıkmadı | Dosya adı tam olarak `ilce_sinirlari.geojson` ve **`veri` klasöründe** olmalı. |
+| Bazı ilçeler soluk ve tıklanamıyor | O ilçelerde henüz kayıtlı yol yok. KML'e o bölgenin yolları eklendiğinde kendiliğinden etkinleşirler. |
 | Renkler QGIS'tekiyle aynı değil | Renkler `kategoriler.json`'dan gelir. Oradaki `renk` değerini `null` yaparsanız KML'deki renk kullanılır. |
 | Site adresi 404 veriyor | Yayın henüz tamamlanmamış olabilir; **Actions** sekmesinden son çalışmayı kontrol edin. Sürekli 404 ise 1. bölümdeki elle açma adımlarını uygulayın. |
 

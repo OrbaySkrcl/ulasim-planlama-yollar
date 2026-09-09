@@ -23,6 +23,7 @@
     seciliTip: new Set(),
     seciliIlce: new Set(),
     ozelKategori: {},          // kullanıcının kendi ad/renk değişiklikleri
+    ozelSinir: {},             // ilçe sınır çizgisi görünümü değişiklikleri
     vurgu: null,
     hover: null,
     hoverKatman: null,
@@ -166,7 +167,9 @@
     return k.renk || "#888888";
   }
 
-  function ozelVarMi() { return Object.keys(D.ozelKategori).length > 0; }
+  function ozelVarMi() {
+    return Object.keys(D.ozelKategori).length > 0 || Object.keys(D.ozelSinir).length > 0;
+  }
 
   /* ------------------------------------------------------------- altlık */
   var OSM = {
@@ -780,6 +783,13 @@
       if (o.ad) hedef.ad = o.ad;
       if (o.renk) { hedef.renk = o.renk; delete hedef.renk_koyu; }
     });
+    if (Object.keys(D.ozelSinir).length) {
+      var sn = ham.ilce_sinir || (ham.ilce_sinir = {});
+      Object.keys(D.ozelSinir).forEach(function (k) {
+        sn[k] = D.ozelSinir[k];
+        if (k === "renk") delete sn.renk_koyu;
+      });
+    }
     var metin = JSON.stringify(ham, null, 2);
     $("#kalici-json").value = metin;
 
@@ -792,31 +802,61 @@
     if (baglanti) { a.href = baglanti; a.hidden = false; $("#kalici-linkyok").hidden = true; }
     else { a.hidden = true; $("#kalici-linkyok").hidden = false; }
 
-    $("#kalici-ozet").innerHTML = Object.keys(D.ozelKategori).length
+    var sinirOzeti = Object.keys(D.ozelSinir).length
+      ? "<li><strong>İlçe sınır çizgisi</strong>: " +
+        Object.keys(D.ozelSinir).map(function (k) {
+          return kacar(k) + " = " + kacar(String(D.ozelSinir[k]));
+        }).join(", ") + "</li>"
+      : "";
+    $("#kalici-ozet").innerHTML = (Object.keys(D.ozelKategori).length || sinirOzeti)
       ? "<ul>" + Object.keys(D.ozelKategori).map(function (durum) {
           var o = D.ozelKategori[durum];
           return "<li><strong>" + kacar(katAd(durum)) + "</strong>: " +
             (o.ad ? "ad değişti" : "") + (o.ad && o.renk ? ", " : "") +
             (o.renk ? 'renk <span style="display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;background:' +
               kacar(o.renk) + '"></span> ' + kacar(o.renk) : "") + "</li>";
-        }).join("") + "</ul>"
+        }).join("") + sinirOzeti + "</ul>"
       : "<p>Henüz bir değişiklik yapmadınız.</p>";
 
     $("#perde-kalici").classList.add("acik");
   }
 
   /* -------------------------------------------------------- ilçe sınırları */
-  function ilceSinirRengi() { return koyuZeminMi() ? "#9ca3af" : "#6b7280"; }
+  var SINIR_VARSAYILAN = { renk: "#6b7280", renk_koyu: "#9ca3af",
+                           kalinlik: 1.2, kesikli: true, etiket_goster: true };
+
+  // Etkin sınır görünümü: kullanıcı değişikliği > kategoriler.json > varsayılan
+  function sinirAyar() {
+    var temel = {};
+    var k;
+    for (k in SINIR_VARSAYILAN) temel[k] = SINIR_VARSAYILAN[k];
+    var dosya = (D.ozet && D.ozet.ilce_sinir) || {};
+    for (k in dosya) if (dosya[k] !== null && dosya[k] !== undefined) temel[k] = dosya[k];
+    for (k in D.ozelSinir) if (D.ozelSinir[k] !== null && D.ozelSinir[k] !== undefined) {
+      temel[k] = D.ozelSinir[k];
+    }
+    return temel;
+  }
+
+  function ilceSinirRengi() {
+    var a = sinirAyar();
+    if (D.ozelSinir.renk) return koyuZeminMi() ? koyuIcinAyarla(a.renk) : a.renk;
+    return koyuZeminMi() ? (a.renk_koyu || koyuIcinAyarla(a.renk)) : a.renk;
+  }
   function ilceVurguRengi() { return koyuZeminMi() ? "#2dd4bf" : "#0a5f6a"; }
 
   function ilceSinirStil(ad) {
+    var a = sinirAyar();
     var secimVar = D.seciliIlce.size > 0;
+    var kesik = a.kesikli ? Math.max(3, a.kalinlik * 4).toFixed(1) + " " +
+                            Math.max(3, a.kalinlik * 3).toFixed(1) : null;
     if (secimVar && D.seciliIlce.has(ad)) {
-      return { color: ilceVurguRengi(), weight: 2.6, opacity: 1, dashArray: null,
+      return { color: ilceVurguRengi(), weight: Math.max(2.2, a.kalinlik * 2),
+               opacity: 1, dashArray: null,
                fill: true, fillColor: ilceVurguRengi(), fillOpacity: 0.07 };
     }
-    return { color: ilceSinirRengi(), weight: 1.2, dashArray: "5 4",
-             opacity: secimVar ? 0.3 : 0.7, fill: false };
+    return { color: ilceSinirRengi(), weight: a.kalinlik, dashArray: kesik,
+             opacity: secimVar ? 0.3 : 0.75, fill: false };
   }
 
   function ilceSinirlariYukle() {
@@ -846,12 +886,16 @@
   function ilceEtiketleriCiz() {
     if (!D.ilceEtiketler || !D.ilceVerisi) return;
     D.ilceEtiketler.clearLayers();
+    if (!sinirAyar().etiket_goster) return;
     var koyu = koyuZeminMi();
+    var ilceler = D.ozet.ilceler || {};
     D.ilceVerisi.features.forEach(function (f) {
       var e = f.properties.etiket;
       if (!e) return;
+      var kayit = ilceler[f.properties.ad];
       var sinif = "ilce-etiket" + (koyu ? " koyu-zemin" : "") +
-        (D.seciliIlce.has(f.properties.ad) ? " secili" : "");
+        (D.seciliIlce.has(f.properties.ad) ? " secili" : "") +
+        (!kayit || kayit.yol_yok ? " yolsuz" : "");
       D.ilceEtiketler.addLayer(L.marker([e[1], e[0]], {
         interactive: false, keyboard: false,
         icon: L.divIcon({ className: sinif, iconSize: null,
@@ -871,6 +915,102 @@
       if (D.harita.hasLayer(D.ilceSinir)) D.harita.removeLayer(D.ilceSinir);
       if (D.harita.hasLayer(D.ilceEtiketler)) D.harita.removeLayer(D.ilceEtiketler);
     }
+  }
+
+  /* ------------------------------------------------ sınır çizgisi düzenleyici */
+  function sinirDuzenleyiciAcKapat() {
+    var kutu = $("#sinir-editor");
+    if (!kutu) return;
+    if (!kutu.hidden) { kutu.hidden = true; kutu.innerHTML = ""; return; }
+
+    var a = sinirAyar();
+    kutu.innerHTML =
+      '<label class="ed-etiket">Sınır çizgisi rengi</label>' +
+      '<div class="renk-satir">' +
+        '<input type="color" class="sn-renk" value="' + kacar(a.renk) + '">' +
+        '<div class="hazir-renkler">' + ["#6b7280", "#1f2937", "#0a5f6a", "#b45309",
+          "#7c3aed", "#be123c", "#15803d", "#0369a1"].map(function (h) {
+          return '<button class="hazir" data-renk="' + h + '" style="background:' + h +
+            '" title="' + h + '"></button>';
+        }).join("") + "</div>" +
+      "</div>" +
+      '<label class="ed-etiket" style="margin-top:12px">Çizgi kalınlığı</label>' +
+      '<div class="ed-kaydirici">' +
+        '<input type="range" class="sn-kalinlik" min="0.4" max="6" step="0.1" value="' +
+          a.kalinlik + '">' +
+        '<span class="deger sn-deger">' + sayi(a.kalinlik, 2) + " px</span>" +
+      "</div>" +
+      '<div class="ed-onizleme"><i class="sn-onizleme"></i></div>' +
+      '<label class="satir-secim" style="margin:12px 0 0">' +
+        '<input type="checkbox" class="sn-kesikli"' + (a.kesikli ? " checked" : "") + ">" +
+        "<span>Kesikli çizgi</span></label>" +
+      '<label class="satir-secim" style="margin:6px 0 0">' +
+        '<input type="checkbox" class="sn-etiket"' + (a.etiket_goster ? " checked" : "") + ">" +
+        "<span>İlçe adlarını haritada göster</span></label>" +
+      '<div class="ed-dugmeler">' +
+        '<button class="dbtn sn-sifirla">Varsayılana dön</button>' +
+        '<button class="dbtn sn-kapat">Kapat</button>' +
+      "</div>" +
+      '<p class="kucuk" style="margin:8px 0 0">Değişiklik anında uygulanır ve bu tarayıcıda ' +
+      "saklanır. Herkes için kalıcı yapmak isterseniz Kategoriler bölümünün altındaki " +
+      "düğmeyi kullanın.</p>";
+    kutu.hidden = false;
+
+    var renk = kutu.querySelector(".sn-renk");
+    var kalinlik = kutu.querySelector(".sn-kalinlik");
+    var deger = kutu.querySelector(".sn-deger");
+    var onizleme = kutu.querySelector(".sn-onizleme");
+    var kesikli = kutu.querySelector(".sn-kesikli");
+    var etiket = kutu.querySelector(".sn-etiket");
+
+    var onizlemeYaz = function () {
+      var g = sinirAyar();
+      onizleme.style.borderTop = Math.max(1, g.kalinlik) + "px " +
+        (g.kesikli ? "dashed " : "solid ") + ilceSinirRengi();
+      deger.textContent = sayi(g.kalinlik, 2) + " px";
+    };
+
+    var uygula = function (yeni) {
+      var anahtar;
+      for (anahtar in yeni) {
+        var varsayilan = (D.ozet.ilce_sinir || {})[anahtar];
+        if (varsayilan === undefined) varsayilan = SINIR_VARSAYILAN[anahtar];
+        if (String(yeni[anahtar]) === String(varsayilan)) delete D.ozelSinir[anahtar];
+        else D.ozelSinir[anahtar] = yeni[anahtar];
+      }
+      yerelYaz("sinirOzel", D.ozelSinir);
+      ilceSinirGuncelle();
+      onizlemeYaz();
+      ozelSatirGuncelle();
+    };
+
+    renk.addEventListener("input", function () { uygula({ renk: renk.value }); });
+    kutu.querySelectorAll(".hazir").forEach(function (b) {
+      b.onclick = function (e) {
+        e.preventDefault();
+        renk.value = b.dataset.renk;
+        uygula({ renk: b.dataset.renk });
+      };
+    });
+    kalinlik.addEventListener("input", function () {
+      uygula({ kalinlik: parseFloat(kalinlik.value) });
+    });
+    kesikli.addEventListener("change", function () { uygula({ kesikli: kesikli.checked }); });
+    etiket.addEventListener("change", function () {
+      uygula({ etiket_goster: etiket.checked });
+    });
+    kutu.querySelector(".sn-sifirla").onclick = function (e) {
+      e.preventDefault();
+      D.ozelSinir = {};
+      yerelYaz("sinirOzel", D.ozelSinir);
+      ilceSinirGuncelle(); ozelSatirGuncelle();
+      kutu.hidden = true; kutu.innerHTML = "";
+      bildir("Sınır çizgisi varsayılana döndürüldü.");
+    };
+    kutu.querySelector(".sn-kapat").onclick = function (e) {
+      e.preventDefault(); kutu.hidden = true; kutu.innerHTML = "";
+    };
+    onizlemeYaz();
   }
 
   /* ---------------------------------------------------------- tip / ilçe */
@@ -895,9 +1035,14 @@
     if (!D.ozet.ilce_verisi_var) return;
     var kap = $("#ilce-liste");
     kap.innerHTML = Object.keys(D.ozet.ilceler).map(function (i) {
+      var k = D.ozet.ilceler[i];
+      if (k.yol_yok) {
+        return '<button class="rozet-secim yolsuz" disabled title="' + kacar(i) +
+          ' ilçesinde henüz kayıtlı yol yok">' + kacar(i) + "<small>–</small></button>";
+      }
       return '<button class="rozet-secim' + (D.seciliIlce.has(i) ? " secili" : "") +
         '" data-ilce="' + kacar(i) + '">' + kacar(i) +
-        "<small>" + sayi(D.ozet.ilceler[i].uzunluk_km, 0) + " km</small></button>";
+        "<small>" + sayi(k.uzunluk_km, 0) + " km</small></button>";
     }).join("");
     kap.querySelectorAll("[data-ilce]").forEach(function (b) {
       b.onclick = function () {
@@ -1081,6 +1226,11 @@
       kategoriListesiCiz(); katmanlariYenile();
     };
 
+    var sinirDuzenle = $("#sinir-duzenle");
+    if (sinirDuzenle) sinirDuzenle.onclick = function (e) {
+      e.preventDefault(); sinirDuzenleyiciAcKapat();
+    };
+
     var sinirKutu = $("#ilce-sinir-goster");
     if (sinirKutu) {
       sinirKutu.checked = D.ilceGoster;
@@ -1094,9 +1244,13 @@
     $("#btn-kalici").onclick = kaliciPencereAc;
     $("#btn-ozel-sifirla").onclick = function () {
       D.ozelKategori = {};
+      D.ozelSinir = {};
       yerelYaz("kategoriOzel", D.ozelKategori);
-      kategoriListesiCiz(); katmanlariYenile(); yardimCiz();
-      bildir("Tüm kategori değişiklikleri sıfırlandı.");
+      yerelYaz("sinirOzel", D.ozelSinir);
+      var se = $("#sinir-editor");
+      if (se) { se.hidden = true; se.innerHTML = ""; }
+      kategoriListesiCiz(); katmanlariYenile(); yardimCiz(); ilceSinirGuncelle();
+      bildir("Tüm görünüm değişiklikleri sıfırlandı.");
     };
     $("#kalici-kopyala").onclick = function () {
       panoyaKopyala($("#kalici-json").value);
@@ -1133,6 +1287,7 @@
   function baslat() {
     temaBaslat();
     D.ozelKategori = yerelOku("kategoriOzel", {}) || {};
+    D.ozelSinir = yerelOku("sinirOzel", {}) || {};
 
     fetch("veri/ozet.json", { cache: "no-cache" })
       .then(function (r) {
@@ -1162,10 +1317,17 @@
           bol.classList.remove("kapali");
           var bilgi = ozet.ilce_bilgi || {};
           var oran = bilgi.tutma === undefined ? null : Math.round(bilgi.tutma * 1000) / 10;
+          var yollu = 0, yolsuz = 0;
+          Object.keys(ozet.ilceler || {}).forEach(function (i) {
+            if (i === "Belirlenemedi") return;
+            if (ozet.ilceler[i].yol_yok) yolsuz++; else yollu++;
+          });
           $("#ilce-not").textContent =
-            "Kaynak: " + sayi(bilgi.adet || 0) + " ilçe sınırı" +
+            sayi(bilgi.adet || 0) + " ilçe sınırı okundu" +
             (bilgi.projeksiyon ? " (" + bilgi.projeksiyon + ")" : "") +
-            (oran !== null ? " · yolların %" + sayi(oran, 1) + "'i bir ilçeye atandı" : "") + ".";
+            (oran !== null ? "; yolların %" + sayi(oran, 1) + "'i bir ilçeye atandı" : "") +
+            ". " + sayi(yollu) + " ilçede kayıtlı yol var" +
+            (yolsuz ? ", " + sayi(yolsuz) + " ilçede henüz yok (soluk gösterilenler)" : "") + ".";
         }
         kategoriListesiCiz(); tipListesiCiz(); ilceListesiCiz();
         kaliteCiz(); yardimCiz(); aramaKur(); aramaCiz(""); dugmeleriKur();

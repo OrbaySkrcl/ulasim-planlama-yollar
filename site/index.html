@@ -80,10 +80,16 @@
       <section class="bolum kapanabilir kapali" id="bolum-ilce" style="display:none">
         <h2>İlçe</h2>
         <div class="icerik">
-          <label class="satir-secim">
-            <input type="checkbox" id="ilce-sinir-goster" checked>
-            <span>İlçe sınırlarını ve adlarını haritada göster</span>
-          </label>
+          <div class="ilce-ust-satir">
+            <label class="satir-secim" style="margin:0">
+              <input type="checkbox" id="ilce-sinir-goster" checked>
+              <span>İlçe sınırlarını haritada göster</span>
+            </label>
+            <button class="kat-duzenle" id="sinir-duzenle"
+                    title="Sınır çizgisinin rengini ve kalınlığını değiştir"
+                    aria-label="Sınır çizgisini düzenle">✎</button>
+          </div>
+          <div class="kat-editor" id="sinir-editor" hidden></div>
           <div class="rozetler" id="ilce-liste"></div>
           <p class="kucuk" id="ilce-not" style="margin:9px 0 0"></p>
         </div>
@@ -161,7 +167,9 @@
       <h4>Haritayı nasıl kullanırım?</h4>
       <ul>
         <li>Soldaki kutucuklarla kategorileri açıp kapatabilirsiniz.</li>
-        <li>Kategorinin yanındaki <strong>✎</strong> ile adını ve çizgi rengini değiştirebilirsiniz.</li>
+        <li>Kategorinin yanındaki <strong>✎</strong> ile adını ve çizgi rengini değiştirebilirsiniz.
+            İlçe bölümündeki <strong>✎</strong> ile de sınır çizgisinin rengini, kalınlığını
+            ve tipini ayarlayabilirsiniz.</li>
         <li>Arama kutusuna yol adı yazıp sonuca tıklayınca harita o yola gider.</li>
         <li>Bir yola tıklayınca adı, tipi, uzunluğu ve koordinatı görünür.</li>
         <li><strong>📏 Mesafe ölç</strong> ile harita üzerinde çok noktalı mesafe ölçebilirsiniz.</li>

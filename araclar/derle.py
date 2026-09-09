@@ -547,6 +547,7 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
             hata("veri/kategoriler.json okunamadı (JSON hatası): %s" % e)
     kategori_ayari = ayar.get("kategoriler", {}) or {}
     site_ayari = ayar.get("site", {}) or {}
+    sinir_ayari = ayar.get("ilce_sinir", {}) or {}
 
     # 2) KML
     kayitlar, bos_geometri = kml_oku(kml_yolu, ondalik)
@@ -647,6 +648,10 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
         a["adet"] += 1
         a["uzunluk_m"] += uzunluk
         a["durumlar"][durum] = a["durumlar"].get(durum, 0) + 1
+
+    # Yolu olmayan ilçeler de listede görünsün (çalışmanın kapsamı belli olsun)
+    for _ad, _kutu, _poly in ilceler:
+        ilce_istatistik.setdefault(_ad, {"adet": 0, "uzunluk_m": 0.0, "durumlar": {}})
 
     # 5) Kategori tanımlarını çöz (ayar > KML rengi > yedek renk)
     kategoriler = {}
@@ -811,10 +816,18 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
         "tipler": {t: {"adet": v["adet"], "uzunluk_km": round(v["uzunluk_m"] / 1000.0, 2)}
                    for t, v in sorted(tip_istatistik.items(), key=lambda x: -x[1]["uzunluk_m"])},
         "ilceler": {i: {"adet": v["adet"], "uzunluk_km": round(v["uzunluk_m"] / 1000.0, 2),
-                        "durumlar": v["durumlar"]}
-                    for i, v in sorted(ilce_istatistik.items(), key=lambda x: -x[1]["uzunluk_m"])},
+                        "durumlar": v["durumlar"], "yol_yok": v["adet"] == 0}
+                    for i, v in sorted(ilce_istatistik.items(),
+                                       key=lambda x: (-x[1]["uzunluk_m"], x[0]))},
         "ilce_verisi_var": bool(ilceler),
         "ilce_bilgi": ilce_bilgi or {},
+        "ilce_sinir": {
+            "renk": sinir_ayari.get("renk") or "#6b7280",
+            "renk_koyu": sinir_ayari.get("renk_koyu") or "#9ca3af",
+            "kalinlik": float(sinir_ayari.get("kalinlik", 1.2) or 1.2),
+            "kesikli": bool(sinir_ayari.get("kesikli", True)),
+            "etiket_goster": bool(sinir_ayari.get("etiket_goster", True)),
+        },
         "uyarilar": uyarilar,
         "depo": depo_bilgisi(),
         "ayar_ham": ayar,
@@ -831,10 +844,12 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
     for durum, k in sorted(kategoriler.items(), key=lambda x: x[1]["sira"]):
         log("   %-42s %5d yol  %9.1f km" % (k["kisa_ad"][:42], k["adet"], k["uzunluk_km"]))
     if ilce_istatistik:
-        log("  İlçe sayısı: %d (%s)"
-            % (len(ilce_istatistik),
-               ", ".join(sorted(ilce_istatistik)[:6]) +
-               ("…" if len(ilce_istatistik) > 6 else "")))
+        yollu = sorted([i for i, v in ilce_istatistik.items()
+                        if v["adet"] and i != "Belirlenemedi"],
+                       key=lambda i: -ilce_istatistik[i]["uzunluk_m"])
+        log("  İlçe: %d sınır, %d ilçede yol var (%s%s)"
+            % (len(ilceler), len(yollu), ", ".join(yollu[:6]),
+               "…" if len(yollu) > 6 else ""))
     for u in uyarilar:
         log("  ! %s: %s" % (u["baslik"], u["mesaj"]))
     log("  " + "-" * 58)

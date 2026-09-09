@@ -223,3 +223,24 @@ Tarayıcı testi: bölüm açık, 30 sınır + 30 etiket haritada, 12 filtre roz
 Bergama seçilince sınır vurgulanıyor (kalınlık 2,6 / #0a5f6a) ve yollar 738,6 km'ye
 düşüyor, aç/kapa anahtarı iki yönde çalışıyor, koyu altlıkta sınır ve etiket
 renkleri değişiyor. Önceki turların tüm testleri de geçiyor. Konsol temiz.
+
+## 3. Tur — ek istekler
+
+- [x] **Sınır çizgisi düzenleyici:** İlçe bölümündeki ✎ ile renk, kalınlık
+      (0,4–6 px kaydırıcı, canlı önizleme), kesikli/düz ve ilçe adlarının
+      görünürlüğü değiştirilebiliyor. Kategori düzenleyicideki mantığın aynısı:
+      anında uygulanıyor, tarayıcıda saklanıyor, "Herkes için kalıcı yap"
+      düğmesi `kategoriler.json` içindeki `ilce_sinir` bölümünü üretiyor.
+- [x] **"Tüm ilçelerin isimleri yok" sorusu:** Filtre yalnızca yolu olan ilçeleri
+      listeliyordu. Artık 30 ilçenin tamamı listede; yolu olmayan 19 ilçe soluk
+      ve tıklanamaz durumda, harita etiketleri de soluk. Panelde şu not var:
+      "11 ilçede kayıtlı yol var, 19 ilçede henüz yok". Yollar eklendikçe
+      kendiliğinden etkinleşiyorlar — kullanıcının tahmini doğruydu.
+
+### Doğrulama
+Rozet sayısı 31 (30 ilçe + Belirlenemedi), 19'u devre dışı, 12'si tıklanabilir;
+30 etiketten 19'u soluk. Düzenleyici: renk `#b45309` ve kalınlık 3,5 px anında
+katman stiline geçti, kesik desen kalınlıkla ölçekleniyor, düz çizgiye geçiş
+`dashArray: null` yapıyor, etiket anahtarı 30 ↔ 0 çalışıyor, üretilen JSON
+geçerli ve `ilce_sinir` bölümünü içeriyor, sıfırlama varsayılana dönüyor,
+koyu altlıkta `renk_koyu` devreye giriyor. Konsol temiz.

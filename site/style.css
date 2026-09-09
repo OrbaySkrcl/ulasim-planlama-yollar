@@ -174,6 +174,28 @@ html[data-tema="koyu"] a { color: var(--vurgu); }
   background: var(--vurgu-soft); border: 1px solid var(--vurgu);
 }
 
+.ilce-ust-satir { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.ilce-ust-satir .satir-secim { flex: 1; min-width: 0; }
+#sinir-duzenle { border-color: var(--cizgi); background: var(--panel-2); }
+
+.rozet-secim.yolsuz { opacity: .45; cursor: default; font-weight: 500; }
+.rozet-secim.yolsuz:hover { background: var(--panel-2); border-color: var(--cizgi); color: var(--yazi-soluk); }
+.ilce-etiket.yolsuz > span { opacity: .55; font-weight: 600; }
+
+/* kaydırıcı (çizgi kalınlığı) */
+.ed-kaydirici { display: flex; align-items: center; gap: 10px; }
+.ed-kaydirici input[type="range"] { flex: 1; accent-color: var(--vurgu); }
+.ed-kaydirici .deger {
+  font-variant-numeric: tabular-nums; font-weight: 700; font-size: 12.5px;
+  min-width: 46px; text-align: right;
+}
+.ed-onizleme {
+  height: 26px; border-radius: 7px; background: var(--panel);
+  border: 1px solid var(--cizgi); margin-top: 9px; display: flex;
+  align-items: center; padding: 0 10px;
+}
+.ed-onizleme > i { display: block; width: 100%; }
+
 /* satır içi onay kutusu */
 .satir-secim {
   display: flex; align-items: center; gap: 9px; cursor: pointer;
