@@ -27,6 +27,10 @@
     hover: null,
     hoverKatman: null,
     olcum: null,
+    ilceVerisi: null,
+    ilceSinir: null,
+    ilceEtiketler: null,
+    ilceGoster: true,
     cizimSiniri: null,
     cizimZoom: null,
     konumIsaret: null,
@@ -201,6 +205,7 @@
       kategoriListesiCiz();
       katmanlariCiz(true);
       yardimCiz();
+      ilceSinirGuncelle();
     }
   }
 
@@ -800,6 +805,74 @@
     $("#perde-kalici").classList.add("acik");
   }
 
+  /* -------------------------------------------------------- ilçe sınırları */
+  function ilceSinirRengi() { return koyuZeminMi() ? "#9ca3af" : "#6b7280"; }
+  function ilceVurguRengi() { return koyuZeminMi() ? "#2dd4bf" : "#0a5f6a"; }
+
+  function ilceSinirStil(ad) {
+    var secimVar = D.seciliIlce.size > 0;
+    if (secimVar && D.seciliIlce.has(ad)) {
+      return { color: ilceVurguRengi(), weight: 2.6, opacity: 1, dashArray: null,
+               fill: true, fillColor: ilceVurguRengi(), fillOpacity: 0.07 };
+    }
+    return { color: ilceSinirRengi(), weight: 1.2, dashArray: "5 4",
+             opacity: secimVar ? 0.3 : 0.7, fill: false };
+  }
+
+  function ilceSinirlariYukle() {
+    if (!D.ozet.ilce_verisi_var) return;
+    fetch("veri/ilceler.geojson", { cache: "no-cache" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (gj) {
+        if (!gj || !gj.features) return;
+        D.ilceVerisi = gj;
+        // Sınırlar yolların ALTINDA kalsın diye ayrı bir katman düzlemi
+        if (!D.harita.getPane("ilcePane")) {
+          D.harita.createPane("ilcePane");
+          D.harita.getPane("ilcePane").style.zIndex = 380;
+        }
+        D.ilceSinir = L.geoJSON(gj, {
+          pane: "ilcePane",
+          renderer: L.canvas({ pane: "ilcePane", padding: 0.3 }),
+          interactive: false,
+          style: function (f) { return ilceSinirStil(f.properties.ad); }
+        });
+        D.ilceEtiketler = L.layerGroup();
+        ilceSinirGuncelle();
+      })
+      .catch(function () {});
+  }
+
+  function ilceEtiketleriCiz() {
+    if (!D.ilceEtiketler || !D.ilceVerisi) return;
+    D.ilceEtiketler.clearLayers();
+    var koyu = koyuZeminMi();
+    D.ilceVerisi.features.forEach(function (f) {
+      var e = f.properties.etiket;
+      if (!e) return;
+      var sinif = "ilce-etiket" + (koyu ? " koyu-zemin" : "") +
+        (D.seciliIlce.has(f.properties.ad) ? " secili" : "");
+      D.ilceEtiketler.addLayer(L.marker([e[1], e[0]], {
+        interactive: false, keyboard: false,
+        icon: L.divIcon({ className: sinif, iconSize: null,
+                          html: "<span>" + kacar(f.properties.ad) + "</span>" })
+      }));
+    });
+  }
+
+  function ilceSinirGuncelle() {
+    if (!D.ilceSinir) return;
+    if (D.ilceGoster) {
+      if (!D.harita.hasLayer(D.ilceSinir)) D.ilceSinir.addTo(D.harita);
+      D.ilceSinir.setStyle(function (f) { return ilceSinirStil(f.properties.ad); });
+      ilceEtiketleriCiz();
+      if (!D.harita.hasLayer(D.ilceEtiketler)) D.ilceEtiketler.addTo(D.harita);
+    } else {
+      if (D.harita.hasLayer(D.ilceSinir)) D.harita.removeLayer(D.ilceSinir);
+      if (D.harita.hasLayer(D.ilceEtiketler)) D.harita.removeLayer(D.ilceEtiketler);
+    }
+  }
+
   /* ---------------------------------------------------------- tip / ilçe */
   function tipListesiCiz() {
     var kap = $("#tip-liste");
@@ -834,6 +907,7 @@
       };
     });
     baslikSayisi("#bolum-ilce", D.seciliIlce.size);
+    ilceSinirGuncelle();
   }
 
   function baslikSayisi(secici, adet) {
@@ -1007,6 +1081,16 @@
       kategoriListesiCiz(); katmanlariYenile();
     };
 
+    var sinirKutu = $("#ilce-sinir-goster");
+    if (sinirKutu) {
+      sinirKutu.checked = D.ilceGoster;
+      sinirKutu.onchange = function () {
+        D.ilceGoster = sinirKutu.checked;
+        yerelYaz("ilceGoster", D.ilceGoster);
+        ilceSinirGuncelle();
+      };
+    }
+
     $("#btn-kalici").onclick = kaliciPencereAc;
     $("#btn-ozel-sifirla").onclick = function () {
       D.ozelKategori = {};
@@ -1071,7 +1155,18 @@
         if (h.i) h.i.forEach(function (i) { D.seciliIlce.add(i); });
         if (h.gorunum) D.harita.setView([h.gorunum.lat, h.gorunum.lng], h.gorunum.z);
 
-        if (ozet.ilce_verisi_var) $("#bolum-ilce").style.display = "";
+        D.ilceGoster = yerelOku("ilceGoster", true) !== false;
+        if (ozet.ilce_verisi_var) {
+          var bol = $("#bolum-ilce");
+          bol.style.display = "";
+          bol.classList.remove("kapali");
+          var bilgi = ozet.ilce_bilgi || {};
+          var oran = bilgi.tutma === undefined ? null : Math.round(bilgi.tutma * 1000) / 10;
+          $("#ilce-not").textContent =
+            "Kaynak: " + sayi(bilgi.adet || 0) + " ilçe sınırı" +
+            (bilgi.projeksiyon ? " (" + bilgi.projeksiyon + ")" : "") +
+            (oran !== null ? " · yolların %" + sayi(oran, 1) + "'i bir ilçeye atandı" : "") + ".";
+        }
         kategoriListesiCiz(); tipListesiCiz(); ilceListesiCiz();
         kaliteCiz(); yardimCiz(); aramaKur(); aramaCiz(""); dugmeleriKur();
 
@@ -1104,6 +1199,7 @@
         });
         izgaraKur();
         katmanlariYenile();
+        ilceSinirlariYukle();
         $("#yukleniyor").style.display = "none";
         if (window.innerWidth <= 860) $("#panel").classList.add("kapali");
         window.IZMIR_HARITA = D;                 // ileri düzey kullanım / hata ayıklama
