@@ -176,7 +176,17 @@ html[data-tema="koyu"] a { color: var(--vurgu); }
 
 .ilce-ust-satir { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .ilce-ust-satir .satir-secim { flex: 1; min-width: 0; }
-#sinir-duzenle { border-color: var(--cizgi); background: var(--panel-2); }
+#ilce-sinir-duzenle, #mahalle-sinir-duzenle {
+  border-color: var(--cizgi); background: var(--panel-2);
+}
+.zoom-notu {
+  margin: 0 0 10px; padding: 8px 10px; border-radius: 8px;
+  background: var(--uyari-arka); color: var(--uyari);
+  font-size: 11.5px; line-height: 1.45;
+}
+.kucuk-arama { margin-bottom: 9px; }
+.kucuk-arama input { padding: 8px 12px 8px 32px; font-size: 13px; }
+.kucuk-arama .buyutec { font-size: 12px; }
 
 .rozet-secim.yolsuz { opacity: .45; cursor: default; font-weight: 500; }
 .rozet-secim.yolsuz:hover { background: var(--panel-2); border-color: var(--cizgi); color: var(--yazi-soluk); }
@@ -213,6 +223,9 @@ html[data-tema="koyu"] a { color: var(--vurgu); }
 }
 .ilce-etiket.koyu-zemin > span {
   color: #e9edf3; text-shadow: 0 0 3px #0b1220, 0 0 3px #0b1220, 0 0 7px #0b1220;
+}
+.ilce-etiket.mahalle > span {
+  font-size: 10px; font-weight: 600; letter-spacing: .02em; text-transform: none;
 }
 .ilce-etiket.secili > span { color: #0a5f6a; font-size: 12.5px; }
 .ilce-etiket.secili.koyu-zemin > span { color: #5eead4; }

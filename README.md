@@ -17,7 +17,7 @@ _(Aşağıdaki "Tek seferlik kurulum" adımını yaptıktan birkaç dakika sonra
 2. [Veriyi güncelleme](#2-veriyi-güncelleme-her-değişiklikte)
 3. [QGIS'ten doğru KML nasıl çıkarılır](#3-qgisten-doğru-kml-nasıl-çıkarılır)
 4. [Kategori adı, renk ve başlıkları değiştirme](#4-kategori-adı-renk-ve-başlıkları-değiştirme)
-5. [İlçe sınırları ekleme (isteğe bağlı)](#5-ilçe-sınırları-ekleme-isteğe-bağlı)
+5. [İlçe ve mahalle sınırları ekleme (isteğe bağlı)](#5-ilçe-ve-mahalle-sınırları-ekleme-isteğe-bağlı)
 6. [Görünümü site üzerinden değiştirme](#6-görünümü-site-üzerinden-değiştirme-kategoriler-ve-ilçe-sınırı)
 7. [Depoyu müdürlük hesabına taşımak](#7-depoyu-müdürlük-hesabına-taşımak)
 8. [Sitede neler var](#8-sitede-neler-var)
@@ -141,20 +141,32 @@ site üzerinden düzenleme yolunu kullanın — hazır JSON'u sizin için üreti
 
 ---
 
-## 5. İlçe sınırları ekleme (isteğe bağlı)
+## 5. İlçe ve mahalle sınırları ekleme (isteğe bağlı)
 
-İzmir **ilçe sınırları** katmanını `veri` klasörüne eklerseniz site üç şey kazanır:
+İdari sınır katmanlarını `veri` klasörüne eklerseniz site şunları kazanır:
 
-- Haritada **ilçe sınırları ve ilçe adları** (aç/kapa anahtarıyla)
-- **İlçe filtresi** — tek tıkla o ilçenin yollarını görmek
-- İlçe bazlı **kilometre istatistikleri**
+- Haritada **sınırlar ve adlar** (her katman için ayrı aç/kapa anahtarı)
+- **Filtre** — tek tıkla o ilçenin/mahallenin yollarını görmek
+- **Kilometre istatistikleri** ve yol bilgi kartında ilçe/mahalle satırı
 
 ### Nasıl eklenir
 
-1. QGIS'te ilçe sınırları katmanını **GeoJSON** olarak dışa aktarın.
-2. Dosyayı **`veri/ilce_sinirlari.geojson`** adıyla `veri` klasörüne yükleyin.
+QGIS'te katmanı **GeoJSON** olarak dışa aktarıp `veri` klasörüne şu adlarla yükleyin:
 
-Hepsi bu. Dosyayı silerseniz özellik kendiliğinden kaybolur.
+| Dosya adı | Ne gelir |
+|-----------|----------|
+| `veri/ilce_sinirlari.geojson` | İlçe sınırları, adları, filtresi |
+| `veri/mahalle_sinirlari.geojson` | Mahalle sınırları, adları, filtresi |
+
+Hepsi bu. Bir dosyayı silerseniz o özellik kendiliğinden kaybolur.
+
+> **Mahalle katmanı hakkında iki not**
+> - İzmir'de 1.300'ü aşkın mahalle var; il genelinde hepsini birden çizmek yolları
+>   görünmez hâle getirir. Bu yüzden mahalle sınırları **z11 yakınlıktan itibaren**,
+>   adları **z12'den itibaren** çizilir. Bu eşikleri site üzerinden değiştirebilirsiniz
+>   (6. bölüm). Uzaktayken panelde bunu hatırlatan bir not görünür.
+> - Aynı adlı mahalleler (İzmir'de 19 ayrı "Atatürk" var) filtrede ilçesiyle ayırt
+>   edilir — "Atatürk (Bergama)" gibi. Haritadaki etikette yalnızca kısa ad yazar.
 
 > **Dosyayı yalnızca `veri` klasörüne koyun.** Depo kökündeki veya başka bir
 > klasördeki kopyalar okunmaz.
@@ -171,6 +183,11 @@ Hepsi bu. Dosyayı silerseniz özellik kendiliğinden kaybolur.
   Bu sayede KML dönüşümlerinde bozulmuş alan adları (`__L__E_AD_` gibi) veya
   `NAME` alanında ad yerine nesne numarası bulunması sorun olmaz.
   Adlar Türkçe kurallarıyla başlık biçimine çevrilir (`ALİAĞA` → `Aliağa`).
+
+> **Dosya boyutu:** QGIS/KML dönüşümlerinden gelen `description` alanı dosyanın
+> %90'ını kaplayabilir (mahalle dosyası bu yüzden 19 MB). Derleme bu alanı kullanmaz;
+> isterseniz QGIS'te dışa aktarmadan önce gereksiz alanları çıkararak dosyayı
+> yaklaşık 10 kat küçültebilirsiniz. Gerekli değil, sadece depoyu hafif tutar.
 
 ### Bir şey ters giderse
 
@@ -205,12 +222,18 @@ düğmesi tarayıcınızdaki değişiklikleri geri alır.
 > Renk seçerken çok koyu bir ton seçerseniz, site koyu altlık haritalarda
 > (Koyu / Uydu) o rengi otomatik olarak açar; yollar görünmez kalmaz.
 
-### İlçe sınır çizgisi
+### Sınır çizgileri (ilçe ve mahalle)
 
-İlçe bölümündeki **✎** simgesi sınır çizgisi için aynı şeyi yapar:
-**renk**, **kalınlık** (0,4–6 px), **kesikli/düz** ve **ilçe adlarının görünmesi**.
-Bu ayarlar da aynı "Herkes için kalıcı yap" düğmesiyle kalıcı hâle gelir
-(`kategoriler.json` içindeki `ilce_sinir` bölümüne yazılır).
+İlçe ve Mahalle bölümlerindeki **✎** simgeleri sınır çizgileri için aynı şeyi yapar:
+
+- **Renk** ve **kalınlık** (0,4–6 px)
+- **Kesikli / düz** çizgi
+- **Adların görünmesi** ve adların görünmeye başladığı yakınlık
+- **Sınırların görünmeye başladığı yakınlık** (kalabalık mahalle katmanı için)
+
+İki katmanın ayarları birbirinden bağımsızdır ve aynı "Herkes için kalıcı yap"
+düğmesiyle kalıcı hâle gelir (`kategoriler.json` içindeki `ilce_sinir` ve
+`mahalle_sinir` bölümlerine yazılır).
 
 ---
 
@@ -281,10 +304,11 @@ güncellemeniz iyi olur.
   hiçbiri üyelik/anahtar gerektirmez
 - **Kategori aç/kapat** — her kategorinin yol sayısı ve toplam kilometresiyle
 - **Yol tipi filtresi** (Cadde, Sokak, Bulvar, Küme Evler, Otoyol, Meydan)
-- **İlçe sınırları, adları ve filtresi** (ilçe sınırları dosyası eklendiğinde) —
-  sınır çizgisinin rengi, kalınlığı ve tipi site üzerinden ayarlanabilir;
-  **henüz yolu olmayan ilçeler soluk gösterilir**, böylece çalışmanın kapsamı
-  bir bakışta görülür
+- **İlçe ve mahalle sınırları, adları ve filtreleri** (ilgili dosyalar eklendiğinde) —
+  her iki çizginin rengi, kalınlığı, tipi ve görünme yakınlığı site üzerinden
+  ayarlanabilir; **henüz yolu olmayan alanlar soluk gösterilir**, böylece çalışmanın
+  kapsamı bir bakışta görülür. Mahalle listesinde arama kutusu vardır ve liste
+  seçili ilçeye göre daralır.
 - **Yol adı arama** — Türkçe karaktere duyarsız (`sarikoy` yazınca `SARIKÖY` bulunur)
 - **Yola tıklayınca** ad, tip, kategori, uzunluk, kayıt no, koordinat; koordinatı kopyalama
   ve Google Maps'te açma; fareyle üzerine gelince yol vurgulanır
@@ -310,6 +334,7 @@ veri/                       ← SİZİN DOKUNACAĞINIZ KLASÖR
   ibb_yollar.kml            QGIS'ten çıkan katman (üzerine yazın)
   kategoriler.json          kategori adları, renkler, site başlıkları
   ilce_sinirlari.geojson    (isteğe bağlı) ilçe sınırları / filtresi için
+  mahalle_sinirlari.geojson (isteğe bağlı) mahalle sınırları / filtresi için
 
 site/                       web sitesinin kaynağı (HTML/CSS/JS)
 araclar/derle.py            KML'i siteye çeviren betik
@@ -331,7 +356,9 @@ tasks/                      çalışma planı ve notlar
 | "Tanımsız durum kodu" uyarısı | KML'de `veri/kategoriler.json`'da tanımlı olmayan bir `DURUM` var. 4. bölümdeki gibi ekleyin. |
 | İlçe sınırları geldi ama tüm yollar "Belirlenemedi" | Sınırlar başka bir bölgeye ait olabilir. Sol panelin **Veri kalitesi uyarıları** bölümünü ve İlçe bölümündeki eşleşme oranını okuyun. |
 | İlçe filtresi hiç çıkmadı | Dosya adı tam olarak `ilce_sinirlari.geojson` ve **`veri` klasöründe** olmalı. |
-| Bazı ilçeler soluk ve tıklanamıyor | O ilçelerde henüz kayıtlı yol yok. KML'e o bölgenin yolları eklendiğinde kendiliğinden etkinleşirler. |
+| Bazı ilçeler/mahalleler soluk ve tıklanamıyor | Orada henüz kayıtlı yol yok. KML'e o bölgenin yolları eklendiğinde kendiliğinden etkinleşirler. |
+| Mahalle sınırları görünmüyor | Varsayılan olarak z11 yakınlıktan itibaren çizilirler; panelde bunu söyleyen bir not çıkar. Eşiği Mahalle bölümündeki **✎** ile değiştirebilirsiniz. |
+| Mahalle filtresinde aradığım mahalle yok | Liste, aramasız durumda yalnızca yolu olan mahalleleri (ve seçili ilçeyi) gösterir. Arama kutusuna yazınca bütün mahalleler aranır. |
 | Renkler QGIS'tekiyle aynı değil | Renkler `kategoriler.json`'dan gelir. Oradaki `renk` değerini `null` yaparsanız KML'deki renk kullanılır. |
 | Site adresi 404 veriyor | Yayın henüz tamamlanmamış olabilir; **Actions** sekmesinden son çalışmayı kontrol edin. Sürekli 404 ise 1. bölümdeki elle açma adımlarını uygulayın. |
 
@@ -344,6 +371,12 @@ tasks/                      çalışma planı ve notlar
   Yani site, dış bir kütüphane sunucusu çökse bile açılır.
 - **Veri boyutu.** 6.600 yol parçası ≈ 2,1 MB GeoJSON; sunucu sıkıştırmasıyla
   tarayıcıya ≈ 0,4 MB iner. Koordinatlar 6 haneye yuvarlanır (≈ 11 cm hassasiyet).
+- **Sınır katmanları** tek bir ortak kodla yürütülür; ilçe ve mahalle yalnızca
+  varsayılanlarıyla ayrılır. Her katman kendi Leaflet katman düzleminde (ilçe 380,
+  mahalle 375) yolların altında çizilir, görüş alanı dışı kırpılır ve tüm alanlar
+  tek bir birleşik çokgen nesnesinde toplanır.
+- **Yol → alan eşlemesi** mekânsal ızgara indeksiyle yapılır; 1.314 mahalle için
+  doğrusal arama yavaş kalırdı.
 - **Projeksiyon dönüşümü** ters Transverse Mercator formülleriyle, standart
   kütüphane dışında bir bağımlılık olmadan yapılır; doğru projeksiyon tahminle
   değil, yol/ilçe çakışma oranı ölçülerek seçilir.

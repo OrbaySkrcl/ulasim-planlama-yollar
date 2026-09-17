@@ -44,6 +44,16 @@
     "kesikli": true,
     "etiket_goster": true
   },
+  "mahalle_sinir": {
+    "_aciklama": "Mahalle sinir cizgisinin gorunumu. etiket_min_zoom: mahalle adlarinin gorunmeye basladigi yakinlastirma seviyesi.",
+    "renk": "#b45309",
+    "renk_koyu": "#f59e0b",
+    "kalinlik": 0.8,
+    "kesikli": true,
+    "etiket_goster": true,
+    "etiket_min_zoom": 12,
+    "cizim_min_zoom": 11
+  },
   "site": {
     "baslik": "İzmir Köy Yolları Devir Haritası",
     "alt_baslik": "İl Özel İdaresi'nden Büyükşehir Belediyesi'ne geçen mahalle ve köy yolları",

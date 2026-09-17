@@ -331,7 +331,7 @@ def tr_baslik(metin):
     return " ".join(sonuc) or str(metin)
 
 
-def ilce_ad_alani(ozellikler):
+def sinir_ad_alani(ozellikler):
     """İlçe adının hangi alanda olduğunu otomatik bulur.
 
     QGIS/KML dönüşümlerinde alan adı `__L__E_AD_` gibi bozulabiliyor ya da
@@ -340,7 +340,8 @@ def ilce_ad_alani(ozellikler):
     if not ozellikler:
         return None
     bilinen = {"ilce", "ilceadi", "ilcead", "ilceler", "adi", "ad", "name",
-               "district", "ilcesi", "ilceismi"}
+               "district", "ilcesi", "ilceismi", "mahalle", "mahalleadi",
+               "mah", "mahad", "koy", "koyadi", "adinumaras", "adinumarasi"}
     anahtarlar = set()
     for f in ozellikler:
         anahtarlar.update((f.get("properties") or {}).keys())
@@ -398,7 +399,7 @@ def _donustur(poligonlar, prm):
             for poly in poligonlar]
 
 
-def _ilce_kaydi(ad, poligonlar):
+def _sinir_kaydi(ad, poligonlar):
     xs, ys = [], []
     for poly in poligonlar:
         for halka in poly:
@@ -415,13 +416,13 @@ def _tutma_orani(kayitlar, ornekler):
         return 0.0
     tutan = 0
     for x, y in ornekler:
-        if ilce_bul(kayitlar, x, y):
+        if sinir_bul(kayitlar, x, y):
             tutan += 1
     return tutan / len(ornekler)
 
 
-def ilce_yukle(yol, yol_ornekleri=None):
-    """İlçe sınırlarını okur; gerekirse projeksiyonu otomatik çözer.
+def sinir_yukle(yol, yol_ornekleri=None, etiket="İlçe"):
+    """Sınır katmanını (ilçe / mahalle) okur; gerekirse projeksiyonu otomatik çözer.
 
     Döndürür: (kayitlar, bilgi)
       kayitlar : [(ad, bbox, poligonlar)] — enlem/boylam
@@ -432,26 +433,26 @@ def ilce_yukle(yol, yol_ornekleri=None):
     try:
         gj = json.loads(yol.read_text(encoding="utf-8"))
     except Exception as e:
-        log("  Uyarı: ilçe sınırları okunamadı (%s); ilçe etiketi eklenmeyecek." % e)
+        log("  Uyarı: %s sınırları okunamadı (%s); etiket eklenmeyecek." % (etiket, e))
         return [], {"hata": "Dosya geçerli bir GeoJSON değil: %s" % e}
 
     ozellikler = [f for f in (gj.get("features") or []) if _poligonlari_al(f)]
     if not ozellikler:
-        log("  Uyarı: ilçe sınırları dosyasında alan (poligon) bulunamadı.")
+        log("  Uyarı: %s sınırları dosyasında alan (poligon) bulunamadı." % etiket)
         return [], {"hata": "Dosyada poligon geometrisi yok. Katmanı QGIS'ten "
                             "'Poligon' katmanı olarak GeoJSON kaydettiğinizden emin olun."}
 
-    ad_alani = ilce_ad_alani(ozellikler)
+    ad_alani = sinir_ad_alani(ozellikler)
     adlar = [tr_baslik(str((f.get("properties") or {}).get(ad_alani) or "").strip())
              or "Bilinmiyor" for f in ozellikler]
-    log("  İlçe sınırları: %d alan, ad alanı '%s' (ör. %s)."
-        % (len(ozellikler), ad_alani, ", ".join(adlar[:3])))
+    log("  %s sınırları: %d alan, ad alanı '%s' (ör. %s)."
+        % (etiket, len(ozellikler), ad_alani, ", ".join(adlar[:3])))
 
     ham = [_poligonlari_al(f) for f in ozellikler]
     ornekler = yol_ornekleri or []
 
     if cografi_mi(ozellikler):
-        kayitlar = [k for k in (_ilce_kaydi(adlar[i], ham[i]) for i in range(len(ham))) if k]
+        kayitlar = [k for k in (_sinir_kaydi(adlar[i], ham[i]) for i in range(len(ham))) if k]
         oran = _tutma_orani(kayitlar, ornekler)
         log("  Koordinatlar enlem/boylam (WGS84). Yol eşleşmesi: %%%.1f" % (oran * 100))
         return kayitlar, {"adet": len(kayitlar), "ad_alani": ad_alani,
@@ -461,7 +462,7 @@ def ilce_yukle(yol, yol_ornekleri=None):
     # --- Projeksiyonlu: doğru CRS'i, yolların ilçelere düşme oranına göre seç ---
     log("  Koordinatlar projeksiyonlu; doğru projeksiyon otomatik aranıyor…")
     if not ornekler:
-        log("  Uyarı: karşılaştırma için yol örneği yok; ilçe etiketi eklenmeyecek.")
+        log("  Uyarı: karşılaştırma için yol örneği yok; etiket eklenmeyecek.")
         return [], {"hata": "Projeksiyon belirlenemedi."}
 
     yol_kutu = (min(p[0] for p in ornekler), min(p[1] for p in ornekler),
@@ -494,7 +495,7 @@ def ilce_yukle(yol, yol_ornekleri=None):
     en_iyi = None
     for ad, prm in finalistler:
         try:
-            kayitlar = [k for k in (_ilce_kaydi(adlar[i], _donustur(ham[i], prm))
+            kayitlar = [k for k in (_sinir_kaydi(adlar[i], _donustur(ham[i], prm))
                                     for i in range(len(ham))) if k]
         except (ValueError, ZeroDivisionError, OverflowError):
             continue
@@ -504,7 +505,7 @@ def ilce_yukle(yol, yol_ornekleri=None):
             en_iyi = (oran, ad, kayitlar)
 
     if en_iyi is None or en_iyi[0] < 0.5:
-        log("  Uyarı: ilçe sınırları yolların üzerine oturmuyor; ilçe etiketi eklenmeyecek.")
+        log("  Uyarı: %s sınırları yolların üzerine oturmuyor; etiket eklenmeyecek." % etiket)
         return [], {"hata": "Sınırların projeksiyonu çözülemedi (en iyi eşleşme %%%.1f). "
                             "Dosyayı QGIS'ten EPSG:4326 (WGS 84) olarak yeniden kaydedin."
                             % ((en_iyi[0] if en_iyi else 0) * 100)}
@@ -515,8 +516,8 @@ def ilce_yukle(yol, yol_ornekleri=None):
                       "projeksiyon": ad, "tutma": round(oran, 4)}
 
 
-def ilce_bul(ilceler, x, y):
-    for ad, (x0, y0, x1, y1), poligonlar in ilceler:
+def sinir_bul(kayitlar, x, y):
+    for ad, (x0, y0, x1, y1), poligonlar in kayitlar:
         if not (x0 <= x <= x1 and y0 <= y <= y1):
             continue
         for poly in poligonlar:
@@ -527,6 +528,121 @@ def ilce_bul(ilceler, x, y):
                 if not delik:
                     return ad
     return None
+
+
+class SinirIndeksi:
+    """Nokta -> alan adı araması için basit mekânsal ızgara.
+
+    1.300'ü aşan mahalle sınırında doğrusal arama yavaş kaldığı için
+    her alanın sınır kutusu ızgara hücrelerine kaydedilir."""
+
+    def __init__(self, kayitlar, hucre=0.02):
+        self.kayitlar = kayitlar
+        self.hucre = hucre
+        self.tablo = {}
+        for i, (_ad, (x0, y0, x1, y1), _poly) in enumerate(kayitlar):
+            for cx in range(int(math.floor(x0 / hucre)), int(math.floor(x1 / hucre)) + 1):
+                for cy in range(int(math.floor(y0 / hucre)), int(math.floor(y1 / hucre)) + 1):
+                    self.tablo.setdefault((cx, cy), []).append(i)
+
+    def bul(self, x, y):
+        aday = self.tablo.get((int(math.floor(x / self.hucre)),
+                               int(math.floor(y / self.hucre))))
+        if not aday:
+            return None
+        for i in aday:
+            ad, (x0, y0, x1, y1), poligonlar = self.kayitlar[i]
+            if not (x0 <= x <= x1 and y0 <= y <= y1):
+                continue
+            for poly in poligonlar:
+                if poly and nokta_poligonda(x, y, poly[0]) and \
+                        not any(nokta_poligonda(x, y, h) for h in poly[1:]):
+                    return ad
+        return None
+
+
+def sinir_etiket_noktasi(poligonlar):
+    """Alanın adını yazacağımız nokta: en büyük halkanın ağırlık merkezi."""
+    enBuyuk = max((poly[0] for poly in poligonlar if poly), key=len, default=None)
+    if not enBuyuk:
+        return None
+    return (round(sum(p[0] for p in enBuyuk) / len(enBuyuk), 5),
+            round(sum(p[1] for p in enBuyuk) / len(enBuyuk), 5))
+
+
+def sinir_geojson_yaz(kayitlar, hedef, tolerans=0.00035, ustKatman=None, kisaAdlar=None):
+    """Sınırları haritada çizmek için sadeleştirilmiş kopya üretir."""
+    oz = []
+    for ad, _kutu, poligonlar in kayitlar:
+        sade = []
+        for poly in poligonlar:
+            halkalar = []
+            for halka in poly:
+                h = cizgi_sadelestir([(round(pt[0], 5), round(pt[1], 5)) for pt in halka],
+                                     tolerans)
+                if len(h) >= 4:
+                    if h[0] != h[-1]:
+                        h.append(h[0])
+                    halkalar.append([[a, b] for a, b in h])
+            if halkalar:
+                sade.append(halkalar)
+        if not sade:
+            continue
+        ozellik = {"ad": ad}
+        if kisaAdlar and kisaAdlar.get(ad) and kisaAdlar[ad] != ad:
+            ozellik["kisa"] = kisaAdlar[ad]
+        etiket = sinir_etiket_noktasi(poligonlar)
+        if etiket:
+            ozellik["etiket"] = [etiket[0], etiket[1]]
+            if ustKatman:
+                ozellik["ust"] = ustKatman.bul(etiket[0], etiket[1]) or "Belirlenemedi"
+        oz.append({"type": "Feature", "properties": ozellik,
+                   "geometry": {"type": "MultiPolygon", "coordinates": sade}})
+    hedef.write_text(json.dumps({"type": "FeatureCollection", "features": oz},
+                                ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    return len(oz)
+
+
+def sinir_gorunumu(ayar, renk, renk_koyu, kalinlik, etiket_min_zoom, cizim_min_zoom=0):
+    """Sınır çizgisinin görünüm ayarlarını varsayılanlarla birleştirir."""
+    a = ayar or {}
+    return {
+        "renk": a.get("renk") or renk,
+        "renk_koyu": a.get("renk_koyu") or renk_koyu,
+        "kalinlik": float(a.get("kalinlik", kalinlik) or kalinlik),
+        "kesikli": bool(a.get("kesikli", True)),
+        "etiket_goster": bool(a.get("etiket_goster", True)),
+        "etiket_min_zoom": int(a.get("etiket_min_zoom", etiket_min_zoom) or 0),
+        "cizim_min_zoom": int(a.get("cizim_min_zoom", cizim_min_zoom) or 0),
+    }
+
+
+def benzersiz_adlar(kayitlar, ustKatman=None):
+    """Aynı adlı alanları ayırt eder: 'Atatürk' -> 'Atatürk (Bergama)'."""
+    sayac = {}
+    for ad, _k, _p in kayitlar:
+        sayac[ad] = sayac.get(ad, 0) + 1
+    kullanilan = set()
+    yeni = []
+    ust_adlari = []
+    kisa_adlar = {}
+    for ad, kutu, poligonlar in kayitlar:
+        ust = None
+        if ustKatman:
+            nokta = sinir_etiket_noktasi(poligonlar)
+            if nokta:
+                ust = ustKatman.bul(nokta[0], nokta[1])
+        anahtar = ad if sayac[ad] == 1 else "%s (%s)" % (ad, ust or "?")
+        temel = anahtar
+        n = 2
+        while anahtar in kullanilan:
+            anahtar = "%s %d" % (temel, n)
+            n += 1
+        kullanilan.add(anahtar)
+        kisa_adlar[anahtar] = ad
+        yeni.append((anahtar, kutu, poligonlar))
+        ust_adlari.append(ust or "Belirlenemedi")
+    return yeni, ust_adlari, kisa_adlar
 
 
 # --------------------------------------------------------------------------
@@ -547,19 +663,32 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
             hata("veri/kategoriler.json okunamadı (JSON hatası): %s" % e)
     kategori_ayari = ayar.get("kategoriler", {}) or {}
     site_ayari = ayar.get("site", {}) or {}
-    sinir_ayari = ayar.get("ilce_sinir", {}) or {}
 
     # 2) KML
     kayitlar, bos_geometri = kml_oku(kml_yolu, ondalik)
 
-    # 3) İlçeler (opsiyonel) — projeksiyon denetimi için yol orta noktalarını ver
+    # 3) Sınır katmanları (opsiyonel) — projeksiyon denetimi için yol orta noktaları
     orta_noktalar = []
     for k in kayitlar:
         p0 = k["parcalar"][0]
         orta_noktalar.append(tuple(p0[len(p0) // 2]))
     adim = max(1, len(orta_noktalar) // 600)
-    ilceler, ilce_bilgi = ilce_yukle(veri_dizini / "ilce_sinirlari.geojson",
-                                     orta_noktalar[::adim])
+    ornek_noktalar = orta_noktalar[::adim]
+
+    ilceler, ilce_bilgi = sinir_yukle(veri_dizini / "ilce_sinirlari.geojson",
+                                      ornek_noktalar, "İlçe")
+    ilce_indeks = SinirIndeksi(ilceler) if ilceler else None
+
+    mahalleler, mahalle_bilgi = sinir_yukle(veri_dizini / "mahalle_sinirlari.geojson",
+                                            ornek_noktalar, "Mahalle")
+    mahalle_ustu = {}
+    mahalle_kisa = {}
+    if mahalleler:
+        # Aynı adlı mahalleleri ilçesiyle ayırt et (ör. 19 farklı "Atatürk")
+        mahalleler, ust_adlari, mahalle_kisa = benzersiz_adlar(mahalleler, ilce_indeks)
+        for (ad, _k, _p), ust in zip(mahalleler, ust_adlari):
+            mahalle_ustu[ad] = ust
+    mahalle_indeks = SinirIndeksi(mahalleler) if mahalleler else None
 
     # 4) Özellikleri üret
     ozellikler = []
@@ -567,6 +696,7 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
     istatistik = {}          # durum -> {adet, uzunluk}
     tip_istatistik = {}
     ilce_istatistik = {}
+    mahalle_istatistik = {}
     adlar = {}
     isimsiz = []
     cok_kisa = []
@@ -626,10 +756,17 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
             "durum": durum,
             "uzunluk_m": round(uzunluk, 1),
         }
-        if ilceler:
-            il = ilce_bul(ilceler, orta[0], orta[1])
-            prop["ilce"] = il or "Belirlenemedi"
-            ist = ilce_istatistik.setdefault(prop["ilce"], {"adet": 0, "uzunluk_m": 0.0, "durumlar": {}})
+        if ilce_indeks:
+            prop["ilce"] = ilce_indeks.bul(orta[0], orta[1]) or "Belirlenemedi"
+            ist = ilce_istatistik.setdefault(prop["ilce"],
+                                             {"adet": 0, "uzunluk_m": 0.0, "durumlar": {}})
+            ist["adet"] += 1
+            ist["uzunluk_m"] += uzunluk
+            ist["durumlar"][durum] = ist["durumlar"].get(durum, 0) + 1
+        if mahalle_indeks:
+            prop["mahalle"] = mahalle_indeks.bul(orta[0], orta[1]) or "Belirlenemedi"
+            ist = mahalle_istatistik.setdefault(prop["mahalle"],
+                                                {"adet": 0, "uzunluk_m": 0.0, "durumlar": {}})
             ist["adet"] += 1
             ist["uzunluk_m"] += uzunluk
             ist["durumlar"][durum] = ist["durumlar"].get(durum, 0) + 1
@@ -649,9 +786,11 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
         a["uzunluk_m"] += uzunluk
         a["durumlar"][durum] = a["durumlar"].get(durum, 0) + 1
 
-    # Yolu olmayan ilçeler de listede görünsün (çalışmanın kapsamı belli olsun)
+    # Yolu olmayan alanlar da listede görünsün (çalışmanın kapsamı belli olsun)
     for _ad, _kutu, _poly in ilceler:
         ilce_istatistik.setdefault(_ad, {"adet": 0, "uzunluk_m": 0.0, "durumlar": {}})
+    for _ad, _kutu, _poly in mahalleler:
+        mahalle_istatistik.setdefault(_ad, {"adet": 0, "uzunluk_m": 0.0, "durumlar": {}})
 
     # 5) Kategori tanımlarını çöz (ayar > KML rengi > yedek renk)
     kategoriler = {}
@@ -713,18 +852,18 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
             "mesaj": "%d kayıt 1 metreden kısa. Genellikle yanlışlıkla oluşmuş artık çizgilerdir."
                      % len(cok_kisa),
             "adet": len(cok_kisa), "ornek": cok_kisa[:12]})
-    if ilce_bilgi and ilce_bilgi.get("hata"):
-        uyarilar.append({
-            "baslik": "İlçe sınırları kullanılamadı",
-            "mesaj": ilce_bilgi["hata"],
-            "adet": 1, "ornek": []})
-    elif ilce_bilgi and ilce_bilgi.get("tutma", 1) < 0.95:
-        uyarilar.append({
-            "baslik": "İlçe eşleşmesi düşük",
-            "mesaj": "Yolların yalnızca %%%.1f'i bir ilçe sınırının içine düştü. "
-                     "İlçe sınırları katmanı eksik olabilir ya da farklı bir "
-                     "projeksiyonda kaydedilmiş olabilir." % (ilce_bilgi["tutma"] * 100),
-            "adet": 1, "ornek": []})
+    for _etiket, _bilgi in (("İlçe", ilce_bilgi), ("Mahalle", mahalle_bilgi)):
+        if _bilgi and _bilgi.get("hata"):
+            uyarilar.append({
+                "baslik": "%s sınırları kullanılamadı" % _etiket,
+                "mesaj": _bilgi["hata"], "adet": 1, "ornek": []})
+        elif _bilgi and _bilgi.get("tutma", 1) < 0.95:
+            uyarilar.append({
+                "baslik": "%s eşleşmesi düşük" % _etiket,
+                "mesaj": "Yolların yalnızca %%%.1f'i bir %s sınırının içine düştü. "
+                         "Katman eksik olabilir ya da farklı bir projeksiyonda "
+                         "kaydedilmiş olabilir." % (_bilgi["tutma"] * 100, _etiket.lower()),
+                "adet": 1, "ornek": []})
     tanimsiz = [d for d in kategoriler if not kategoriler[d]["tanimli"]]
     if tanimsiz:
         uyarilar.append({
@@ -757,36 +896,16 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
     with gj_yolu.open("w", encoding="utf-8") as f:
         json.dump(geojson, f, ensure_ascii=False, separators=(",", ":"))
 
-    # İlçe sınırlarını haritada çizmek için sadeleştirilmiş kopya
+    # Sınırları haritada çizmek için sadeleştirilmiş kopyalar
     if ilceler:
-        tol = 0.00035                       # ~40 m
-        oz = []
-        for ad, kutu, poligonlar in ilceler:
-            sade = []
-            for poly in poligonlar:
-                halkalar = []
-                for halka in poly:
-                    h = cizgi_sadelestir([(round(pt[0], 5), round(pt[1], 5))
-                                          for pt in halka], tol)
-                    if len(h) >= 4:
-                        if h[0] != h[-1]:
-                            h.append(h[0])
-                        halkalar.append([[a, b] for a, b in h])
-                if halkalar:
-                    sade.append(halkalar)
-            if not sade:
-                continue
-            # etiket noktası: en büyük halkanın ağırlık merkezi
-            enBuyuk = max((h[0] for h in sade), key=len)
-            ex = sum(pt[0] for pt in enBuyuk) / len(enBuyuk)
-            ey = sum(pt[1] for pt in enBuyuk) / len(enBuyuk)
-            oz.append({"type": "Feature",
-                       "properties": {"ad": ad,
-                                      "etiket": [round(ex, 5), round(ey, 5)]},
-                       "geometry": {"type": "MultiPolygon", "coordinates": sade}})
-        (veri_cikti / "ilceler.geojson").write_text(
-            json.dumps({"type": "FeatureCollection", "features": oz},
-                       ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        n = sinir_geojson_yaz(ilceler, veri_cikti / "ilceler.geojson")
+        log("  ilceler.geojson    : %d alan, %.2f MB"
+            % (n, (veri_cikti / "ilceler.geojson").stat().st_size / 1048576))
+    if mahalleler:
+        n = sinir_geojson_yaz(mahalleler, veri_cikti / "mahalleler.geojson",
+                              ustKatman=ilce_indeks, kisaAdlar=mahalle_kisa)
+        log("  mahalleler.geojson : %d alan, %.2f MB"
+            % (n, (veri_cikti / "mahalleler.geojson").stat().st_size / 1048576))
 
     # orijinal KML'i indirilebilir yap
     shutil.copyfile(kml_yolu, veri_cikti / "ibb_yollar.kml")
@@ -821,13 +940,17 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
                                        key=lambda x: (-x[1]["uzunluk_m"], x[0]))},
         "ilce_verisi_var": bool(ilceler),
         "ilce_bilgi": ilce_bilgi or {},
-        "ilce_sinir": {
-            "renk": sinir_ayari.get("renk") or "#6b7280",
-            "renk_koyu": sinir_ayari.get("renk_koyu") or "#9ca3af",
-            "kalinlik": float(sinir_ayari.get("kalinlik", 1.2) or 1.2),
-            "kesikli": bool(sinir_ayari.get("kesikli", True)),
-            "etiket_goster": bool(sinir_ayari.get("etiket_goster", True)),
-        },
+        "ilce_sinir": sinir_gorunumu(ayar.get("ilce_sinir"), "#6b7280", "#9ca3af", 1.2, 0),
+        "mahalleler": {m: {"adet": v["adet"],
+                           "uzunluk_km": round(v["uzunluk_m"] / 1000.0, 2),
+                           "yol_yok": v["adet"] == 0,
+                           "ilce": mahalle_ustu.get(m, "")}
+                       for m, v in sorted(mahalle_istatistik.items(),
+                                          key=lambda x: (-x[1]["uzunluk_m"], x[0]))},
+        "mahalle_verisi_var": bool(mahalleler),
+        "mahalle_bilgi": mahalle_bilgi or {},
+        "mahalle_sinir": sinir_gorunumu(ayar.get("mahalle_sinir"),
+                                        "#b45309", "#f59e0b", 0.8, 12, 11),
         "uyarilar": uyarilar,
         "depo": depo_bilgisi(),
         "ayar_ham": ayar,
@@ -843,13 +966,16 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
     log("  Toplam %d yol parçası, %.1f km" % (len(ozellikler), toplam_uzunluk / 1000.0))
     for durum, k in sorted(kategoriler.items(), key=lambda x: x[1]["sira"]):
         log("   %-42s %5d yol  %9.1f km" % (k["kisa_ad"][:42], k["adet"], k["uzunluk_km"]))
-    if ilce_istatistik:
-        yollu = sorted([i for i, v in ilce_istatistik.items()
+    for _etiket, _kayitlar, _ist in (("İlçe", ilceler, ilce_istatistik),
+                                     ("Mahalle", mahalleler, mahalle_istatistik)):
+        if not _ist:
+            continue
+        yollu = sorted([i for i, v in _ist.items()
                         if v["adet"] and i != "Belirlenemedi"],
-                       key=lambda i: -ilce_istatistik[i]["uzunluk_m"])
-        log("  İlçe: %d sınır, %d ilçede yol var (%s%s)"
-            % (len(ilceler), len(yollu), ", ".join(yollu[:6]),
-               "…" if len(yollu) > 6 else ""))
+                       key=lambda i: -_ist[i]["uzunluk_m"])
+        log("  %s: %d sınır, %d tanesinde yol var (%s%s)"
+            % (_etiket, len(_kayitlar), len(yollu), ", ".join(yollu[:5]),
+               "…" if len(yollu) > 5 else ""))
     for u in uyarilar:
         log("  ! %s: %s" % (u["baslik"], u["mesaj"]))
     log("  " + "-" * 58)

@@ -17,7 +17,11 @@ Site 2–3 dakika içinde kendiliğinden güncellenir.
 |-------|--------------|
 | `ibb_yollar.kml` | QGIS'ten çıkan yol katmanı. **Üzerine yazın.** |
 | `kategoriler.json` | Kategori adları, renkleri, sırası, ilçe sınır çizgisinin görünümü ve site başlıkları. |
-| `ilce_sinirlari.geojson` | *(isteğe bağlı)* Eklerseniz haritaya ilçe sınırları, adları ve ilçe filtresi gelir. Projeksiyonu ve ilçe adı alanı otomatik algılanır. |
+| `ilce_sinirlari.geojson` | *(isteğe bağlı)* Eklerseniz haritaya ilçe sınırları, adları ve ilçe filtresi gelir. |
+| `mahalle_sinirlari.geojson` | *(isteğe bağlı)* Aynısının mahalle karşılığı. Mahalle sınırları z11, adları z12 yakınlıktan itibaren çizilir. |
+
+Her iki sınır dosyasının da **projeksiyonu ve ad alanı otomatik algılanır**;
+EPSG:4326'ya çevirmeniz veya alan adlarını düzeltmeniz gerekmez.
 
 > Dosyaları **yalnızca bu klasöre** koyun. Depo kökündeki veya başka klasörlerdeki
 > kopyalar okunmaz.

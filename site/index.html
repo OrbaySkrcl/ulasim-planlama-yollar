@@ -85,13 +85,38 @@
               <input type="checkbox" id="ilce-sinir-goster" checked>
               <span>İlçe sınırlarını haritada göster</span>
             </label>
-            <button class="kat-duzenle" id="sinir-duzenle"
+            <button class="kat-duzenle" id="ilce-sinir-duzenle"
                     title="Sınır çizgisinin rengini ve kalınlığını değiştir"
                     aria-label="Sınır çizgisini düzenle">✎</button>
           </div>
-          <div class="kat-editor" id="sinir-editor" hidden></div>
+          <div class="kat-editor" id="ilce-sinir-editor" hidden></div>
+          <p class="zoom-notu" id="ilce-zoom-notu" hidden></p>
           <div class="rozetler" id="ilce-liste"></div>
           <p class="kucuk" id="ilce-not" style="margin:9px 0 0"></p>
+        </div>
+      </section>
+
+      <section class="bolum kapanabilir kapali" id="bolum-mahalle" style="display:none">
+        <h2>Mahalle</h2>
+        <div class="icerik">
+          <div class="ilce-ust-satir">
+            <label class="satir-secim" style="margin:0">
+              <input type="checkbox" id="mahalle-sinir-goster" checked>
+              <span>Mahalle sınırlarını haritada göster</span>
+            </label>
+            <button class="kat-duzenle" id="mahalle-sinir-duzenle"
+                    title="Mahalle sınır çizgisinin rengini ve kalınlığını değiştir"
+                    aria-label="Mahalle sınır çizgisini düzenle">✎</button>
+          </div>
+          <div class="kat-editor" id="mahalle-sinir-editor" hidden></div>
+          <p class="zoom-notu" id="mahalle-zoom-notu" hidden></p>
+          <div class="arama-kutu kucuk-arama">
+            <span class="buyutec">🔍</span>
+            <input id="mahalle-arama" type="search" placeholder="Mahalle ara"
+                   autocomplete="off" aria-label="Mahalle ara">
+          </div>
+          <div class="rozetler" id="mahalle-liste"></div>
+          <p class="kucuk" id="mahalle-not" style="margin:9px 0 0"></p>
         </div>
       </section>
 

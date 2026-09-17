@@ -244,3 +244,48 @@ katman stiline geçti, kesik desen kalınlıkla ölçekleniyor, düz çizgiye ge
 `dashArray: null` yapıyor, etiket anahtarı 30 ↔ 0 çalışıyor, üretilen JSON
 geçerli ve `ilce_sinir` bölümünü içeriyor, sıfırlama varsayılana dönüyor,
 koyu altlıkta `renk_koyu` devreye giriyor. Konsol temiz.
+
+---
+
+# 4. Tur — Mahalle sınırları (17.09.2026)
+
+## İstek
+`izmir_mahalleler.geojson` (19 MB, 1.314 mahalle) eklensin; ilçe sınırlarındaki
+gibi düzenleme seçenekleri olsun.
+
+## Verinin durumu
+- Zaten **WGS84 (CRS84)** — projeksiyon dönüşümü gerekmedi, otomatik algılandı.
+- Ad alanı `name`; içerik sezgisi doğru alanı seçti (`description` alanı
+  `http://` içerdiği için elendi).
+- **133 mahalle adı tekrar ediyor** (ATATÜRK 19 kez, CUMHURİYET 15 kez).
+  Mahalle dosyasında ilçe bilgisi yok; ilçe sınırlarından türetilip
+  "Atatürk (Bergama)" gibi benzersiz anahtar üretildi.
+
+## Yapılanlar
+- [x] Sınır katmanı kodu (hem derleme hem site tarafında) tek ortak koda
+      genelleştirildi; ilçe ve mahalle yalnızca varsayılanlarıyla ayrılıyor
+- [x] Mekânsal ızgara indeksi: 1.314 poligonda doğrusal arama yavaş kalıyordu
+- [x] Yollara `mahalle` alanı; bilgi kartında, filtrede ve istatistiklerde
+- [x] Mahalle sınır katmanı: ayrı katman düzlemi, görüş alanı kırpması,
+      tüm alanların tek birleşik çokgende toplanması
+- [x] Mahalle bölümü: aç/kapa, ✎ düzenleyici, arama kutusu, rozet listesi
+- [x] Düzenleyiciye **çizim yakınlık eşiği** kaydırıcısı eklendi
+- [x] Etiketlerde kısa ad (haritada "Kapukaya", filtrede "Kapukaya (Bergama)")
+- [x] Paylaşım bağlantısına mahalle seçimi (`m=`) eklendi
+
+## Ölçüm ve kararlar
+- Sadeleştirme 40 m: 358.450 nokta → 62.845 (%18). Çıktı 1,40 MB / **gzip 406 KB**.
+- **İl genelinde 1.314 sınırı birden çizmek yolları görünmez yapıyor** (ekran
+  görüntüsüyle görüldü). Bu yüzden mahalle çizimi z11, adlar z12 eşiğine bağlandı;
+  eşiğin altındayken panelde bunu söyleyen bir not çıkıyor ("sessiz görünmezlik" yok).
+- 6.647 yolun eşleşmesi: %99,8; 375 mahallede kayıtlı yol var.
+
+## Doğrulama
+1.314 alan yüklendi, z9,5'te çizilmiyor + not görünüyor, z12'de çiziliyor ve
+24 etiket kısa adla çıkıyor; arama "zeytin" → 8 sonuç; Zeytindağ seçilince
+110,5 km / 9 yol adı, vurgu katmanı ve hash (`m=Zeytindağ`) doğru; bilgi kartında
+Mahalle satırı var; düzenleyicide renk/kalınlık/eşik anında uygulanıyor ve
+localStorage'a tür bazlı yazılıyor; "kalıcı yap" JSON'u `mahalle_sinir` bölümünü
+üretiyor; aç/kapa iki yönde çalışıyor ve ilçe katmanını etkilemiyor.
+Önceki turların tüm testleri (kategori düzenleyici, mesafe aracı, arama, altlıklar,
+ilçe katmanı) yeni mimariyle geçiyor. Konsol temiz.

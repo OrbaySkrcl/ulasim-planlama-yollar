@@ -112,3 +112,28 @@ Bu dosya, aynı hataların tekrarlanmaması için tutulur.
   kurulumda değiştiği için güvenilmez.
 - Türkçe başlık biçimi için `str.title()` kullanılamaz: `I`→`ı`, `İ`→`i`
   eşlemesi elle yapılmalı (ALİAĞA → Aliağa).
+
+## 4. Tur — mahalle sınırları (17.09.2026)
+
+- **Yoğunluk, doğruluktan önce gelen bir tasarım sorunudur.** 1.314 mahalle sınırı
+  teknik olarak sorunsuz çizildi ama il genelinde yolları tamamen boğdu. Ekran
+  görüntüsüne bakmasaydım "çalışıyor" diye teslim edecektim. Çözüm: katman başına
+  **çizim yakınlık eşiği** (mahalle z11, adlar z12) ve eşiğin altındayken panelde
+  görünür bir not — gizlemek ile sessizce çalışmamak arasındaki fark bu nottur.
+- **Aynı adlar veride kuraldır, istisna değil.** İzmir'de 19 ayrı "Atatürk"
+  mahallesi var. Benzersiz anahtar üst katmandan (ilçe) türetilmeli; ama haritada
+  her etikete "(Bergama)" yazmak okunaksız. Ayrım: **anahtar benzersiz, etiket kısa.**
+- **İkinci benzer özellik gelince genelleştir.** İlçe kodunu kopyalayıp mahalleye
+  uyarlamak yerine tek ortak koda çevirmek (tür tanımı + ortak fonksiyonlar)
+  hem düzenleyiciyi hem kırpmayı hem etiketleri tek yerde tuttu.
+- **Leaflet'te çok sayıda poligonu tek nesnede topla.** `L.polygon` çok-poligon
+  dizisi kabul ediyor; 1.314 ayrı katman yerine 2 nesne (normal + vurgulu)
+  projeksiyon maliyetini nesne başına değil nokta başına indiriyor.
+- **Ayrı pane = güvenilir z-sırası.** Sınırların yolların altında kalması için
+  `createPane` + `zIndex` şart; aynı tuvalde çizim sırası her yeniden kurulumda
+  değişiyor.
+- Nokta-poligon araması 1.300+ alanda doğrusal yapılamaz; sınır kutularını
+  ızgara hücrelerine kaydeden basit bir indeks derlemeyi 7,5 saniyede tutuyor.
+- KML kökenli GeoJSON'larda `description` alanı dosyanın %90'ı olabiliyor
+  (19 MB'lık dosyanın geometrisi ~2 MB). Derleme kullanmıyor; kullanıcıya
+  isteğe bağlı bir küçültme yolu olarak söylemek yeterli.
