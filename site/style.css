@@ -134,6 +134,7 @@ html[data-tema="koyu"] a { color: var(--vurgu); }
 }
 .kat .ad { flex: 1; font-weight: 550; font-size: 13px; line-height: 1.3; min-width: 0; }
 .kat .ad em { color: var(--vurgu); font-style: normal; font-weight: 800; }
+.kat .sayi.bekliyor { color: var(--vurgu); font-style: italic; }
 .kat .sayi { font-size: 11.5px; color: var(--yazi-soluk); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .kat-duzenle {
   border: 1px solid transparent; background: transparent; color: var(--yazi-soluk);

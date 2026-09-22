@@ -1,6 +1,6 @@
 {
-  "_aciklama_koyu": "renk_koyu: koyu temada kullanilacak renk. Yazilmazsa 'renk' kullanilir.",
   "_aciklama": "Bu dosya sitedeki kategori adlarini, renklerini ve siralamasini belirler. QGIS'teki DURUM alanindaki her deger burada bir satirdir. Renk null birakilirsa KML dosyasindaki renk otomatik kullanilir. Yeni bir DURUM degeri eklerseniz burada tanimlamaniz yeterlidir; tanimlamazsaniz site otomatik olarak 'Durum X' adiyla gosterir.",
+  "_aciklama_koyu": "renk_koyu: koyu temada kullanilacak renk. Yazilmazsa 'renk' kullanilir.",
   "kategoriler": {
     "1": {
       "ad": "Büyükşehir'e geçen köy yolları",
@@ -34,7 +34,34 @@
       "aciklama": "KGM sorumluluğundaki devlet yolları, il yolları ve otoyollar.",
       "sira": 4,
       "varsayilan_acik": true
+    },
+    "5": {
+      "ad": "İlçe belediyesine ait yollar",
+      "kisa_ad": "İlçe belediyesi",
+      "renk": "#06b6d4",
+      "aciklama": "Sorumluluğu ilçe belediyelerinde olan yollar.",
+      "sira": 5,
+      "varsayilan_acik": false,
+      "cizim_min_zoom": 14
+    },
+    "0": {
+      "ad": "Boş yollar",
+      "kisa_ad": "Boş",
+      "renk": "#22c55e",
+      "aciklama": "DURUM bilgisi girilmemiş, henüz sınıflandırılmamış yollar.",
+      "sira": 6,
+      "varsayilan_acik": false,
+      "cizim_min_zoom": 14
     }
+  },
+  "yol_tipleri": {
+    "_aciklama": "TIP1 alanindaki sayisal kodlarin karsiliklari. Kodlanmamis (metin) degerler oldugu gibi kullanilir.",
+    "1": "Sokak",
+    "2": "Cadde",
+    "3": "Bulvar",
+    "4": "Meydan",
+    "5": "Küme Evler",
+    "7": "Otoyol"
   },
   "ilce_sinir": {
     "_aciklama": "Ilce sinir cizgisinin gorunumu. renk_koyu, koyu altlik haritalarda (Koyu/Uydu) kullanilir. Site uzerinden de degistirilebilir.",
@@ -52,12 +79,13 @@
     "kesikli": true,
     "etiket_goster": true,
     "etiket_min_zoom": 12,
-    "cizim_min_zoom": 11
+    "cizim_min_zoom": 12
   },
   "site": {
     "baslik": "İzmir Köy Yolları Devir Haritası",
     "alt_baslik": "İl Özel İdaresi'nden Büyükşehir Belediyesi'ne geçen mahalle ve köy yolları",
     "kurum": "Ulaşım Planlama",
     "not": "Bu harita çalışma amaçlı hazırlanmıştır, resmî bir belge niteliği taşımaz. Veriler güncellenmeye devam etmektedir."
-  }
+  },
+  "_aciklama_zoom": "cizim_min_zoom: kategorinin cizilmeye basladigi yakinlastirma seviyesi. Cok kalabalik kategorilerde il genelinde harita okunmaz hale gelmesin diye kullanilir. 0 = her zaman ciz."
 }

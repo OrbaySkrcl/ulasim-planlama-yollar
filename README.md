@@ -99,6 +99,19 @@ Derleme zaten 6 haneye yuvarlıyor, yani kalitede hiçbir kayıp olmaz.
 > Kaynak dosya 25 MB'ı geçerse yayınlanan siteye kopyalanmaz (Pages'i şişirmemek
 > için); **Veriyi indir** menüsünde GeoJSON sürümü sunulmaya devam eder.
 
+### Veri büyüdükçe: kategori başına yükleme ve yakınlık eşiği
+
+Veri 40 bin yolu aştığında hepsini birden tarayıcıya yüklemek ağır gelir. Site bunu
+iki şekilde çözer, ikisi de `veri/kategoriler.json` üzerinden ayarlanabilir:
+
+- **Kategori başına ayrı dosya.** Site yalnızca **açık** kategorileri indirir.
+  Kapalı bir kategoriyi işaretlediğinizde verisi o anda indirilir (satırda
+  "yükleniyor…" yazar). `varsayilan_acik: false` ile bir kategoriyi kapalı başlatırsınız.
+- **Çizim yakınlık eşiği.** Kalabalık kategoriler (ilçe belediyesi yolları, boş yollar)
+  il genelinde çizilmez; `cizim_min_zoom` değerinden itibaren görünür. Eşiğin
+  altındayken panelde bunu söyleyen bir not çıkar — yani "çalışmıyor" sanmazsınız.
+  Bu eşiği kategorinin **✎** düzenleyicisinden de değiştirebilirsiniz.
+
 ---
 
 ## 3. QGIS'ten doğru KML nasıl çıkarılır
@@ -134,6 +147,23 @@ Hâlihazırdaki karşılıklar:
 | `2` | 🔴 kırmızı | Durumu belirsiz yollar |
 | `3` | ⚫ siyah | Karayolları Genel Müdürlüğü yolları |
 | `4` | 🔵 mavi | Halihazırda Büyükşehir'e ait yollar |
+| `5` | 🩵 turkuaz | İlçe belediyesine ait yollar |
+| `0` | 🟢 yeşil | DURUM girilmemiş (boş) yollar |
+
+`TIP1` alanı sayısal kod olabilir; karşılıkları `veri/kategoriler.json` içindeki
+`yol_tipleri` bölümünde tanımlıdır ve oradan düzenlenebilir:
+
+| Kod | Karşılığı |
+|-----|-----------|
+| `1` | Sokak |
+| `2` | Cadde |
+| `3` | Bulvar |
+| `4` | Meydan |
+| `5` | Küme Evler |
+| `7` | Otoyol |
+
+Alanda kod yerine düz metin (`Cadde`, `Sokak` …) yazıyorsa o da olduğu gibi kabul edilir;
+ikisi bir arada bulunabilir.
 
 Yeni bir `DURUM` değeri (örneğin `5`) eklerseniz site onu **otomatik olarak fark eder**,
 veriyi kaybetmez ve "Tanımsız durum kodu: 5" adıyla gösterir. Adını ve rengini vermek için
@@ -398,6 +428,11 @@ tasks/                      çalışma planı ve notlar
 
 ## 11. Teknik notlar
 
+- **Çizim birimi yol değil, yol parçasıdır.** Çok parçalı kayıtların parçaları ilin
+  iki ucunda olabildiği için kaydın sınır kutusuyla kırpma işe yaramıyordu; ölçüldü:
+  z17'de 4.641 yol / 279.936 nokta "görünür" sayılıyordu, parça bazında 809 yol /
+  6.246 nokta (45 kat). Ayrıca uzaktan bakarken kırılma noktaları yakınlığa göre
+  seyreltilir (z<11'de 8'de 1).
 - **Büyük kaynak dosyalar.** KML akış hâlinde (streaming) okunur; her kayıt
   işlendikten sonra bellekten düşürülür, böylece 100 MB'lık dosyalarda da bellek
   sabit kalır. Sıkıştırılmış dosyalar açılmadan, doğrudan içinden okunur.

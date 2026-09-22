@@ -634,7 +634,7 @@ def sinir_bul(kayitlar, x, y):
     return None
 
 
-def baskin_alan(indeks, parcalar, ornek=21):
+def baskin_alan(indeks, parcalar, uzunluk_m=None, ornek=21):
     """Yolun geçtiği alanlardan en çok noktasını barındıranı döndürür.
 
     Birleştirilmiş (dissolve edilmiş) yollar birden fazla mahalleden geçebilir;
@@ -645,6 +645,9 @@ def baskin_alan(indeks, parcalar, ornek=21):
         noktalar.extend(parca)
     if not noktalar:
         return None
+    if uzunluk_m is not None:
+        # Kısa yollar için 3 örnek yeter; 40 bin yolda bu, derlemeyi kat kat hızlandırır
+        ornek = min(ornek, max(3, int(uzunluk_m / 300)))
     n = len(noktalar)
     if n <= ornek:
         secilen = noktalar
@@ -793,6 +796,8 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
         except Exception as e:
             hata("veri/kategoriler.json okunamadı (JSON hatası): %s" % e)
     kategori_ayari = ayar.get("kategoriler", {}) or {}
+    tip_ayari = {k: v for k, v in (ayar.get("yol_tipleri", {}) or {}).items()
+                 if not k.startswith("_")}
     site_ayari = ayar.get("site", {}) or {}
 
     # 2) KML
@@ -848,7 +853,8 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
         adsiz = not ad
         if adsiz:
             ad = "İsimsiz yol"
-        tip = (oz.get("TIP1") or oz.get("TIP") or "").strip() or "Belirtilmemiş"
+        tip = (oz.get("TIP1") or oz.get("TIP") or "").strip()
+        tip = tip_ayari.get(tip, tip) or "Belirtilmemiş"
         fid = (oz.get("fid") or oz.get("FID") or "").strip()
         try:
             fid = str(int(float(fid)))
@@ -888,14 +894,14 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
             "uzunluk_m": round(uzunluk, 1),
         }
         if ilce_indeks:
-            prop["ilce"] = baskin_alan(ilce_indeks, k["parcalar"]) or "Belirlenemedi"
+            prop["ilce"] = baskin_alan(ilce_indeks, k["parcalar"], uzunluk) or "Belirlenemedi"
             ist = ilce_istatistik.setdefault(prop["ilce"],
                                              {"adet": 0, "uzunluk_m": 0.0, "durumlar": {}})
             ist["adet"] += 1
             ist["uzunluk_m"] += uzunluk
             ist["durumlar"][durum] = ist["durumlar"].get(durum, 0) + 1
         if mahalle_indeks:
-            prop["mahalle"] = baskin_alan(mahalle_indeks, k["parcalar"]) or "Belirlenemedi"
+            prop["mahalle"] = baskin_alan(mahalle_indeks, k["parcalar"], uzunluk) or "Belirlenemedi"
             ist = mahalle_istatistik.setdefault(prop["mahalle"],
                                                 {"adet": 0, "uzunluk_m": 0.0, "durumlar": {}})
             ist["adet"] += 1
@@ -947,6 +953,7 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
             "renk_koyu": tanim.get("renk_koyu") or None,
             "sira": tanim.get("sira", 900 + int(durum) if durum.isdigit() else 999),
             "varsayilan_acik": tanim.get("varsayilan_acik", True),
+            "cizim_min_zoom": int(tanim.get("cizim_min_zoom", 0) or 0),
             "tanimli": bilinen,
             "kml_renkleri": sorted(kategori_renkleri.get(durum, {}).keys()),
             "adet": istatistik[durum]["adet"],
@@ -968,8 +975,8 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
     if durumsuz:
         uyarilar.append({
             "baslik": "DURUM alanı boş kayıtlar",
-            "mesaj": "%d kaydın DURUM alanı boş. Bunlar haritada 'Tanımsız durum kodu: 0' "
-                     "olarak gösterilir." % len(durumsuz),
+            "mesaj": "%d kaydın DURUM alanı boş; bu kayıtlar 0 (boş yollar) kategorisine "
+                     "yazıldı. QGIS'te doğru durumu girerek düzeltebilirsiniz." % len(durumsuz),
             "adet": len(durumsuz), "ornek": durumsuz[:12]})
     if isimsiz:
         uyarilar.append({
@@ -1017,15 +1024,28 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
     veri_cikti = cikti_dizini / "veri"
     veri_cikti.mkdir(parents=True, exist_ok=True)
 
-    geojson = {
-        "type": "FeatureCollection",
-        "name": "izmir_yollar",
-        "crs": {"type": "name", "properties": {"name": "urn:ogc:def:crs:OGC:1.3:CRS84"}},
-        "features": ozellikler,
-    }
+    def _geojson_yaz(hedef, ozler):
+        with hedef.open("w", encoding="utf-8") as f:
+            json.dump({"type": "FeatureCollection", "name": "izmir_yollar",
+                       "crs": {"type": "name",
+                               "properties": {"name": "urn:ogc:def:crs:OGC:1.3:CRS84"}},
+                       "features": ozler}, f, ensure_ascii=False, separators=(",", ":"))
+        return hedef.stat().st_size
+
+    # Tamamı tek dosyada (indirme için)
     gj_yolu = veri_cikti / "yollar.geojson"
-    with gj_yolu.open("w", encoding="utf-8") as f:
-        json.dump(geojson, f, ensure_ascii=False, separators=(",", ":"))
+    _geojson_yaz(gj_yolu, ozellikler)
+
+    # Kategori başına ayrı dosya: site yalnızca açık kategorileri indirir.
+    # 40 bin yolun tamamını birden yüklemek tarayıcıyı gereksiz yorar.
+    kategori_dosyalari = {}
+    duruma_gore = {}
+    for oz in ozellikler:
+        duruma_gore.setdefault(oz["properties"]["durum"], []).append(oz)
+    for durum, liste in duruma_gore.items():
+        ad = "yollar-%s.geojson" % re.sub(r"[^0-9A-Za-z_-]", "_", durum)
+        boyut = _geojson_yaz(veri_cikti / ad, liste)
+        kategori_dosyalari[durum] = {"dosya": ad, "boyut_mb": round(boyut / 1048576, 2)}
 
     # Sınırları haritada çizmek için sadeleştirilmiş kopyalar
     if ilceler:
@@ -1072,7 +1092,8 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
         "toplam_yol": len(ozellikler),
         "toplam_km": round(toplam_uzunluk / 1000.0, 2),
         "bbox": [round(minx, 6), round(miny, 6), round(maxx, 6), round(maxy, 6)],
-        "kategoriler": kategoriler,
+        "kategoriler": {d: dict(k, **kategori_dosyalari.get(d, {}))
+                        for d, k in kategoriler.items()},
         "tipler": {t: {"adet": v["adet"], "uzunluk_km": round(v["uzunluk_m"] / 1000.0, 2)}
                    for t, v in sorted(tip_istatistik.items(), key=lambda x: -x[1]["uzunluk_m"])},
         "ilceler": {i: {"adet": v["adet"], "uzunluk_km": round(v["uzunluk_m"] / 1000.0, 2),
@@ -1120,7 +1141,9 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
     for u in uyarilar:
         log("  ! %s: %s" % (u["baslik"], u["mesaj"]))
     log("  " + "-" * 58)
-    log("  yollar.geojson : %.2f MB" % ozet["veri_boyut_mb"])
+    log("  yollar.geojson : %.2f MB (tamamı, indirme için)" % ozet["veri_boyut_mb"])
+    for durum, bilgi in sorted(kategori_dosyalari.items()):
+        log("    %-22s %6.2f MB" % (bilgi["dosya"], bilgi["boyut_mb"]))
     log("  Çıktı klasörü  : %s" % cikti_dizini)
     log("")
     return ozet

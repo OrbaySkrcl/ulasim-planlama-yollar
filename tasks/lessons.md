@@ -156,3 +156,28 @@ Bu dosya, aynı hataların tekrarlanmaması için tutulur.
   yerine hata vermek doğru — sessizce eski veriyle yayınlamak en kötüsü.
 - Uzantıya göre dosya arayan bir kural yazarken **aynı klasördeki ayar
   dosyalarını dışlamayı unutma** (`kategoriler.json` yol verisi sanıldı).
+
+## 6. Tur — tam yol ağı (22.09.2026)
+
+- **Sınır kutusuyla kırpma, çok parçalı kayıtlarda işe yaramaz.** Kaydın parçaları
+  ilin iki ucundaysa kutusu yarım ili kaplar ve her zaman "görünür" çıkar. Ölçüm:
+  40.859 kaydın 6.591'inde (%25) kutu >11 km ve bunlar noktaların %52'sini tutuyordu.
+  Çizim/tıklama birimini **parça** yapmak z17'de 45 kat kazandırdı.
+- **Yavaşlığın nedenini katman katman ölç.** "Yollar yavaş" sanıyordum; katmanları
+  tek tek kapatınca z10→11'de payların yollar 213 ms, mahalle sınırı 130 ms,
+  ilçe 65 ms, karolar 93 ms olduğu çıktı. Mahalle eşiğini bir kademe yükseltmek
+  tek satırla 130 ms kazandırdı.
+- **Uzaktan tam çözünürlük çizmek israf.** z10'da bir piksel ~150 m, noktalar ~50 m
+  aralıklı. Yakınlığa göre seyreltme (z<11'de 8'de 1) görüntüyü bozmadan üçte bire
+  indiriyor. Douglas-Peucker'lı ayrı dosyalar üretmeye gerek kalmadı.
+- **Veri büyüyünce "hepsini yükle" sürdürülemez.** Kategori başına dosya + istendiğinde
+  indirme, açılışı 31 MB yerine 4,85 MB'ta tutuyor. Kullanıcı kapalı kategoriyi
+  işaretlediğinde indirmek, hem hızlı açılış hem tam erişim demek.
+- **Kalabalık katmanı sessizce gizleme, söyle.** Yakınlık eşiğiyle gizlenen kategori
+  için panelde neden gizlendiğini ve ne yapılacağını yazan bir not şart; yoksa
+  kullanıcı "çalışmıyor" diye geri gelir (3. turda mahalle sınırlarında öğrenilmişti).
+- Sistemde `unrar`/`7z` yoksa **libarchive zaten kuruludur**; ctypes ile bağlanmak
+  RAR/7z/zip açmaya yetiyor, paket kurmaya gerek yok.
+- Aramada, adı kapalı bir kategoride de geçen yola tıklanınca o kategorinin 15 MB'ını
+  indirmek sürpriz olur. Önce **açık** kategorilerde ara; yalnızca hiçbirinde yoksa
+  kapalıyı aç.

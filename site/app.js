@@ -17,6 +17,10 @@
     ozet: null,
     ozellikler: [],
     durumaGore: {},
+    parcalar: [],              // çizim/tıklama birimi: yol parçaları
+    parcaDurum: {},            // durum -> parça kayıtları
+    yuklenen: {},              // durum -> true (kategori verisi indirildi mi)
+    yukleniyor: {},            // durum -> Promise
     katmanlar: {},
     izgara: null,
     seciliKategori: new Set(),
@@ -150,6 +154,12 @@
     return k ? k.ad : "Durum " + durum;
   }
 
+  function katCizimEsigi(durum) {
+    var o = D.ozelKategori[durum] || {};
+    if (o.cizim_min_zoom !== undefined && o.cizim_min_zoom !== null) return o.cizim_min_zoom;
+    return (D.ozet.kategoriler[durum] || {}).cizim_min_zoom || 0;
+  }
+
   function katRenk(durum) {
     var o = D.ozelKategori[durum];
     if (o && o.renk) return koyuZeminMi() ? koyuIcinAyarla(o.renk) : o.renk;
@@ -244,26 +254,63 @@
   }
 
   /* ------------------------------------------------------- ızgara indeksi */
-  function izgaraKur() {
-    D.izgara = new Map();
+  // LatLng dizileri ilk kullanıldığında üretilir; 1,1 milyon noktalık veride
+  // her şeyi baştan nesneye çevirmek gereksiz bellek harcar.
+  function parcaLatLng(q) {
+    if (!q.ll) {
+      q.ll = q.p.map(function (c) { return L.latLng(c[1], c[0]); });
+    }
+    return q.ll;
+  }
+
+  function yolLatLng(f) {
+    return f.kayitlar.map(parcaLatLng);
+  }
+
+  // Uzaktan bakarken her kırılma noktasını çizmenin anlamı yok: z10'da bir
+  // piksel ~150 m, noktalar ise ~50 m aralıklı. Yakınlığa göre seyreltiyoruz.
+  function seyreltmeOrani(z) {
+    if (z >= 15) return 1;
+    if (z >= 13) return 2;
+    if (z >= 11) return 4;
+    return 8;
+  }
+
+  function parcaLatLngSeyrek(q, oran) {
+    if (oran <= 1 || q.p.length <= 4) return parcaLatLng(q);
+    var anahtar = "ll" + oran;
+    if (!q[anahtar]) {
+      var p = q.p, out = [];
+      for (var i = 0; i < p.length; i += oran) out.push(L.latLng(p[i][1], p[i][0]));
+      var son = p[p.length - 1];
+      var sonEklenen = out[out.length - 1];
+      if (!sonEklenen || sonEklenen.lat !== son[1] || sonEklenen.lng !== son[0]) {
+        out.push(L.latLng(son[1], son[0]));
+      }
+      q[anahtar] = out;
+    }
+    return q[anahtar];
+  }
+
+  function izgaraEkle(yeniler) {
+    if (!D.izgara) D.izgara = new Map();
     var ekle = function (x, y, i) {
       var a = Math.round(x / IZGARA) + "|" + Math.round(y / IZGARA);
       var s = D.izgara.get(a);
       if (!s) { s = []; D.izgara.set(a, s); }
       if (s[s.length - 1] !== i) s.push(i);
     };
-    D.ozellikler.forEach(function (f, i) {
-      f.parcalar.forEach(function (p) {
-        for (var j = 0; j < p.length; j++) {
-          ekle(p[j][0], p[j][1], i);
-          if (j > 0) {                       // uzun kenarlarda ara noktalar
-            var a = p[j - 1], b = p[j];
-            var dx = b[0] - a[0], dy = b[1] - a[1];
-            var n = Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) / (IZGARA * 0.5));
-            for (var k = 1; k < n; k++) ekle(a[0] + dx * k / n, a[1] + dy * k / n, i);
-          }
+    yeniler.forEach(function (q) {
+      var i = q.sira, p = q.p;
+      for (var j = 0; j < p.length; j++) {
+        ekle(p[j][0], p[j][1], i);
+        if (j > 0) {                         // uzun kenarlarda ara noktalar
+          var a = p[j - 1], b = p[j];
+          var dx = b[0] - a[0], dy = b[1] - a[1];
+          var n = Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) / (IZGARA * 0.5));
+          for (var k = 1; k < n; k++) ekle(a[0] + dx * k / n, a[1] + dy * k / n, i);
         }
-      });
+      }
     });
   }
 
@@ -285,16 +332,17 @@
     var enIyi = null, enIyiD = esik || TIKLAMA_ESIGI;
     var aday = yakinAdaylar(latlng.lng, latlng.lat);
     for (var n = 0; n < aday.length; n++) {
-      var f = D.ozellikler[aday[n]];
+      var kayit = D.parcalar[aday[n]];
+      if (!kayit) continue;
+      var f = kayit.f;
       if (!D.seciliKategori.has(f.properties.durum) || !gecerliMi(f.properties)) continue;
-      for (var q = 0; q < f.ll.length; q++) {
-        var parca = f.ll[q];
-        for (var j = 1; j < parca.length; j++) {
-          var a = D.harita.latLngToContainerPoint(parca[j - 1]);
-          var b = D.harita.latLngToContainerPoint(parca[j]);
-          var d = L.LineUtil.pointToSegmentDistance(p, a, b);
-          if (d < enIyiD) { enIyiD = d; enIyi = f; }
-        }
+      if (D.harita.getZoom() < katCizimEsigi(f.properties.durum)) continue;
+      var parca = parcaLatLng(kayit);
+      for (var j = 1; j < parca.length; j++) {
+        var a = D.harita.latLngToContainerPoint(parca[j - 1]);
+        var b = D.harita.latLngToContainerPoint(parca[j]);
+        var d = L.LineUtil.pointToSegmentDistance(p, a, b);
+        if (d < enIyiD) { enIyiD = d; enIyi = f; }
       }
     }
     return enIyi;
@@ -374,15 +422,20 @@
     });
 
     // Sıra numarası büyük olan altta kalsın diye tersten ekliyoruz
+    var simdikiZoom = D.harita.getZoom();
+    var zoomGizli = [];
     kategoriSiralari().reverse().forEach(function (durum) {
       if (!D.seciliKategori.has(durum)) return;
+      var esik = katCizimEsigi(durum);
+      if (simdikiZoom < esik) { zoomGizli.push({ durum: durum, esik: esik }); return; }
       var cizgiler = [];
-      var liste = D.durumaGore[durum] || [];
+      var liste = D.parcaDurum[durum] || [];
+      var oran = seyreltmeOrani(simdikiZoom);
       for (var n = 0; n < liste.length; n++) {
-        var f = liste[n], b = f.bbox;
+        var q = liste[n], b = q.b;
         if (b[0] > dogu || b[2] < bati || b[1] > kuzey || b[3] < guney) continue;
-        if (!gecerliMi(f.properties)) continue;
-        for (var i = 0; i < f.ll.length; i++) cizgiler.push(f.ll[i]);
+        if (!gecerliMi(q.f.properties)) continue;
+        cizgiler.push(parcaLatLngSeyrek(q, oran));
       }
       if (!cizgiler.length) return;
       D.katmanlar[durum] = L.polyline(cizgiler, {
@@ -399,7 +452,20 @@
 
     if (D.vurgu) { D.vurgu.setStyle({ weight: w + 9 }); D.vurgu.bringToBack(); }
     if (D.hoverKatman) { D.harita.removeLayer(D.hoverKatman); D.hoverKatman = null; D.hover = null; }
+    kategoriZoomNotu(zoomGizli, simdikiZoom);
     hashYaz();
+  }
+
+  // Kalabalık kategoriler uzaktan çizilmez; kullanıcı bunu bilsin
+  function kategoriZoomNotu(gizliler, zoom) {
+    var el = $("#kategori-zoom-notu");
+    if (!el) return;
+    if (!gizliler.length) { el.hidden = true; return; }
+    var enDusuk = Math.min.apply(null, gizliler.map(function (g) { return g.esik; }));
+    el.hidden = false;
+    el.textContent = "🔍 " + gizliler.map(function (g) { return katAd(g.durum); }).join(", ") +
+      ": çok kalabalık olduğu için z" + enDusuk + " yakınlıktan itibaren çiziliyor " +
+      "(şu an z" + sayi(zoom, 1) + "). Yakınlaştırın ya da ✎ ile eşiği değiştirin.";
   }
 
   function tipTablosuYaz(tipSayaci) {
@@ -444,7 +510,7 @@
   }
 
   function ortaNokta(f) {
-    var parca = f.ll[0];
+    var parca = yolLatLng(f)[0];
     return parca[Math.floor(parca.length / 2)];
   }
 
@@ -472,7 +538,7 @@
     if (D.hoverKatman) { D.harita.removeLayer(D.hoverKatman); D.hoverKatman = null; }
     D.harita.getContainer().style.cursor = f ? "pointer" : "";
     if (!f) return;
-    D.hoverKatman = L.polyline(f.ll, {
+    D.hoverKatman = L.polyline(yolLatLng(f), {
       renderer: D.cizer, color: katRenk(f.properties.durum),
       weight: agirlik() + 4, opacity: 1, interactive: false,
       lineCap: "round", lineJoin: "round"
@@ -590,6 +656,21 @@
   }
 
   function adaGit(ad) {
+    // Aranan yol henüz indirilmemiş bir kategoride olabilir
+    var kayit = (D.ozet.adlar || []).filter(function (a) { return a.ad === ad; })[0];
+    var gerekli = kayit ? Object.keys(kayit.durumlar || {}) : [];
+    // Açık kategorilerde varsa yalnızca onları indir; hiçbirinde yoksa
+    // kapalı kategoriyi açmak gerekir (yoksa yol hiç görünmez).
+    var acik = gerekli.filter(function (d) { return D.seciliKategori.has(d); });
+    var hedef = acik.length ? acik : gerekli;
+    var eksik = hedef.filter(function (d) { return !D.yuklenen[d]; });
+    if (eksik.length) {
+      eksik.forEach(function (d) { D.seciliKategori.add(d); });
+      kategoriListesiCiz();
+      bildir("Veri yükleniyor…");
+      kategorileriYukle(eksik).then(function () { adaGit(ad); });
+      return;
+    }
     var secilenler = D.ozellikler.filter(function (f) { return f.properties.ad === ad; });
     if (!secilenler.length) return;
 
@@ -611,7 +692,10 @@
 
     vurguyuKaldir();
     var cizgiler = [];
-    secilenler.forEach(function (f) { for (var i = 0; i < f.ll.length; i++) cizgiler.push(f.ll[i]); });
+    secilenler.forEach(function (f) {
+      var llf = yolLatLng(f);
+      for (var i = 0; i < llf.length; i++) cizgiler.push(llf[i]);
+    });
     D.vurgu = L.polyline(cizgiler, {
       renderer: D.cizer, color: "#f59e0b", weight: agirlik() + 9,
       opacity: 0.5, interactive: false, lineCap: "round"
@@ -661,9 +745,14 @@
 
     kap.querySelectorAll("input[data-durum]").forEach(function (el) {
       el.onchange = function () {
-        if (el.checked) D.seciliKategori.add(el.dataset.durum);
-        else D.seciliKategori.delete(el.dataset.durum);
-        katmanlariYenile();
+        var durum = el.dataset.durum;
+        if (el.checked) {
+          D.seciliKategori.add(durum);
+          kategoriYukle(durum).then(katmanlariYenile);
+        } else {
+          D.seciliKategori.delete(durum);
+          katmanlariYenile();
+        }
       };
     });
     kap.querySelectorAll("[data-duzenle]").forEach(function (b) {
@@ -694,6 +783,13 @@
             '" title="' + h + '"></button>';
         }).join("") + "</div>" +
       "</div>" +
+      '<label class="ed-etiket" style="margin-top:12px">Çizilmeye başladığı yakınlık</label>' +
+      '<div class="ed-kaydirici">' +
+        '<input type="range" class="ed-zoom" min="0" max="16" step="1" value="' +
+          katCizimEsigi(durum) + '">' +
+        '<span class="deger ed-zoomdeger">' +
+          (katCizimEsigi(durum) ? "z" + katCizimEsigi(durum) : "her zaman") + "</span>" +
+      "</div>" +
       '<div class="ed-dugmeler">' +
         '<button class="dbtn ed-sifirla">Varsayılana dön</button>' +
         '<button class="dbtn ed-kapat">Kapat</button>' +
@@ -704,10 +800,17 @@
 
     var adGiris = kutu.querySelector(".ed-ad");
     var renkGiris = kutu.querySelector(".ed-renk");
+    var zoomGiris = kutu.querySelector(".ed-zoom");
+    var zoomDeger = kutu.querySelector(".ed-zoomdeger");
     var zaman;
 
-    var uygula = function (yeniAd, yeniRenk) {
+    var uygula = function (yeniAd, yeniRenk, yeniZoom) {
       var o = D.ozelKategori[durum] || {};
+      if (yeniZoom !== undefined) {
+        var vz = (D.ozet.kategoriler[durum] || {}).cizim_min_zoom || 0;
+        if (yeniZoom === vz) delete o.cizim_min_zoom; else o.cizim_min_zoom = yeniZoom;
+        zoomDeger.textContent = yeniZoom ? "z" + yeniZoom : "her zaman";
+      }
       if (yeniAd !== undefined) {
         var varsayilan = (D.ozet.kategoriler[durum] || {}).ad;
         if (yeniAd && yeniAd !== varsayilan) o.ad = yeniAd; else delete o.ad;
@@ -731,6 +834,9 @@
       zaman = setTimeout(function () { uygula(adGiris.value.trim(), undefined); }, 250);
     });
     renkGiris.addEventListener("input", function () { uygula(undefined, renkGiris.value); });
+    zoomGiris.addEventListener("input", function () {
+      uygula(undefined, undefined, parseInt(zoomGiris.value, 10));
+    });
     kutu.querySelectorAll(".hazir").forEach(function (b) {
       b.onclick = function (e) {
         e.preventDefault();
@@ -1328,6 +1434,87 @@
     return sonuc;
   }
 
+  /* ------------------------------------------------- kategori verisi yükleme */
+  // Yollar kategori başına ayrı dosyalarda tutulur; yalnızca açık kategoriler
+  // indirilir. 40 bin yolun tamamı 31 MB; hepsini birden yüklemek gereksiz.
+  function kategoriYukle(durum) {
+    if (D.yuklenen[durum]) return Promise.resolve();
+    if (D.yukleniyor[durum]) return D.yukleniyor[durum];
+    var k = (D.ozet.kategoriler || {})[durum];
+    if (!k || !k.dosya) { D.yuklenen[durum] = true; return Promise.resolve(); }
+
+    kategoriDurumYaz(durum, "yükleniyor…");
+    var istek = fetch("veri/" + k.dosya, { cache: "no-cache" })
+      .then(function (r) {
+        if (!r.ok) throw new Error(k.dosya + " bulunamadı (" + r.status + ")");
+        return r.json();
+      })
+      .then(function (gj) {
+        var yeniler = [];
+        (gj.features || []).forEach(function (f) {
+          var g = f.geometry;
+          f.parcalar = g.type === "LineString" ? [g.coordinates] : g.coordinates;
+          var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+          for (var q = 0; q < f.parcalar.length; q++) {
+            var p = f.parcalar[q];
+            for (var i = 0; i < p.length; i++) {
+              if (p[i][0] < x0) x0 = p[i][0];
+              if (p[i][0] > x1) x1 = p[i][0];
+              if (p[i][1] < y0) y0 = p[i][1];
+              if (p[i][1] > y1) y1 = p[i][1];
+            }
+          }
+          f.bbox = [x0, y0, x1, y1];
+          D.ozellikler.push(f);
+          (D.durumaGore[durum] = D.durumaGore[durum] || []).push(f);
+          // Çok parçalı yolları parça bazında indeksliyoruz: tek bir kaydın
+          // parçaları ilin iki ucunda olabiliyor, bütün kaydın sınır kutusuyla
+          // kırpmak işe yaramıyor.
+          f.kayitlar = [];
+          for (var pi = 0; pi < f.parcalar.length; pi++) {
+            var pp = f.parcalar[pi];
+            var a0 = 1e9, c0 = 1e9, a1 = -1e9, c1 = -1e9;
+            for (var pj = 0; pj < pp.length; pj++) {
+              if (pp[pj][0] < a0) a0 = pp[pj][0];
+              if (pp[pj][0] > a1) a1 = pp[pj][0];
+              if (pp[pj][1] < c0) c0 = pp[pj][1];
+              if (pp[pj][1] > c1) c1 = pp[pj][1];
+            }
+            var kayit = { f: f, p: pp, b: [a0, c0, a1, c1], sira: D.parcalar.length };
+            D.parcalar.push(kayit);
+            f.kayitlar.push(kayit);
+            (D.parcaDurum[durum] = D.parcaDurum[durum] || []).push(kayit);
+            yeniler.push(kayit);
+          }
+        });
+        izgaraEkle(yeniler);
+        D.yuklenen[durum] = true;
+        delete D.yukleniyor[durum];
+        kategoriDurumYaz(durum, null);
+      })
+      .catch(function (e) {
+        delete D.yukleniyor[durum];
+        kategoriDurumYaz(durum, "yüklenemedi");
+        console.error(e);
+        bildir("Kategori verisi yüklenemedi: " + katAd(durum));
+      });
+    D.yukleniyor[durum] = istek;
+    return istek;
+  }
+
+  function kategorileriYukle(liste) {
+    return Promise.all(liste.map(kategoriYukle));
+  }
+
+  // Kategori satırındaki km yazısını geçici olarak durum bilgisiyle değiştirir
+  function kategoriDurumYaz(durum, metin) {
+    var satir = document.querySelector('.kat[data-kat="' + CSS.escape(durum) + '"] .sayi');
+    if (!satir) return;
+    var k = (D.ozet.kategoriler || {})[durum] || {};
+    satir.textContent = metin || (sayi(k.uzunluk_km, 1) + " km");
+    satir.classList.toggle("bekliyor", !!metin);
+  }
+
   /* -------------------------------------------------------------- başlangıç */
   function haritaKur(ozet) {
     D.harita = L.map("harita", {
@@ -1435,9 +1622,14 @@
 
     $("#kategori-hepsi").onclick = function () {
       var hepsi = Object.keys(D.ozet.kategoriler);
-      if (D.seciliKategori.size === hepsi.length) D.seciliKategori.clear();
-      else hepsi.forEach(function (d) { D.seciliKategori.add(d); });
-      kategoriListesiCiz(); katmanlariYenile();
+      if (D.seciliKategori.size === hepsi.length) {
+        D.seciliKategori.clear();
+        kategoriListesiCiz(); katmanlariYenile();
+      } else {
+        hepsi.forEach(function (d) { D.seciliKategori.add(d); });
+        kategoriListesiCiz();
+        kategorileriYukle(hepsi).then(katmanlariYenile);
+      }
     };
 
     Object.keys(SINIR_TURU).forEach(function (tur) {
@@ -1583,34 +1775,9 @@
         kategoriListesiCiz(); tipListesiCiz(); ilceListesiCiz(); mahalleListesiCiz();
         kaliteCiz(); yardimCiz(); aramaKur(); aramaCiz(""); dugmeleriKur();
 
-        return fetch("veri/yollar.geojson", { cache: "no-cache" });
+        return kategorileriYukle(Array.from(D.seciliKategori));
       })
-      .then(function (r) {
-        if (!r.ok) throw new Error("yollar.geojson bulunamadı (" + r.status + ")");
-        return r.json();
-      })
-      .then(function (gj) {
-        D.ozellikler = gj.features;
-        D.ozellikler.forEach(function (f) {
-          var g = f.geometry;
-          f.parcalar = g.type === "LineString" ? [g.coordinates] : g.coordinates;
-          f.ll = f.parcalar.map(function (p) {
-            return p.map(function (c) { return L.latLng(c[1], c[0]); });
-          });
-          var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
-          f.parcalar.forEach(function (p) {
-            for (var i = 0; i < p.length; i++) {
-              if (p[i][0] < x0) x0 = p[i][0];
-              if (p[i][0] > x1) x1 = p[i][0];
-              if (p[i][1] < y0) y0 = p[i][1];
-              if (p[i][1] > y1) y1 = p[i][1];
-            }
-          });
-          f.bbox = [x0, y0, x1, y1];
-          var d = f.properties.durum;
-          (D.durumaGore[d] = D.durumaGore[d] || []).push(f);
-        });
-        izgaraKur();
+      .then(function () {
         katmanlariYenile();
         Object.keys(SINIR_TURU).forEach(function (tur) {
           if (sinirVerisiVar(tur) && sinirDurum(tur).goster) sinirYukle(tur);

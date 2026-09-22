@@ -326,3 +326,62 @@ kopyalanmadı, `kaynak_indirme: null` yazıldı, sitede KML bağlantısı gizlen
 GeoJSON bağlantısı kaldı. Zip kaynakta bağlantı "Sıkıştırılmış kaynak" olarak
 göründü. İki yol dosyası bırakıldığında derleme anlaşılır hata verdi.
 Önceki turların tüm testleri geçiyor, konsol temiz.
+
+---
+
+# 6. Tur — Tam yol ağı (22.09.2026)
+
+## Gelen veri
+`ibb_yollar.rar` (15,7 MB) → içinde **86,19 MB** KML. Sistemde rar açıcı yoktu;
+libarchive'a ctypes ile bağlanılarak açıldı (harici araç kurulmadı).
+
+**40.859 yol, 1.133.610 kırılma noktası, 33.521,6 km** — önceki verinin ~10 katı.
+
+| DURUM | Kayıt | km | KML rengi |
+|---|---|---|---|
+| 0 (boş) | 14.427 | 10.156,1 | yeşil |
+| 1 (devredilen) | 1.517 | 2.403,5 | mor |
+| 2 (belirsiz) | 60 | 121,0 | kırmızı |
+| 3 (Karayolları) | 442 | 4.746,2 | siyah |
+| 4 (mevcut Büyükşehir) | 668 | 1.369,8 | mavi |
+| 5 (ilçe belediyesi) | 23.745 | 14.725,0 | turkuaz |
+
+`TIP1` karışık: hem sayısal kod (1, 2, 5 …) hem düz metin (Cadde, Sokak …).
+
+## Yapılanlar
+- [x] DURUM 0 ve 5 kategori olarak tanımlandı (varsayılan kapalı)
+- [x] TIP1 kod→ad eşlemesi `kategoriler.json`'a taşındı; metin değerler korunuyor
+- [x] Yollar kategori başına ayrı dosyalara bölündü; site yalnızca açık kategorileri
+      indiriyor, kapalıyı işaretleyince o an indiriyor
+- [x] Kategori başına **çizim yakınlık eşiği** (0 ve 5 için z14) + panelde uyarı notu
+- [x] Çizim/tıklama birimi yol yerine **yol parçası** yapıldı
+- [x] Yakınlığa göre nokta seyreltme (z<11'de 8'de 1)
+- [x] Derleme hızlandırıldı: örnek sayısı yol uzunluğuna göre ölçekleniyor
+
+## Ölçümler
+Kırpma etkinliği (kategori 5 açıkken):
+| zoom | yol bazlı nokta | parça bazlı nokta |
+|---|---|---|
+| z17 | 279.936 | **6.246** |
+| z15 | 316.938 | **42.002** |
+| z13 | 454.482 | **230.704** |
+
+Zoom süresi (aynı ortam, sıcak önbellek):
+| Durum | Başlangıç | Sonuç |
+|---|---|---|
+| Varsayılan (1-4), z10 | 749 ms | **180-257 ms** |
+| Varsayılan (1-4), z13 | 679 ms | **75-86 ms** |
+| Tüm kategoriler, z14 | — | **234-244 ms** |
+| Tüm kategoriler, z16 | — | **54-92 ms** |
+
+Katman payları (z10→11): yollar 213 ms, mahalle sınırı 130 ms, ilçe sınırı 65 ms,
+altlık karolar 93 ms. Mahalle sınırı eşiği bu yüzden z11→z12 yapıldı.
+
+Derleme süresi 3 dk 32 sn → **1 dk 34 sn**.
+Açılışta indirilen: yalnızca yollar-1/2/3/4 (4,85 MB); sayfa 1,5 sn'de hazır.
+
+## Doğrulama
+Açılışta yalnızca 1-4 indiriliyor (ağ isteğiyle doğrulandı), kategori 5
+işaretlenince "yükleniyor…" yazıp indiriyor ve 26.432 kayda çıkıyor; TIP1 kodları
+ad olarak görünüyor; bilgi kartı, ölçüm aracı, arama+vurgu, kategori/sınır
+düzenleyicileri, altlıklar çalışıyor. Konsol temiz.
