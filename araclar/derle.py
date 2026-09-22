@@ -634,6 +634,33 @@ def sinir_bul(kayitlar, x, y):
     return None
 
 
+def baskin_alan(indeks, parcalar, ornek=21):
+    """Yolun geçtiği alanlardan en çok noktasını barındıranı döndürür.
+
+    Birleştirilmiş (dissolve edilmiş) yollar birden fazla mahalleden geçebilir;
+    tek bir orta nokta yanıltıcı olur. Bu yüzden yol boyunca eşit aralıklı
+    örnekler alınıp en sık çıkan alan seçilir."""
+    noktalar = []
+    for parca in parcalar:
+        noktalar.extend(parca)
+    if not noktalar:
+        return None
+    n = len(noktalar)
+    if n <= ornek:
+        secilen = noktalar
+    else:
+        adim = n / float(ornek)
+        secilen = [noktalar[int(i * adim)] for i in range(ornek)]
+    sayac = {}
+    for x, y in secilen:
+        ad = indeks.bul(x, y)
+        if ad:
+            sayac[ad] = sayac.get(ad, 0) + 1
+    if not sayac:
+        return None
+    return max(sayac.items(), key=lambda kv: (kv[1], kv[0]))[0]
+
+
 class SinirIndeksi:
     """Nokta -> alan adı araması için basit mekânsal ızgara.
 
@@ -774,8 +801,8 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
     # 3) Sınır katmanları (opsiyonel) — projeksiyon denetimi için yol orta noktaları
     orta_noktalar = []
     for k in kayitlar:
-        p0 = k["parcalar"][0]
-        orta_noktalar.append(tuple(p0[len(p0) // 2]))
+        for parca in k["parcalar"]:
+            orta_noktalar.append(tuple(parca[len(parca) // 2]))
     adim = max(1, len(orta_noktalar) // 600)
     ornek_noktalar = orta_noktalar[::adim]
 
@@ -861,14 +888,14 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
             "uzunluk_m": round(uzunluk, 1),
         }
         if ilce_indeks:
-            prop["ilce"] = ilce_indeks.bul(orta[0], orta[1]) or "Belirlenemedi"
+            prop["ilce"] = baskin_alan(ilce_indeks, k["parcalar"]) or "Belirlenemedi"
             ist = ilce_istatistik.setdefault(prop["ilce"],
                                              {"adet": 0, "uzunluk_m": 0.0, "durumlar": {}})
             ist["adet"] += 1
             ist["uzunluk_m"] += uzunluk
             ist["durumlar"][durum] = ist["durumlar"].get(durum, 0) + 1
         if mahalle_indeks:
-            prop["mahalle"] = mahalle_indeks.bul(orta[0], orta[1]) or "Belirlenemedi"
+            prop["mahalle"] = baskin_alan(mahalle_indeks, k["parcalar"]) or "Belirlenemedi"
             ist = mahalle_istatistik.setdefault(prop["mahalle"],
                                                 {"adet": 0, "uzunluk_m": 0.0, "durumlar": {}})
             ist["adet"] += 1
