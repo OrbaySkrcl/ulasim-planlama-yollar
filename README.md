@@ -68,8 +68,36 @@ QGIS'te yolları güncelledikten sonra:
 2–3 dakika içinde site otomatik olarak yeni veriyle yenilenir.
 İlerlemeyi **Actions** sekmesinden izleyebilirsiniz.
 
-> Dosya adının **aynı** kalması (`ibb_yollar.kml`) önemlidir; GitHub eskisinin üzerine yazar.
-> Farklı bir ad kullanırsanız site yine çalışır ama depoda iki dosya birikir.
+> Dosya adının **aynı** kalması önemlidir; GitHub eskisinin üzerine yazar.
+> Farklı bir ada (ya da farklı bir uzantıya) geçerseniz **eskisini silin** —
+> `veri` klasöründe birden fazla yol dosyası kalırsa derleme, hangisinin geçerli
+> olduğunu tahmin etmek yerine açık bir hata verip sizden seçmenizi ister.
+
+### Dosya çok büyükse (GitHub 25 MB'ı kabul etmiyorsa)
+
+GitHub'ın **web arayüzünden yükleme sınırı dosya başına 25 MB**. KML dosyanız
+bundan büyükse çözüm basit: **sıkıştırın**. Bu tür KML'ler zip'lenince
+**%15'ine iniyor** (85 MB → ~13 MB), yani rahatlıkla sınırın altına girer.
+
+1. Bilgisayarınızda dosyaya sağ tıklayın →
+   **Gönder → Sıkıştırılmış klasör** (Windows) / **Sıkıştır** (Mac).
+2. Oluşan `ibb_yollar.zip` dosyasını `veri` klasörüne yükleyin.
+3. **Eski `ibb_yollar.kml` dosyasını silin** (dosyaya tıklayın → sağ üstteki
+   çöp kutusu simgesi → Commit changes).
+
+Site bunu açıp okur; sizin için hiçbir şey değişmez.
+
+**Kabul edilen biçimler:** `.kml`, `.kmz`, `.zip` (içinde kml veya geojson),
+`.geojson`, `.json`, `.gz`
+
+**Daha da küçültmek isterseniz** (isteğe bağlı): QGIS'te KML yerine **GeoJSON**
+dışa aktarırken *Katman Seçenekleri → COORDINATE_PRECISION* değerini **6** yapın.
+Mevcut dosyadaki koordinatlar 13 ondalık haneli (milimetrenin binde biri);
+6 hane ≈ 11 cm, bu harita için fazlasıyla yeterli ve dosyayı yarı yarıya küçültür.
+Derleme zaten 6 haneye yuvarlıyor, yani kalitede hiçbir kayıp olmaz.
+
+> Kaynak dosya 25 MB'ı geçerse yayınlanan siteye kopyalanmaz (Pages'i şişirmemek
+> için); **Veriyi indir** menüsünde GeoJSON sürümü sunulmaya devam eder.
 
 ---
 
@@ -79,6 +107,7 @@ QGIS'te yolları güncelledikten sonra:
 2. **Dışa Aktar → Özellikleri Farklı Kaydet…**
 3. Ayarlar:
    - **Biçim:** `Keyhole Markup Language [KML]`
+     *(GeoJSON da olur — bkz. 2. bölümdeki "Dosya çok büyükse")*
    - **Dosya adı:** `ibb_yollar.kml`
    - **KRS / CRS:** `EPSG:4326 - WGS 84`
    - **Yalnızca seçili özellikleri kaydet:** işaretli **olmasın**
@@ -332,6 +361,7 @@ güncellemeniz iyi olur.
 ```
 veri/                       ← SİZİN DOKUNACAĞINIZ KLASÖR
   ibb_yollar.kml            QGIS'ten çıkan katman (üzerine yazın)
+                            .kmz / .zip / .geojson da olabilir
   kategoriler.json          kategori adları, renkler, site başlıkları
   ilce_sinirlari.geojson    (isteğe bağlı) ilçe sınırları / filtresi için
   mahalle_sinirlari.geojson (isteğe bağlı) mahalle sınırları / filtresi için
@@ -350,6 +380,8 @@ tasks/                      çalışma planı ve notlar
 | Belirti | Sebep / çözüm |
 |--------|----------------|
 | Site "Veri yüklenemedi" diyor | Derleme henüz bitmemiş olabilir. **Actions** sekmesinden son çalışmayı kontrol edin. |
+| "Birden fazla yol verisi var" hatası | `veri` klasöründe eski ve yeni dosya bir arada. Eskisini silin. |
+| Dosya 25 MB'ı geçiyor, GitHub yüklemiyor | Sıkıştırıp `.zip` olarak yükleyin — 2. bölüme bakın. |
 | Actions'ta kırmızı ✗ var | Çalışmaya tıklayın; **Derleme özeti** bölümünde Türkçe hata mesajı yazar (çoğunlukla bozuk JSON veya eksik KML). Site bu sırada eski hâliyle yayında kalır. |
 | Yeni yollar haritada yok | KML'i `veri` klasörüne yüklediğinizden ve **Commit changes**'e bastığınızdan emin olun. Tarayıcıda `Ctrl+F5` ile sayfayı yenileyin. |
 | Bir kategori hiç görünmüyor | Sol paneldeki kutucuğu işaretleyin; ya da o `DURUM` değeri KML'de hiç yoksa kategori listelenmez. |
@@ -366,6 +398,9 @@ tasks/                      çalışma planı ve notlar
 
 ## 11. Teknik notlar
 
+- **Büyük kaynak dosyalar.** KML akış hâlinde (streaming) okunur; her kayıt
+  işlendikten sonra bellekten düşürülür, böylece 100 MB'lık dosyalarda da bellek
+  sabit kalır. Sıkıştırılmış dosyalar açılmadan, doğrudan içinden okunur.
 - **Bağımlılık yok.** Derleme yalnızca Python 3 standart kütüphanesiyle çalışır;
   site saf HTML/CSS/JavaScript'tir, Leaflet 1.9.4 depo içinde yerel olarak sunulur.
   Yani site, dış bir kütüphane sunucusu çökse bile açılır.

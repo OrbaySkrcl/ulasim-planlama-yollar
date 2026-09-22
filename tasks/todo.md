@@ -289,3 +289,40 @@ localStorage'a tür bazlı yazılıyor; "kalıcı yap" JSON'u `mahalle_sinir` b�
 üretiyor; aç/kapa iki yönde çalışıyor ve ilçe katmanını etkilemiyor.
 Önceki turların tüm testleri (kategori düzenleyici, mesafe aracı, arama, altlıklar,
 ilçe katmanı) yeni mimariyle geçiyor. Konsol temiz.
+
+---
+
+# 5. Tur — Büyük kaynak dosya (22.09.2026)
+
+## Sorun
+Yeni `ibb_yollar.kml` ~85 MB. GitHub'ın web arayüzü dosya başına 25 MB kabul
+ediyor; sohbete de yüklenemiyor.
+
+## Ölçüm
+Mevcut 7,1 MB'lık KML zip'lendiğinde **1,07 MB** oldu — **%15**. Aynı oranla
+85 MB → **~12,7 MB**, sınırın epey altında. Sebep: OGR her Placemark için
+aynı `<Style>` bloğunu tekrarlıyor ve koordinatlar **13 ondalık haneli**
+(milimetrenin binde biri) yazılıyor.
+
+## Yapılanlar
+- [x] Sıkıştırılmış kaynak desteği: `.zip`, `.kmz`, `.gz` doğrudan içinden okunuyor
+- [x] GeoJSON kaynak desteği (QGIS'te koordinat hassasiyeti düşürülebildiği için
+      daha da küçük bir seçenek)
+- [x] KML okuma akışlı (iterparse) hâle getirildi; her kayıt işlendikten sonra
+      bellekten düşürülüyor → 100 MB'lık dosyada da bellek sabit
+- [x] Kaynak 25 MB'ı geçerse yayınlanan siteye kopyalanmıyor (Pages şişmesin);
+      indirme menüsündeki bağlantı kendini gizliyor, GeoJSON kalıyor
+- [x] `veri/` klasöründe birden fazla yol dosyası varsa **açık hata** —
+      dosya tarihleri git kopyasında güvenilmez olduğu için sessizce yanlış
+      (eski) dosyayı seçme riski vardı
+- [x] `kategoriler.json` yanlışlıkla yol verisi sanılıyordu; ayrıldı
+- [x] README 2. bölüm + veri/BENIOKU.md: sıkıştırma yönergesi
+
+## Doğrulama
+Aynı veriyle dört giriş biçimi de birebir 10.187 yol / 3.452,6 km üretti:
+`.kml` (7,1 MB), `.zip` (1,07 MB), `.kmz` (doc.kml), `.geojson` (3,1 MB).
+25 MB üstü senaryosu sınır 5 MB'a indirilerek denendi: kaynak siteye
+kopyalanmadı, `kaynak_indirme: null` yazıldı, sitede KML bağlantısı gizlendi,
+GeoJSON bağlantısı kaldı. Zip kaynakta bağlantı "Sıkıştırılmış kaynak" olarak
+göründü. İki yol dosyası bırakıldığında derleme anlaşılır hata verdi.
+Önceki turların tüm testleri geçiyor, konsol temiz.

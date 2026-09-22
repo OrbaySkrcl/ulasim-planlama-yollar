@@ -146,68 +146,172 @@ def normalize(s):
 
 
 # --------------------------------------------------------------------------
+# Kaynak dosyayı açma (düz, sıkıştırılmış ya da GeoJSON)
+# --------------------------------------------------------------------------
+
+YOL_UZANTILARI = (".kml", ".kmz", ".zip", ".geojson", ".json", ".gz")
+
+
+def _zipten_sec(zf):
+    """Zip/KMZ içinden okunacak veri dosyasını seçer."""
+    adlar = [n for n in zf.namelist()
+             if not n.endswith("/") and not n.startswith("__MACOSX")]
+    oncelik = [".kml", ".geojson", ".json"]
+    for uzanti in oncelik:
+        esleme = [n for n in adlar if n.lower().endswith(uzanti)]
+        if esleme:
+            return sorted(esleme, key=len)[0]
+    return adlar[0] if adlar else None
+
+
+def kaynak_ac(yol):
+    """(ikili dosya nesnesi, biçim, iç dosya adı) döndürür.
+
+    Desteklenen: .kml, .geojson/.json, .kmz, .zip (içinde kml/geojson), .gz
+    Büyük dosyalarda bellek şişmesin diye akış (stream) olarak açılır."""
+    ad = yol.name.lower()
+    if ad.endswith(".kmz") or ad.endswith(".zip"):
+        import zipfile
+        zf = zipfile.ZipFile(str(yol))
+        ic = _zipten_sec(zf)
+        if not ic:
+            hata("Sıkıştırılmış dosyanın içi boş: %s" % yol.name)
+        bicim = "geojson" if ic.lower().endswith((".geojson", ".json")) else "kml"
+        return zf.open(ic), bicim, ic
+    if ad.endswith(".gz"):
+        import gzip
+        ic = yol.name[:-3]
+        bicim = "geojson" if ic.lower().endswith((".geojson", ".json")) else "kml"
+        return gzip.open(str(yol), "rb"), bicim, ic
+    bicim = "geojson" if ad.endswith((".geojson", ".json")) else "kml"
+    return open(str(yol), "rb"), bicim, yol.name
+
+
+# --------------------------------------------------------------------------
 # KML okuma
 # --------------------------------------------------------------------------
 
 def kml_oku(yol, ondalik=6):
-    log("  KML okunuyor: %s (%.1f MB)" % (yol.name, yol.stat().st_size / 1048576))
-    try:
-        agac = ET.parse(str(yol))
-    except ET.ParseError as e:
-        hata("KML dosyası okunamadı (bozuk XML olabilir): %s" % e)
-    kok = agac.getroot()
+    kaynak, bicim, ic_ad = kaynak_ac(yol)
+    boyut = yol.stat().st_size / 1048576
+    if ic_ad != yol.name:
+        log("  Kaynak okunuyor: %s → %s (sıkıştırılmış, %.1f MB)" % (yol.name, ic_ad, boyut))
+    else:
+        log("  Kaynak okunuyor: %s (%.1f MB)" % (yol.name, boyut))
+
+    if bicim == "geojson":
+        with kaynak:
+            return geojson_yol_oku(kaynak, ondalik)
 
     kayitlar = []
     atlanan = []
-    for pm in kok.iter():
-        if etiket(pm) != "Placemark":
-            continue
-
-        # --- öznitelikler ---
-        ozellik = {}
-        for sd in pm.iter():
-            if etiket(sd) == "SimpleData":
-                ozellik[sd.get("name", "")] = (sd.text or "").strip()
-            elif etiket(sd) == "Data":
-                ad = sd.get("name", "")
-                for v in sd:
-                    if etiket(v) == "value":
-                        ozellik[ad] = (v.text or "").strip()
-        if not ozellik:
-            for ch in pm:
-                if etiket(ch) == "name":
-                    ozellik["ADINUMARASI"] = (ch.text or "").strip()
-
-        # --- renk ---
-        renk = None
-        for c in pm.iter():
-            if etiket(c) == "color":
-                renk = kml_rengi_hex(c.text)
-                if renk:
-                    break
-
-        # --- geometri (LineString / LinearRing, MultiGeometry dahil) ---
-        parcalar = []
-        for g in pm.iter():
-            if etiket(g) in ("LineString", "LinearRing"):
-                for c in g:
-                    if etiket(c) == "coordinates" and c.text:
-                        nokta = koordinat_ayikla(c.text, ondalik)
-                        if len(nokta) >= 2:
-                            parcalar.append(nokta)
-        if not parcalar:
-            atlanan.append(str(ozellik.get("fid") or "?").split(".")[0])
-            continue
-
-        kayitlar.append({"ozellik": ozellik, "renk": renk, "parcalar": parcalar})
+    # Akışlı okuma: 100 MB'lık dosyalarda da bellek sabit kalsın diye
+    # her Placemark işlendikten sonra bellekten düşürülür.
+    try:
+        with kaynak:
+            for olay, pm in ET.iterparse(kaynak, events=("end",)):
+                if etiket(pm) != "Placemark":
+                    continue
+                kayit, bos_fid = _placemark_oku(pm, ondalik)
+                if kayit:
+                    kayitlar.append(kayit)
+                else:
+                    atlanan.append(bos_fid)
+                pm.clear()
+    except ET.ParseError as e:
+        hata("KML dosyası okunamadı (bozuk XML olabilir): %s" % e)
 
     if atlanan:
         log("  Uyarı: çizgi geometrisi olmayan %d kayıt atlandı (fid: %s)."
             % (len(atlanan), ", ".join(atlanan[:10]) + ("…" if len(atlanan) > 10 else "")))
     if not kayitlar:
-        hata("KML dosyasında hiç yol (LineString) bulunamadı. QGIS'ten çizgi katmanını "
-             "KML olarak dışa aktardığınızdan emin olun.")
+        hata("Dosyada hiç yol (LineString) bulunamadı. QGIS'ten çizgi katmanını "
+             "KML ya da GeoJSON olarak dışa aktardığınızdan emin olun.")
     log("  %d yol parçası okundu." % len(kayitlar))
+    return kayitlar, atlanan
+
+
+def _placemark_oku(pm, ondalik):
+    """Tek bir Placemark'ı okur. (kayit, atlanan_fid) döndürür."""
+    # --- öznitelikler ---
+    ozellik = {}
+    for sd in pm.iter():
+        if etiket(sd) == "SimpleData":
+            ozellik[sd.get("name", "")] = (sd.text or "").strip()
+        elif etiket(sd) == "Data":
+            ad = sd.get("name", "")
+            for v in sd:
+                if etiket(v) == "value":
+                    ozellik[ad] = (v.text or "").strip()
+    if not ozellik:
+        for ch in pm:
+            if etiket(ch) == "name":
+                ozellik["ADINUMARASI"] = (ch.text or "").strip()
+
+    # --- renk ---
+    renk = None
+    for c in pm.iter():
+        if etiket(c) == "color":
+            renk = kml_rengi_hex(c.text)
+            if renk:
+                break
+
+    # --- geometri (LineString / LinearRing, MultiGeometry dahil) ---
+    parcalar = []
+    for g in pm.iter():
+        if etiket(g) in ("LineString", "LinearRing"):
+            for c in g:
+                if etiket(c) == "coordinates" and c.text:
+                    nokta = koordinat_ayikla(c.text, ondalik)
+                    if len(nokta) >= 2:
+                        parcalar.append(nokta)
+    if not parcalar:
+        return None, str(ozellik.get("fid") or "?").split(".")[0]
+    return {"ozellik": ozellik, "renk": renk, "parcalar": parcalar}, None
+
+
+def geojson_yol_oku(kaynak, ondalik=6):
+    """Yolları GeoJSON'dan okur (KML yerine GeoJSON dışa aktaranlar için)."""
+    try:
+        gj = json.loads(kaynak.read().decode("utf-8"))
+    except Exception as e:
+        hata("GeoJSON okunamadı: %s" % e)
+    kayitlar = []
+    atlanan = []
+    for f in (gj.get("features") or []):
+        ozellik = {k: ("" if v is None else str(v).strip())
+                   for k, v in (f.get("properties") or {}).items()}
+        g = f.get("geometry") or {}
+        tip = g.get("type")
+        if tip == "LineString":
+            ham = [g.get("coordinates") or []]
+        elif tip == "MultiLineString":
+            ham = g.get("coordinates") or []
+        else:
+            ham = []
+        parcalar = []
+        for dizi in ham:
+            nokta = []
+            for c in dizi:
+                if not isinstance(c, (list, tuple)) or len(c) < 2:
+                    continue
+                x, y = round(float(c[0]), ondalik), round(float(c[1]), ondalik)
+                if nokta and nokta[-1] == [x, y]:
+                    continue
+                nokta.append([x, y])
+            if len(nokta) >= 2:
+                parcalar.append(nokta)
+        if not parcalar:
+            atlanan.append(str(ozellik.get("fid") or "?").split(".")[0])
+            continue
+        kayitlar.append({"ozellik": ozellik, "renk": None, "parcalar": parcalar})
+
+    if atlanan:
+        log("  Uyarı: çizgi geometrisi olmayan %d kayıt atlandı (fid: %s)."
+            % (len(atlanan), ", ".join(atlanan[:10]) + ("…" if len(atlanan) > 10 else "")))
+    if not kayitlar:
+        hata("GeoJSON dosyasında hiç çizgi (LineString) bulunamadı.")
+    log("  %d yol parçası okundu (GeoJSON)." % len(kayitlar))
     return kayitlar, atlanan
 
 
@@ -907,8 +1011,17 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
         log("  mahalleler.geojson : %d alan, %.2f MB"
             % (n, (veri_cikti / "mahalleler.geojson").stat().st_size / 1048576))
 
-    # orijinal KML'i indirilebilir yap
-    shutil.copyfile(kml_yolu, veri_cikti / "ibb_yollar.kml")
+    # Kaynak dosyayı indirilebilir yap — çok büyükse yayınlanan siteye konmaz
+    KAYNAK_SINIRI_MB = 25
+    kaynak_boyut = kml_yolu.stat().st_size / 1048576
+    kaynak_indirme = None
+    if kaynak_boyut <= KAYNAK_SINIRI_MB:
+        shutil.copyfile(kml_yolu, veri_cikti / kml_yolu.name)
+        kaynak_indirme = kml_yolu.name
+    else:
+        log("  Not: kaynak dosya %.1f MB (>%d MB); siteye kopyalanmadı. "
+            "İndirme menüsünde GeoJSON sürümü sunuluyor."
+            % (kaynak_boyut, KAYNAK_SINIRI_MB))
 
     guncelleme = datetime.now(TR_SAAT)
     ad_listesi = sorted(
@@ -927,7 +1040,8 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
         "guncelleme": guncelleme.strftime("%d.%m.%Y %H:%M"),
         "guncelleme_iso": guncelleme.isoformat(),
         "kaynak_dosya": kml_yolu.name,
-        "kaynak_boyut_mb": round(kml_yolu.stat().st_size / 1048576, 2),
+        "kaynak_boyut_mb": round(kaynak_boyut, 2),
+        "kaynak_indirme": kaynak_indirme,
         "toplam_yol": len(ozellikler),
         "toplam_km": round(toplam_uzunluk / 1000.0, 2),
         "bbox": [round(minx, 6), round(miny, 6), round(maxx, 6), round(maxy, 6)],
@@ -986,12 +1100,34 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
 
 
 def kml_bul(veri_dizini):
-    adaylar = sorted(veri_dizini.glob("*.kml")) + sorted(veri_dizini.glob("*.KML"))
+    """Yol verisini bulur: ibb_yollar.(kml|kmz|zip|geojson|json|gz) ve benzerleri."""
+    # Yol verisi olmayan, klasördeki diğer dosyalar
+    ayrilmis_adlar = {"kategoriler.json"}
+    ayrilmis_onekler = ("ilce_sinirlari", "mahalle_sinirlari")
+    adaylar = []
+    for dosya in sorted(veri_dizini.iterdir()):
+        if not dosya.is_file():
+            continue
+        ad = dosya.name.lower()
+        if not ad.endswith(YOL_UZANTILARI):
+            continue
+        if ad in ayrilmis_adlar or any(ad.startswith(o) for o in ayrilmis_onekler):
+            continue
+        adaylar.append(dosya)
     if not adaylar:
-        hata("veri/ klasöründe .kml dosyası bulunamadı.\n"
-             "QGIS'ten dışa aktardığınız KML dosyasını 'veri' klasörüne yükleyin.")
-    tercih = [a for a in adaylar if a.name.lower() == "ibb_yollar.kml"]
-    return (tercih or adaylar)[0]
+        hata("veri/ klasöründe yol verisi bulunamadı.\n"
+             "QGIS'ten dışa aktardığınız dosyayı 'veri' klasörüne yükleyin.\n"
+             "Kabul edilen biçimler: .kml, .kmz, .zip (içinde kml/geojson), "
+             ".geojson, .json, .gz")
+    if len(adaylar) > 1:
+        # Dosya tarihleri git kopyasında güvenilir değildir; yanlış (eski) dosyayı
+        # sessizce kullanmaktansa açıkça soruyoruz.
+        hata("veri/ klasöründe birden fazla yol verisi var:\n  %s\n\n"
+             "Hangisinin kullanılacağı belirsiz. Eski olanları silin, "
+             "yalnızca bir tane kalsın.\n"
+             "(GitHub'da dosyaya tıklayıp sağ üstteki çöp kutusu simgesiyle "
+             "silebilirsiniz.)" % "\n  ".join(a.name for a in adaylar))
+    return adaylar[0]
 
 
 def main():

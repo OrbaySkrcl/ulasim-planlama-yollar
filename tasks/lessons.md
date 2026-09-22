@@ -137,3 +137,22 @@ Bu dosya, aynı hataların tekrarlanmaması için tutulur.
 - KML kökenli GeoJSON'larda `description` alanı dosyanın %90'ı olabiliyor
   (19 MB'lık dosyanın geometrisi ~2 MB). Derleme kullanmıyor; kullanıcıya
   isteğe bağlı bir küçültme yolu olarak söylemek yeterli.
+
+## 5. Tur — büyük dosya (22.09.2026)
+
+- **Önce sıkıştırma oranını ölç, sonra çözüm öner.** "Dosya bölelim / LFS
+  kuralım / vektör karo üretelim" demeden önce zip denendi: %15. Sorun
+  tamamen çözüldü ve kullanıcının iş akışı değişmedi (bir sağ tık).
+- OGR'nin KML çıktısı **her Placemark için aynı `<Style>` bloğunu** tekrar
+  yazar ve koordinatları **13 ondalık haneyle** kaydeder. Bu yüzden bu dosyalar
+  olağanüstü sıkıştırılabilir; boyut gerçek veri miktarını yansıtmıyor.
+- **GitHub sınırları:** web arayüzünden yükleme 25 MB/dosya, komut satırından
+  100 MB (50 MB'da uyarı). Web arayüzü kullanan biri için asıl sınır 25 MB.
+- `ET.parse` bütün ağacı belleğe alır; büyük dosyada `ET.iterparse` + işlenen
+  öğeyi `clear()` etmek belleği sabit tutar. Placemark'ı temizlemek yeterli —
+  geriye kalan boş öğeler önemsiz.
+- **Dosya tarihine göre "en yenisini seç" git deposunda çalışmaz:** checkout
+  bütün dosyalara aynı mtime'ı verir. Birden fazla aday varsa tahmin etmek
+  yerine hata vermek doğru — sessizce eski veriyle yayınlamak en kötüsü.
+- Uzantıya göre dosya arayan bir kural yazarken **aynı klasördeki ayar
+  dosyalarını dışlamayı unutma** (`kategoriler.json` yol verisi sanıldı).

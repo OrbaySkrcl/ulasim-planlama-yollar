@@ -1510,7 +1510,19 @@
     $("#kaynak").textContent = ozet.kaynak_dosya + " · " + sayi(ozet.toplam_km, 1) +
       " km · " + sayi(ozet.adlar.length) + " farklı yol adı";
     $("#boyut-geojson").textContent = ozet.veri_boyut_mb + " MB";
-    $("#boyut-kml").textContent = ozet.kaynak_boyut_mb + " MB";
+    var kaynakBaglanti = $("#indir-kaynak");
+    if (kaynakBaglanti) {
+      if (ozet.kaynak_indirme) {
+        kaynakBaglanti.hidden = false;
+        kaynakBaglanti.href = "veri/" + ozet.kaynak_indirme;
+        kaynakBaglanti.firstChild.nodeValue =
+          (/\.(kmz|zip|gz)$/i.test(ozet.kaynak_indirme) ? "Sıkıştırılmış kaynak" : "KML — kaynak dosya") + " (";
+        $("#boyut-kml").textContent = ozet.kaynak_boyut_mb + " MB";
+      } else {
+        // Kaynak dosya siteye konmayacak kadar büyük; GeoJSON zaten sunuluyor
+        kaynakBaglanti.hidden = true;
+      }
+    }
   }
 
   function baslat() {
