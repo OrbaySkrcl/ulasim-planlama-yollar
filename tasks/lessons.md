@@ -181,3 +181,22 @@ Bu dosya, aynı hataların tekrarlanmaması için tutulur.
 - Aramada, adı kapalı bir kategoride de geçen yola tıklanınca o kategorinin 15 MB'ını
   indirmek sürpriz olur. Önce **açık** kategorilerde ara; yalnızca hiçbirinde yoksa
   kapalıyı aç.
+- **Özet dosyasına "her ihtimale karşı" liste koymak pahalı.** 30.568 yol adı
+  `ozet.json`'u 2,20 MB yaptı ve herkes her açılışta indiriyordu, oysa arama
+  yapanların oranı düşük. Büyük listeler ayrı dosyaya + ilk kullanımda indirme.
+- **Satır içine düğme eklemek adı kırpar.** `.ad` ile `.sayi` arasına iki düğme
+  koyunca kategori adları "Devredil..." oldu. Çözüm: düğmeleri ikinci satıra
+  (açıklama satırına) almak; `visibility:hidden` yer kapladığı için `.ad`'ı
+  kurtarmıyor.
+- **Masaüstünde doğru olan etiket yoğunluğu telefonda değil.** Açılış yakınlığı
+  1440 px'te z9, 390 px'te z7,5; aynı 30 ilçe etiketi dar ekranda üst üste
+  biniyor. Sınır etiketlerine en küçük yakınlaştırma eşiği şart.
+- **Harita üstü kutular ölçek çubuğu/katkı satırıyla çakışır.** Telefonda sol alt
+  köşe `bottom:14px` ile Leaflet ölçek çubuğunun üstüne geliyor; dar ekranda
+  hem yukarı almak hem de varsayılan kapalı başlatmak gerekti.
+- **Testler iç API'ye değil davranışa bakmalı.** `D.ilceSinir` → `D.sinir.ilce.katman`
+  ve yol bazlı `f.ll` → parça bazlı `q.ll` değişiklikleri test betiklerini art arda
+  kırdı.
+- **Arayüz değişince ekran görüntüsüne bak.** "Panel 1560 px'e indi" ölçümü iyi
+  görünürken ekran görüntüsü adların kırpıldığını gösterdi; sayısal ölçüm tek
+  başına yetmiyor.

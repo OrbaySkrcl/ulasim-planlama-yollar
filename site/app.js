@@ -1,10 +1,16 @@
 /* İzmir Köy Yolları Devir Haritası
    Saf JavaScript + Leaflet. Derleme aracı gerektirmez.
-   Veri: veri/ozet.json (istatistik + ayarlar), veri/yollar.geojson (geometri)
 
-   Çizim mimarisi: her kategori tek bir birleşik çizgi nesnesiyle çizilir
-   (6.647 nesne yerine 4). Hangi yola tıklandığı, kendi ızgara indeksimizle
-   yapılan "en yakın çizgi" testiyle bulunur. Bu, zoom/kaydırmayı akıcı tutar. */
+   Veri dosyaları (hepsi veri/ altında):
+     ozet.json        istatistik + ayarlar — açılışta iner
+     yollar-<durum>.geojson  kategori başına geometri — yalnızca açık olanlar iner
+     adlar.json       arama dizini — ilk aramada iner
+     ilceler/mahalleler.geojson  sınır katmanları — açıksa iner
+
+   Çizim: her kategori tek bir birleşik çizgi nesnesiyle çizilir. Çizim ve
+   tıklama birimi yol değil YOL PARÇASIDIR; çok parçalı kayıtların parçaları
+   ilin iki ucunda olabildiği için kaydın sınır kutusuyla kırpmak işe yaramıyor.
+   Uzaktan bakarken noktalar yakınlığa göre seyreltilir. */
 
 (function () {
   "use strict";
@@ -28,6 +34,8 @@
     seciliIlce: new Set(),
     ozelKategori: {},          // kullanıcının kendi ad/renk değişiklikleri
     ozelSinir: {},             // sınır çizgisi görünümü değişiklikleri (tür bazlı)
+    adlar: null,               // arama dizini (ilk aramada indirilir)
+    adlarYukleniyor: null,
     vurgu: null,
     hover: null,
     hoverKatman: null,
@@ -152,6 +160,14 @@
     if (o && o.ad) return o.ad;
     var k = D.ozet.kategoriler[durum];
     return k ? k.ad : "Durum " + durum;
+  }
+
+  // Panelde dar alanda tam ad üç satıra taşıyor; kısa ad varsa onu kullan
+  function katKisaAd(durum) {
+    var o = D.ozelKategori[durum];
+    if (o && o.ad) return o.ad;
+    var k = D.ozet.kategoriler[durum] || {};
+    return k.kisa_ad || k.ad || ("Durum " + durum);
   }
 
   function katCizimEsigi(durum) {
@@ -395,6 +411,54 @@
     $("#ist-ad").textContent = sayi(adSayisi, 0);
     tipTablosuYaz(tipSayaci);
     kategoriSayilariYaz();
+    filtreNotuYaz();
+  }
+
+  // Hangi filtrelerin açık olduğunu özet şeridinin altında tek satırda göster
+  function filtreNotuYaz() {
+    var el = $("#ozet-filtre-notu");
+    if (!el) return;
+    var parcalar = [];
+    // Varsayılandan sapma varsa yaz; "4/6" varsayılan olduğu için sürekli
+    // görünmesi gürültü olurdu.
+    var hepsi = Object.keys(D.ozet.kategoriler);
+    var varsayilan = hepsi.filter(function (d) {
+      return D.ozet.kategoriler[d].varsayilan_acik !== false;
+    });
+    var sapma = varsayilan.length !== D.seciliKategori.size ||
+      varsayilan.some(function (d) { return !D.seciliKategori.has(d); });
+    if (sapma) {
+      parcalar.push(D.seciliKategori.size + "/" + hepsi.length + " kategori");
+    }
+    if (D.seciliTip.size) parcalar.push(D.seciliTip.size + " yol tipi");
+    if (D.seciliIlce.size) {
+      parcalar.push(D.seciliIlce.size === 1
+        ? Array.from(D.seciliIlce)[0] : D.seciliIlce.size + " ilçe");
+    }
+    if (D.seciliMahalle.size) {
+      parcalar.push(D.seciliMahalle.size === 1
+        ? Array.from(D.seciliMahalle)[0] : D.seciliMahalle.size + " mahalle");
+    }
+    if (!parcalar.length) { el.hidden = true; return; }
+    el.hidden = false;
+    el.innerHTML = "Süzgeç: " + kacar(parcalar.join(" · ")) +
+      ' <button class="baglanti-dugme" id="filtre-sifirla">temizle</button>';
+    var d = $("#filtre-sifirla");
+    if (d) d.onclick = filtreleriSifirla;
+  }
+
+  function filtreleriSifirla() {
+    D.seciliTip.clear(); D.seciliIlce.clear(); D.seciliMahalle.clear();
+    Object.keys(D.ozet.kategoriler).forEach(function (d) {
+      if (D.ozet.kategoriler[d].varsayilan_acik !== false) D.seciliKategori.add(d);
+      else D.seciliKategori.delete(d);
+    });
+    kategoriListesiCiz(); tipListesiCiz(); ilceListesiCiz(); mahalleListesiCiz();
+    kategorileriYukle(Array.from(D.seciliKategori)).then(function () {
+      katmanlariYenile();
+      tumSinirlariGuncelle(true);
+    });
+    bildir("Süzgeçler temizlendi.");
   }
 
   // Ekranda görünmeyen yolları Leaflet'e hiç vermiyoruz: asıl maliyet çizim değil,
@@ -451,9 +515,36 @@
     });
 
     if (D.vurgu) { D.vurgu.setStyle({ weight: w + 9 }); D.vurgu.bringToBack(); }
-    if (D.hoverKatman) { D.harita.removeLayer(D.hoverKatman); D.hoverKatman = null; D.hover = null; }
+    if (D.hoverKatman) { D.harita.removeLayer(D.hoverKatman); D.hoverKatman = null; }
+    if (D.hover) { D.hover = null; D.harita.getContainer().style.cursor = ""; }
     kategoriZoomNotu(zoomGizli, simdikiZoom);
+    lejantCiz(zoomGizli);
     hashYaz();
+  }
+
+  // Harita üstü lejant: panel kapalıyken (özellikle telefonda) tek başvuru noktası
+  function lejantCiz(zoomGizli) {
+    var govde = $("#lejant-govde");
+    if (!govde || !D.ozet) return;
+    var gizliKume = {};
+    (zoomGizli || []).forEach(function (g) { gizliKume[g.durum] = g.esik; });
+    var satirlar = kategoriSiralari().filter(function (d) {
+      return D.seciliKategori.has(d);
+    });
+    if (!satirlar.length) {
+      govde.innerHTML = '<div class="lejant-bos">Hiçbir kategori seçili değil.</div>';
+      return;
+    }
+    govde.innerHTML = satirlar.map(function (d) {
+      var k = D.ozet.kategoriler[d];
+      var gizli = gizliKume[d];
+      return '<div class="lejant-satir"' + (gizli ? ' title="z' + gizli +
+        ' yakınlıktan itibaren çizilir"' : "") + ">" +
+        '<i style="background:' + kacar(katRenk(d)) + (gizli ? ";opacity:.35" : "") + '"></i>' +
+        '<span class="ad"' + (gizli ? ' style="opacity:.55"' : "") + ">" + kacar(katAd(d)) +
+        (gizli ? " 🔍" : "") + "</span>" +
+        '<span class="km">' + sayi(k.uzunluk_km, 0) + " km</span></div>";
+    }).join("");
   }
 
   // Kalabalık kategoriler uzaktan çizilmez; kullanıcı bunu bilsin
@@ -610,8 +701,35 @@
   }
 
   /* ---------------------------------------------------------------- arama */
+  // 30 binden fazla yol adı ozet.json'u 2 MB'a çıkarıyordu; ayrı dosyaya alındı
+  // ve yalnızca arama kutusuna dokunulduğunda indiriliyor.
+  function adlariYukle() {
+    if (D.adlar) return Promise.resolve(D.adlar);
+    if (D.adlarYukleniyor) return D.adlarYukleniyor;
+    var dosya = (D.ozet && D.ozet.ad_dosyasi) || "adlar.json";
+    D.adlarYukleniyor = fetch("veri/" + dosya, { cache: "no-cache" })
+      .then(function (r) {
+        if (!r.ok) throw new Error(dosya + " bulunamadı (" + r.status + ")");
+        return r.json();
+      })
+      .then(function (liste) {
+        liste.forEach(function (a) { a.arama = normalize(a.ad); });
+        D.adlar = liste;
+        D.adlarYukleniyor = null;
+        return liste;
+      })
+      .catch(function (e) {
+        D.adlarYukleniyor = null;
+        console.error(e);
+        bildir("Arama dizini yüklenemedi.");
+        return null;
+      });
+    return D.adlarYukleniyor;
+  }
+
   function aramaKur() {
     var giris = $("#arama"), temizle = $("#arama-temizle"), zaman;
+    giris.addEventListener("focus", adlariYukle);
     giris.addEventListener("input", function () {
       temizle.style.display = giris.value ? "block" : "none";
       clearTimeout(zaman);
@@ -629,10 +747,15 @@
     if (q.length < 2) {
       kap.innerHTML = q.length === 1
         ? '<div class="bos">En az 2 harf yazın.</div>'
-        : '<div class="bos">' + sayi(D.ozet.adlar.length) + " farklı yol adı kayıtlı.</div>";
+        : '<div class="bos">' + sayi(D.ozet.ad_sayisi || 0) + " farklı yol adı kayıtlı.</div>";
       return;
     }
-    var sonuc = D.ozet.adlar.filter(function (a) { return a.arama.indexOf(q) !== -1; });
+    if (!D.adlar) {
+      kap.innerHTML = '<div class="bos">Arama dizini yükleniyor…</div>';
+      adlariYukle().then(function (l) { if (l) aramaCiz($("#arama").value); });
+      return;
+    }
+    var sonuc = D.adlar.filter(function (a) { return a.arama.indexOf(q) !== -1; });
     sonuc.sort(function (a, b) {
       var ab = a.arama.indexOf(q) === 0 ? 0 : 1, bb = b.arama.indexOf(q) === 0 ? 0 : 1;
       return ab - bb || b.km - a.km;
@@ -656,8 +779,9 @@
   }
 
   function adaGit(ad) {
+    if (!D.adlar) { adlariYukle().then(function (l) { if (l) adaGit(ad); }); return; }
     // Aranan yol henüz indirilmemiş bir kategoride olabilir
-    var kayit = (D.ozet.adlar || []).filter(function (a) { return a.ad === ad; })[0];
+    var kayit = D.adlar.filter(function (a) { return a.ad === ad; })[0];
     var gerekli = kayit ? Object.keys(kayit.durumlar || {}) : [];
     // Açık kategorilerde varsa yalnızca onları indir; hiçbirinde yoksa
     // kapalı kategoriyi açmak gerekir (yoksa yol hiç görünmez).
@@ -723,20 +847,25 @@
       var k = kategoriler[durum];
       var acik = D.seciliKategori.has(durum);
       var ozel = D.ozelKategori[durum];
-      return '<div class="kat" data-kat="' + kacar(durum) + '">' +
+      return '<div class="kat' + (acik ? "" : " kapali-kat") + '" data-kat="' + kacar(durum) +
+        '" title="' + kacar(katAd(durum)) + " — " + kacar(k.aciklama) + '">' +
         '<div class="ust">' +
           '<label class="kat-etiket">' +
             '<input type="checkbox" data-durum="' + kacar(durum) + '"' + (acik ? " checked" : "") + ">" +
             '<span class="cizgi-ornek" style="background:' + kacar(katRenk(durum)) + '"></span>' +
-            '<span class="ad">' + kacar(katAd(durum)) +
+            '<span class="ad">' + kacar(katKisaAd(durum)) +
               (k.tanimli === false ? " ⚠️" : "") + (ozel ? ' <em title="Siz değiştirdiniz">•</em>' : "") +
             "</span>" +
           "</label>" +
           '<span class="sayi">' + sayi(k.uzunluk_km, 1) + " km</span>" +
-          '<button class="kat-duzenle" data-duzenle="' + kacar(durum) +
-            '" title="Adını ve rengini değiştir" aria-label="Adını ve rengini değiştir">✎</button>' +
         "</div>" +
-        '<div class="aciklama">' + kacar(k.aciklama) + "</div>" +
+        '<div class="alt-satir">' +
+          '<span class="aciklama" title="' + kacar(k.aciklama) + '">' + kacar(k.aciklama) + "</span>" +
+          '<button class="kat-yalniz" data-yalniz="' + kacar(durum) +
+            '" title="Yalnızca bu kategoriyi göster">yalnız</button>' +
+          '<button class="kat-duzenle" data-duzenle="' + kacar(durum) +
+            '" title="Adını, rengini ve görünme yakınlığını değiştir" aria-label="Düzenle">✎</button>' +
+        "</div>" +
         '<div class="bar"><i style="width:' + (k.uzunluk_km / enBuyuk * 100).toFixed(1) +
           "%;background:" + kacar(katRenk(durum)) + '"></i></div>' +
         '<div class="kat-editor" data-editor="' + kacar(durum) + '" hidden></div>' +
@@ -753,6 +882,24 @@
           D.seciliKategori.delete(durum);
           katmanlariYenile();
         }
+      };
+    });
+    kap.querySelectorAll("[data-yalniz]").forEach(function (b) {
+      b.onclick = function (e) {
+        e.preventDefault(); e.stopPropagation();
+        var durum = b.dataset.yalniz;
+        var tekMi = D.seciliKategori.size === 1 && D.seciliKategori.has(durum);
+        D.seciliKategori.clear();
+        if (tekMi) {
+          // ikinci tıklama: varsayılan kategorilere dön
+          Object.keys(D.ozet.kategoriler).forEach(function (d) {
+            if (D.ozet.kategoriler[d].varsayilan_acik !== false) D.seciliKategori.add(d);
+          });
+        } else {
+          D.seciliKategori.add(durum);
+        }
+        kategoriListesiCiz();
+        kategorileriYukle(Array.from(D.seciliKategori)).then(katmanlariYenile);
       };
     });
     kap.querySelectorAll("[data-duzenle]").forEach(function (b) {
@@ -941,7 +1088,8 @@
       opaklik: 0.72,
       varsayilan: { renk: "#6b7280", renk_koyu: "#9ca3af", kalinlik: 1.2,
                     kesikli: true, etiket_goster: true,
-                    etiket_min_zoom: 0, cizim_min_zoom: 0 }
+                    // z8'in altinda ilce adlari ust uste biniyor (telefonda acilis z7.5)
+                    etiket_min_zoom: 8, cizim_min_zoom: 0 }
     },
     mahalle: {
       ad: "Mahalle", dosya: "veri/mahalleler.geojson", pane: "mahallePane", paneZ: 375,
@@ -1105,11 +1253,20 @@
     var secili = seciliKume(tur);
     var kayitlar = (D.ozet[tur === "ilce" ? "ilceler" : "mahalleler"]) || {};
     var gorunen = D.harita.getBounds();
+    // Haritada avuç içi kadar kalan alanın adı komşularının üstüne biner.
+    // Alanın ekrandaki boyu bu eşiğin altındaysa adı yazılmaz; yakınlaştırınca çıkar.
+    var enAzPiksel = tur === "ilce" ? 58 : 44;
     var sayac = 0;
     adaylar.forEach(function (f) {
       if (sayac >= 200) return;
       var e = f.properties.etiket;
       if (!e || !gorunen.contains([e[1], e[0]])) return;
+      var boy = f.properties.boy;
+      if (boy) {
+        var p1 = D.harita.latLngToLayerPoint([e[1], e[0]]);
+        var p2 = D.harita.latLngToLayerPoint([e[1] + boy[1], e[0] + boy[0]]);
+        if (Math.abs(p2.x - p1.x) < enAzPiksel && Math.abs(p2.y - p1.y) < enAzPiksel) return;
+      }
       sayac++;
       var kayit = kayitlar[f.properties.ad];
       var sinif = "ilce-etiket " + tur + (koyu ? " koyu-zemin" : "") +
@@ -1678,9 +1835,35 @@
       bildir("JSON panoya kopyalandı.");
     };
 
-    $$(".bolum.kapanabilir h2").forEach(function (h) {
-      h.onclick = function () { h.parentElement.classList.toggle("kapali"); };
+    // Bölümlerin açık/kapalı durumu hatırlansın
+    var acikKapali = yerelOku("bolumler", {}) || {};
+    $$(".bolum.kapanabilir").forEach(function (bol) {
+      if (bol.id && acikKapali[bol.id] !== undefined) {
+        bol.classList.toggle("kapali", !acikKapali[bol.id]);
+      }
+      var h = bol.querySelector("h2");
+      if (!h) return;
+      h.onclick = function () {
+        bol.classList.toggle("kapali");
+        if (bol.id) {
+          acikKapali[bol.id] = !bol.classList.contains("kapali");
+          yerelYaz("bolumler", acikKapali);
+        }
+      };
     });
+
+    var lejant = $("#harita-lejant");
+    var lejantAc = $("#lejant-ac");
+    if (lejant && lejantAc) {
+      // Dar ekranda lejant acikken haritanin yarisini kapatiyor: kapali baslasin
+      var lejantVarsayilan = window.innerWidth > 700;
+      lejant.classList.toggle("acik", yerelOku("lejant", lejantVarsayilan) !== false);
+      lejantAc.onclick = function () {
+        var acik = !lejant.classList.contains("acik");
+        lejant.classList.toggle("acik", acik);
+        yerelYaz("lejant", acik);
+      };
+    }
 
     D.harita.on("locationfound", function (e) {
       if (D.konumIsaret) D.harita.removeLayer(D.konumIsaret);
@@ -1700,7 +1883,7 @@
     $("#site-not").textContent = ozet.site["not"];
     $("#guncelleme").textContent = ozet.guncelleme;
     $("#kaynak").textContent = ozet.kaynak_dosya + " · " + sayi(ozet.toplam_km, 1) +
-      " km · " + sayi(ozet.adlar.length) + " farklı yol adı";
+      " km · " + sayi(ozet.ad_sayisi || 0) + " farklı yol adı";
     $("#boyut-geojson").textContent = ozet.veri_boyut_mb + " MB";
     var kaynakBaglanti = $("#indir-kaynak");
     if (kaynakBaglanti) {

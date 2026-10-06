@@ -64,12 +64,13 @@
     "7": "Otoyol"
   },
   "ilce_sinir": {
-    "_aciklama": "Ilce sinir cizgisinin gorunumu. renk_koyu, koyu altlik haritalarda (Koyu/Uydu) kullanilir. Site uzerinden de degistirilebilir.",
+    "_aciklama": "Ilce sinir cizgisinin gorunumu. renk_koyu, koyu altlik haritalarda (Koyu/Uydu) kullanilir. etiket_min_zoom: ilce adlarinin gorunmeye basladigi yakinlastirma seviyesi. Site uzerinden de degistirilebilir.",
     "renk": "#6b7280",
     "renk_koyu": "#9ca3af",
     "kalinlik": 1.2,
     "kesikli": true,
-    "etiket_goster": true
+    "etiket_goster": true,
+    "etiket_min_zoom": 8
   },
   "mahalle_sinir": {
     "_aciklama": "Mahalle sinir cizgisinin gorunumu. etiket_min_zoom: mahalle adlarinin gorunmeye basladigi yakinlastirma seviyesi.",

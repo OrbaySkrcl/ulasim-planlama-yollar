@@ -57,6 +57,14 @@
         <div id="arama-sonuc"></div>
       </section>
 
+      <section class="bolum ozet-serit">
+        <div class="ist-kutular">
+          <div class="ist-kutu"><div class="deger" id="ist-km">–</div><div class="etiket">Seçili toplam (km)</div></div>
+          <div class="ist-kutu"><div class="deger" id="ist-ad">–</div><div class="etiket">Farklı yol adı</div></div>
+        </div>
+        <p class="kucuk" id="ozet-filtre-notu" hidden></p>
+      </section>
+
       <section class="bolum" id="bolum-kategori">
         <h2>Kategoriler <span id="kategori-hepsi">tümünü seç</span></h2>
         <div id="kategori-liste"></div>
@@ -75,7 +83,10 @@
 
       <section class="bolum kapanabilir kapali" id="bolum-tip">
         <h2>Yol tipi</h2>
-        <div class="icerik"><div class="rozetler" id="tip-liste"></div></div>
+        <div class="icerik">
+          <div class="rozetler" id="tip-liste"></div>
+          <table class="tablo" id="tip-tablo" style="margin-top:12px"></table>
+        </div>
       </section>
 
       <section class="bolum kapanabilir kapali" id="bolum-ilce" style="display:none">
@@ -121,15 +132,6 @@
         </div>
       </section>
 
-      <section class="bolum">
-        <h2>Özet</h2>
-        <div class="ist-kutular">
-          <div class="ist-kutu"><div class="deger" id="ist-km">–</div><div class="etiket">Seçili toplam (km)</div></div>
-          <div class="ist-kutu"><div class="deger" id="ist-ad">–</div><div class="etiket">Farklı yol adı</div></div>
-        </div>
-        <table class="tablo" id="tip-tablo" style="margin-top:12px"></table>
-      </section>
-
       <section class="bolum kapanabilir kapali" id="bolum-kalite" style="display:none">
         <h2>Veri kalitesi uyarıları</h2>
         <div class="icerik"><div id="kalite-liste"></div></div>
@@ -149,6 +151,12 @@
       <div id="harita"></div>
       <button class="dbtn" id="panel-ac">☰ Filtreler</button>
       <div id="altlik-secim" class="harita-kontrol"></div>
+      <div id="harita-lejant" class="harita-kontrol">
+        <button id="lejant-ac" title="Lejantı aç/kapat" aria-label="Lejantı aç/kapat">
+          <span class="lejant-ikon">▤</span><span class="lejant-yazi">Lejant</span>
+        </button>
+        <div id="lejant-govde"></div>
+      </div>
       <div id="koordinat">–</div>
 
       <div id="olcum-kutu" hidden>

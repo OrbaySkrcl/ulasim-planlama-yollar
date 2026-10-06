@@ -723,6 +723,9 @@ def sinir_geojson_yaz(kayitlar, hedef, tolerans=0.00035, ustKatman=None, kisaAdl
         if not sade:
             continue
         ozellik = {"ad": ad}
+        # Alanin genisligi/yuksekligi derece cinsinden: site, haritada cok kucuk
+        # kalan alanlarin adini gizlemek icin kullanir (ust uste binmeyi onler).
+        ozellik["boy"] = [round(_kutu[2] - _kutu[0], 4), round(_kutu[3] - _kutu[1], 4)]
         if kisaAdlar and kisaAdlar.get(ad) and kisaAdlar[ad] != ad:
             ozellik["kisa"] = kisaAdlar[ad]
         etiket = sinir_etiket_noktasi(poligonlar)
@@ -854,7 +857,12 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
         if adsiz:
             ad = "İsimsiz yol"
         tip = (oz.get("TIP1") or oz.get("TIP") or "").strip()
-        tip = tip_ayari.get(tip, tip) or "Belirtilmemiş"
+        if tip in tip_ayari:
+            tip = tip_ayari[tip]
+        elif tip.isdigit():
+            # kategoriler.json'da karşılığı tanımlanmamış sayısal kod
+            tip = "Tanımsız kod " + tip
+        tip = tip or "Belirtilmemiş"
         fid = (oz.get("fid") or oz.get("FID") or "").strip()
         try:
             fid = str(int(float(fid)))
@@ -1071,11 +1079,16 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
             % (kaynak_boyut, KAYNAK_SINIRI_MB))
 
     guncelleme = datetime.now(TR_SAAT)
+    # Arama dizini ayrı dosyada: 30 binden fazla yol adı ozet.json'u 2 MB'a
+    # çıkarıyor ve her açılışta iniyordu. Site bunu ilk arama anında indirir.
     ad_listesi = sorted(
         [{"ad": a, "n": v["adet"], "km": round(v["uzunluk_m"] / 1000.0, 2),
-          "durumlar": v["durumlar"], "arama": normalize(a)}
+          "durumlar": v["durumlar"]}
          for a, v in adlar.items()],
         key=lambda x: -x["km"])
+    ad_yolu = veri_cikti / "adlar.json"
+    ad_yolu.write_text(json.dumps(ad_listesi, ensure_ascii=False, separators=(",", ":")),
+                       encoding="utf-8")
 
     ozet = {
         "site": {
@@ -1102,7 +1115,7 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
                                        key=lambda x: (-x[1]["uzunluk_m"], x[0]))},
         "ilce_verisi_var": bool(ilceler),
         "ilce_bilgi": ilce_bilgi or {},
-        "ilce_sinir": sinir_gorunumu(ayar.get("ilce_sinir"), "#6b7280", "#9ca3af", 1.2, 0),
+        "ilce_sinir": sinir_gorunumu(ayar.get("ilce_sinir"), "#6b7280", "#9ca3af", 1.2, 8),
         "mahalleler": {m: {"adet": v["adet"],
                            "uzunluk_km": round(v["uzunluk_m"] / 1000.0, 2),
                            "yol_yok": v["adet"] == 0,
@@ -1116,7 +1129,9 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
         "uyarilar": uyarilar,
         "depo": depo_bilgisi(),
         "ayar_ham": ayar,
-        "adlar": ad_listesi,
+        "ad_sayisi": len(ad_listesi),
+        "ad_dosyasi": "adlar.json",
+        "ad_dosya_mb": round(ad_yolu.stat().st_size / 1048576, 2),
         "veri_boyut_mb": round(gj_yolu.stat().st_size / 1048576, 2),
     }
     (veri_cikti / "ozet.json").write_text(
@@ -1142,6 +1157,9 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
         log("  ! %s: %s" % (u["baslik"], u["mesaj"]))
     log("  " + "-" * 58)
     log("  yollar.geojson : %.2f MB (tamamı, indirme için)" % ozet["veri_boyut_mb"])
+    log("  ozet.json      : %.2f MB | adlar.json: %.2f MB (ilk aramada iner)"
+        % ((veri_cikti / "ozet.json").stat().st_size / 1048576 if (veri_cikti / "ozet.json").exists() else 0,
+           ozet["ad_dosya_mb"]))
     for durum, bilgi in sorted(kategori_dosyalari.items()):
         log("    %-22s %6.2f MB" % (bilgi["dosya"], bilgi["boyut_mb"]))
     log("  Çıktı klasörü  : %s" % cikti_dizini)

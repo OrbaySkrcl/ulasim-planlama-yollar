@@ -294,6 +294,15 @@ düğmesi tarayıcınızdaki değişiklikleri geri alır.
 düğmesiyle kalıcı hâle gelir (`kategoriler.json` içindeki `ilce_sinir` ve
 `mahalle_sinir` bölümlerine yazılır).
 
+> İlçe adları varsayılan olarak **z8**'den itibaren görünür. Bunun sebebi, telefon
+> gibi dar ekranlarda harita il geneline sığdığında 30 ilçe adının üst üste
+> binmesidir. Daha uzaktan da görünsün isterseniz `etiket_min_zoom` değerini
+> düşürebilirsiniz.
+>
+> Ayrıca haritada çok küçük kalan alanların adı yazılmaz: Konak, Balçova,
+> Narlıdere gibi küçük ilçelerin adı il geneli görünümünde gizlenir, yakınlaştırınca
+> kendiliğinden çıkar. Bu otomatiktir, ayar gerektirmez.
+
 ---
 
 ## 7. Depoyu müdürlük hesabına taşımak
@@ -374,7 +383,14 @@ güncellemeniz iyi olur.
 - **📏 Mesafe ölçme:** haritada çok noktalı, canlı toplamlı mesafe ölçümü
 - **Görünüm düzenleme:** kategori adı/rengi ve ilçe sınır çizgisinin
   rengi/kalınlığı/tipi site üzerinden değiştirilebilir
-- **Anlık istatistik** — seçili filtreye uyan toplam kilometre ve farklı yol adı sayısı
+- **Anlık istatistik** — seçili filtreye uyan toplam kilometre ve farklı yol adı
+  sayısı, arama kutusunun hemen altında
+- **Harita üstü lejant** (sol alt) — hangi rengin ne anlama geldiği panel kapalıyken
+  de görünür; açılıp kapanır, tercihiniz hatırlanır
+- **"yalnız" düğmesi** — kategorinin üzerine gelince çıkar, tek tıkla sadece o
+  kategoriyi gösterir; ikinci tıkta varsayılan görünüme döner
+- **Süzgeç özeti** — varsayılandan saptığınızda "Süzgeç: 1/6 kategori" yazar ve
+  tek tıkla sıfırlanır
 - **Paylaşılabilir bağlantı** — harita konumu ve filtreler bağlantıya işlenir
 - **Veri indirme** — GeoJSON (QGIS/ArcGIS/Google Earth) ve orijinal KML
 - **Konumum** düğmesi — sahada kendi konumunuzu haritada görmek için

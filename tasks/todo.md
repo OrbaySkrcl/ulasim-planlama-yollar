@@ -385,3 +385,63 @@ Açılışta yalnızca 1-4 indiriliyor (ağ isteğiyle doğrulandı), kategori 5
 işaretlenince "yükleniyor…" yazıp indiriyor ve 26.432 kayda çıkıyor; TIP1 kodları
 ad olarak görünüyor; bilgi kartı, ölçüm aracı, arama+vurgu, kategori/sınır
 düzenleyicileri, altlıklar çalışıyor. Konsol temiz.
+
+---
+
+# Tur 8 — Hata taraması + arayüz iyileştirme
+
+İstek: "hatalar var mı son halini analiz eder misin. ayrıca kullanıcı arayüzünü
+iyileştirmek adına iyileştirilmesi gereken noktalar varsa onları da uygula.
+Sonuçta bu çalışma da veriler önemli ve o verileri kolayca görebilmekte önemli."
+
+## Bulunan hatalar
+- [x] **ozet.json 2,20 MB'a şişmişti** — 30.568 yol adı özet dosyasının içindeydi
+      ve her açılışta iniyordu. Arama dizini ayrı `adlar.json` dosyasına alındı,
+      ilk arama anında iniyor. ozet.json **0,11 MB** oldu.
+- [x] **Tanımsız yol tipi "0" olarak görünüyordu** — kategoriler.json'da karşılığı
+      olmayan sayısal TIP1 kodu çıplak sayı olarak yazılıyordu. Artık
+      "Tanımsız kod 0" yazıyor.
+- [x] **Fare imleci "el" şeklinde takılı kalıyordu** — yolun üstünden çıkınca
+      imleç sıfırlanmıyordu.
+- [x] **Telefonda ilçe adları üst üste biniyordu** — açılış yakınlığı z7,5 olduğu
+      için 30 ilçe etiketi iç içe geçiyordu. İlçe etiketi için en küçük
+      yakınlaştırma varsayılanı z8 yapıldı (panelden değiştirilebilir).
+- [x] **Telefonda lejant ölçek çubuğunu kapatıyordu** — lejant 42 px yukarı alındı
+      ve dar ekranda kapalı başlıyor.
+- [x] **Masaüstünde de İzmir merkezindeki ilçe adları iç içeydi** — alanın ekrandaki
+      boyu 58 px'in altındaysa adı yazılmıyor. Açılışta 30 yerine 23 ad çıkıyor;
+      Konak/Balçova z10'da, Narlıdere/Karşıyaka z11'de kendiliğinden beliriyor.
+- [x] Başlıktaki eski açıklama satırı ve ölü yorumlar temizlendi.
+
+## Arayüz iyileştirmeleri
+- [x] **Özet şeridi arama kutusunun hemen altına alındı** — seçili toplam km ve
+      farklı yol adı sayısı ilk bakışta görünüyor (önce sayfanın altındaydı).
+- [x] **Harita üstünde lejant** (sol alt, açılır-kapanır, durumu hatırlanıyor) —
+      panel kapalıyken hangi rengin ne olduğu haritadan okunabiliyor.
+- [x] **Kategori başına "yalnız" düğmesi** — tek tıkla sadece o kategori; ikinci
+      tıkta varsayılana dönüyor.
+- [x] **Süzgeç özeti + "temizle"** — varsayılandan sapıldığında "Süzgeç: 1/6
+      kategori" yazıyor, tek tıkla sıfırlanıyor.
+- [x] **Kapalı kategoriler soluklaştırıldı**, bölüm aç/kapa durumu hatırlanıyor.
+- [x] **Yol tipi tablosu kendi bölümüne taşındı** (önce sayfa dibindeydi).
+- [x] **Kategori satırları iki satıra ayrıldı** — ad+km üstte, açıklama ve
+      ✎ / yalnız düğmeleri altta. Ad artık kırpılmıyor.
+- [x] Panel yüksekliği **2024 px → 1595 px**: ilçe listesi kaydırmasız görünüyor.
+
+## Ölçümler (temiz derleme sonrası, sıcak önbellek)
+| Ölçüm | Değer |
+|---|---|
+| Açılışta inen | ozet.json + yollar-1/2/3/4 + sınırlar |
+| Sayfa hazır | ~1,0 sn |
+| ozet.json | 2,20 MB → **0,11 MB** |
+| Tam çizim | 65 ms |
+| Zoom | 146-166 ms |
+| Süzgeç yenileme | 35 ms |
+| Fare hareketi (vurgu testi) | 0,10 ms |
+| Derleme | 1 dk 18 sn (42.753 yol) |
+
+## Doğrulama
+`test2`, `ilce_test`, `mah_test`, `sinir_test`, `yeni_ui` ve yeni `mobil`
+senaryoları temiz derleme çıktısı üzerinde çalıştırıldı; hepsi geçti, tarayıcı
+konsolu temiz. Telefon ölçüsünde (390×844) yatay taşma yok, kategori adları
+kırpılmıyor, lejant ölçek çubuğunu kapatmıyor.

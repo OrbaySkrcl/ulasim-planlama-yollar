@@ -123,7 +123,7 @@ html[data-tema="koyu"] a { color: var(--vurgu); }
 #arama-sonuc .bos { color: var(--yazi-soluk); font-size: 12.5px; padding: 8px 2px; }
 
 /* kategori listesi */
-.kat { padding: 8px 8px 10px; border-radius: 8px; }
+.kat { padding: 7px 8px 8px; border-radius: 8px; }
 .kat:hover { background: var(--panel-2); }
 .kat .ust { display: flex; align-items: center; gap: 8px; }
 .kat-etiket { display: flex; align-items: center; gap: 9px; flex: 1; min-width: 0; cursor: pointer; }
@@ -132,18 +132,44 @@ html[data-tema="koyu"] a { color: var(--vurgu); }
   width: 22px; height: 4px; border-radius: 2px; flex: 0 0 auto;
   box-shadow: 0 0 0 1px rgba(128, 128, 128, .45);
 }
-.kat .ad { flex: 1; font-weight: 550; font-size: 13px; line-height: 1.3; min-width: 0; }
+.kat .ad {
+  flex: 1; font-weight: 600; font-size: 13px; line-height: 1.35; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .kat .ad em { color: var(--vurgu); font-style: normal; font-weight: 800; }
 .kat .sayi.bekliyor { color: var(--vurgu); font-style: italic; }
-.kat .sayi { font-size: 11.5px; color: var(--yazi-soluk); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.kat .sayi {
+  font-size: 11.5px; color: var(--yazi-soluk); white-space: nowrap;
+  font-variant-numeric: tabular-nums; flex: 0 0 auto; margin-left: 2px;
+}
 .kat-duzenle {
   border: 1px solid transparent; background: transparent; color: var(--yazi-soluk);
-  border-radius: 6px; padding: 3px 6px; font-size: 13px; line-height: 1; flex: 0 0 auto;
+  border-radius: 6px; padding: 2px 5px; font-size: 12px; line-height: 1; flex: 0 0 auto;
+  visibility: hidden;
 }
-.kat:hover .kat-duzenle { border-color: var(--cizgi); background: var(--panel); }
+.kat:hover .kat-duzenle, .kat:focus-within .kat-duzenle {
+  visibility: visible; border-color: var(--cizgi); background: var(--panel);
+}
 .kat-duzenle:hover { color: var(--vurgu); border-color: var(--vurgu); }
-.kat .aciklama { font-size: 11.5px; color: var(--yazi-soluk); margin: 3px 0 0 46px; line-height: 1.45; }
-.kat .bar { height: 4px; border-radius: 3px; margin: 6px 0 0 46px; background: var(--panel-2); overflow: hidden; }
+.kat .alt-satir {
+  display: flex; align-items: center; gap: 4px; margin: 1px 0 0 46px; min-height: 19px;
+}
+.kat .aciklama {
+  flex: 1; min-width: 0; font-size: 11px; color: var(--yazi-soluk); line-height: 1.35;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.kat.kapali-kat .cizgi-ornek, .kat.kapali-kat .bar > i { opacity: .35; }
+.kat.kapali-kat .ad, .kat.kapali-kat .sayi { color: var(--yazi-soluk); }
+.kat-yalniz {
+  border: 1px solid transparent; background: transparent; color: var(--yazi-soluk);
+  border-radius: 6px; padding: 2px 6px; font-size: 10.5px; font-weight: 650;
+  line-height: 1.4; flex: 0 0 auto; visibility: hidden;
+}
+.kat:hover .kat-yalniz, .kat:focus-within .kat-yalniz {
+  visibility: visible; border-color: var(--cizgi); background: var(--panel);
+}
+.kat-yalniz:hover { color: var(--vurgu); border-color: var(--vurgu); }
+.kat .bar { height: 3px; border-radius: 3px; margin: 5px 0 0 46px; background: var(--panel-2); overflow: hidden; }
 .kat .bar > i { display: block; height: 100%; border-radius: 3px; }
 
 /* kategori düzenleyici */
@@ -240,6 +266,11 @@ html[data-tema="koyu"] a { color: var(--vurgu); }
 .rozet-secim.secili { background: var(--vurgu); border-color: var(--vurgu); color: #fff; }
 .rozet-secim small { opacity: .75; margin-left: 4px; font-weight: 500; }
 
+/* üstteki özet şeridi */
+.ozet-serit { padding-top: 12px; padding-bottom: 12px; }
+.ozet-serit .ist-kutu { padding: 8px 10px; }
+.ozet-serit .ist-kutu .deger { font-size: 17px; }
+
 /* istatistik */
 .ist-kutular { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .ist-kutu { background: var(--panel-2); border-radius: var(--r); padding: 10px 11px; }
@@ -255,6 +286,11 @@ html[data-tema="koyu"] a { color: var(--vurgu); }
   padding: 9px 11px; font-size: 12px; line-height: 1.5;
 }
 .kucuk { font-size: 11.5px; color: var(--yazi-soluk); line-height: 1.55; }
+.baglanti-dugme {
+  border: 0; background: transparent; color: var(--vurgu); font-weight: 650;
+  font-size: 11.5px; padding: 0 2px; text-decoration: underline;
+}
+#ozet-filtre-notu { margin: 9px 0 0; }
 
 /* ---------- harita üstü kontroller ---------- */
 .leaflet-container { font: inherit; background: var(--panel-2); }
@@ -291,6 +327,30 @@ html[data-tema="koyu"] a { color: var(--vurgu); }
 .olcum-dugmeler .dbtn { padding: 5px 10px; font-size: 12px; }
 .olcum-modu { cursor: crosshair !important; }
 #btn-olcum.etkin { background: var(--vurgu); border-color: var(--vurgu); color: #fff; }
+
+#harita-lejant {
+  bottom: 58px; left: 12px; z-index: 900; flex-direction: column; align-items: flex-start;
+  gap: 0; background: var(--panel); border-radius: 10px; box-shadow: var(--golge);
+  width: 318px; max-width: calc(100vw - 24px); overflow: hidden;
+}
+#lejant-ac {
+  border: 0; background: transparent; color: var(--yazi); width: 100%;
+  display: flex; align-items: center; gap: 7px; padding: 8px 11px;
+  font-size: 12px; font-weight: 650; text-align: left;
+}
+#lejant-ac:hover { background: var(--panel-2); }
+.lejant-ikon { color: var(--yazi-soluk); }
+#lejant-govde { padding: 0 11px 9px; display: none; }
+#harita-lejant.acik #lejant-govde { display: block; }
+.lejant-satir {
+  display: flex; align-items: center; gap: 8px; padding: 3px 0;
+  font-size: 11.5px; line-height: 1.3;
+}
+.lejant-satir i { width: 18px; height: 4px; border-radius: 2px; flex: 0 0 auto;
+  box-shadow: 0 0 0 1px rgba(128,128,128,.35); }
+.lejant-satir .ad { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lejant-satir .km { color: var(--yazi-soluk); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.lejant-bos { font-size: 11.5px; color: var(--yazi-soluk); padding: 3px 0; }
 
 #koordinat {
   position: absolute; right: 12px; bottom: 62px; z-index: 900;
@@ -400,5 +460,8 @@ html[data-tema="koyu"] a { color: var(--vurgu); }
   #olcum-kutu { top: auto; bottom: 12px; }
   #altlik-secim button { padding: 5px 8px; font-size: 11.5px; }
   #panel { z-index: 1000; }
+  /* olcek cubugu ve katki satiri sag altta: lejant onlarin uzerinde kalsin */
+  #harita-lejant { bottom: 42px; width: auto; max-width: calc(100vw - 24px); }
+  .lejant-yazi { display: inline; }
   #koordinat { display: none; }
 }
