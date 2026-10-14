@@ -352,7 +352,9 @@ düğmesi tarayıcınızdaki değişiklikleri geri alır.
 
 ### Sınır çizgileri (ilçe ve mahalle)
 
-İlçe ve Mahalle bölümlerindeki **✎** simgeleri sınır çizgileri için aynı şeyi yapar:
+İlçe ve Mahalle bölümlerinin üstündeki **✎ Çizgi ayarları** düğmesi
+("… sınırlarını haritada göster" satırının sağında) sınır çizgileri için aynı
+şeyi yapar:
 
 - **Renk** ve **kalınlık** (0,4–6 px)
 - **Kesikli / düz** çizgi
@@ -442,10 +444,13 @@ güncellemeniz iyi olur.
 - **Kategori aç/kapat** — her kategorinin yol sayısı ve toplam kilometresiyle
 - **Yol tipi filtresi** (Cadde, Sokak, Bulvar, Küme Evler, Otoyol, Meydan)
 - **İlçe ve mahalle sınırları, adları ve filtreleri** (ilgili dosyalar eklendiğinde) —
-  her iki çizginin rengi, kalınlığı, tipi ve görünme yakınlığı site üzerinden
-  ayarlanabilir; **henüz yolu olmayan alanlar soluk gösterilir**, böylece çalışmanın
-  kapsamı bir bakışta görülür. Mahalle listesinde arama kutusu vardır ve liste
-  seçili ilçeye göre daralır.
+  her iki çizginin rengi, kalınlığı, tipi ve görünme yakınlığı **✎ Çizgi ayarları**
+  düğmesinden ayarlanabilir; **henüz yolu olmayan alanlar soluk gösterilir**, böylece
+  çalışmanın kapsamı bir bakışta görülür. Mahalle listesinde arama kutusu vardır ve
+  liste seçili ilçeye göre daralır.
+- **Bir ilçe ya da mahalle seçince harita oraya gider** — aradığınız mahalleyi
+  listeden seçmeniz yeterli, haritayı elle bulmanız gerekmez. Seçimi kaldırınca
+  harita yerinde kalır.
 - **Yol adı arama** — Türkçe karaktere duyarsız (`sarikoy` yazınca `SARIKÖY` bulunur)
 - **Yola tıklayınca** ad, tip, kategori, uzunluk, kayıt no, koordinat; koordinatı kopyalama
   ve Google Maps'te açma; fareyle üzerine gelince yol vurgulanır

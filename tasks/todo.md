@@ -504,3 +504,30 @@ Yani "adı boş + DURUM 0" olan her şey **tek bir kayıt**. Birine tıklayınca
 
 Doğru davranışın korunduğunun kanıtı: sürekli otoyollar bölünmedi, bölünenler
 yalnızca birbirine değmeyen kayıtlar.
+
+
+---
+
+# Tur 10 — Sınır düzenleyicisinin görünürlüğü + alana zoom
+
+İstek: "mahalle ve ilçe sınırları görünümünü editleme aracı gelmedi ya da ben
+göremedim? ayrıca bir mahalleyi aratıp seçtiğiniz zaman direkt oraya zoomlasın."
+
+## Teşhis
+Yayındaki sürüm güncel (son derleme başarılı). Düğme teknik olarak oradaydı ama
+**çıplak bir ✎ simgesiydi** — 22 px, soluk gri, satırın en sağında. Kullanıcı
+göremedi; haklı. Teknik olarak "var olmak" ile "bulunabilir olmak" aynı şey değil.
+
+## Yapılanlar
+- [x] `✎` → **`✎ Çizgi ayarları`** yazılı düğme (`.sinir-duzenle`), çerçeveli ve
+      dolgulu. Telefonda da sığıyor (105 px, taşma yok).
+- [x] İlçe ya da mahalle rozetine tıklayıp **seçince** harita o alanın sınır
+      kutusuna gidiyor (`alanaGit`). Mahallede en çok z15, ilçede en çok z13.
+      Seçimi **kaldırınca** harita yerinde kalıyor.
+- [x] Teste iki denetim eklendi (toplam 17): seçilen alanın ekranda olması ve
+      yakınlaşmanın gerçekleşmesi ölçülüyor.
+
+## Doğrulama
+`Zeytindağ` arandı → rozete tıklandı → harita z9'dan **z13**'e gitti, mahalle
+sınırı tamamen ekranda. `Bergama` seçildi → **z10,5**, ilçe ekranda. Seçim
+kaldırılınca liste temizlendi. 17/17 denetim geçti, konsol temiz.

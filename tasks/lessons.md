@@ -213,3 +213,10 @@ Bu dosya, aynı hataların tekrarlanmaması için tutulur.
   sınıftaki düğmeler (ilçe/mahalle ✎) tamamen kayboldu. Kullanıcı bildirdi.
   Ders: bir kuralı sınıfa göre gizlerken o sınıfın **başka nerede** kullanıldığını
   `grep` ile kontrol et.
+- **"Düğme var" ile "düğme bulunur" aynı şey değil.** Sınır düzenleyicisinin
+  kapısı çıplak bir ✎ simgesiydi; test "görünür: true" diyordu, kullanıcı yine
+  göremedi. Simge + yazı ("✎ Çizgi ayarları") sorunu bitirdi. Bir aracı
+  kullanıcı iki kez soruyorsa hata erişilebilirlikte değil, görünürlüktedir.
+- **Listeden bir alan seçmek "orayı görmek" istemektir.** İlçe/mahalle seçimi
+  yalnızca süzgeci değiştiriyordu; haritayı elle bulmak gerekiyordu. Seçince
+  `fitBounds`, seçimi kaldırınca yerinde bırakmak doğru davranış.

@@ -156,6 +156,56 @@ denetle("etiketler yakınlaştırmaya göre açılıyor", await ev(`(async funct
   return s;})()`),
   r => r.z7 === 0 && r.z11 > 0);
 
+console.log("\n— Alan seçince haritanın oraya gitmesi —");
+denetle("mahalle seçilince harita o mahalleye gidiyor", await ev(`(async function(){
+  var D=window.IZMIR_HARITA;
+  D.seciliMahalle.clear(); D.seciliIlce.clear();
+  D.harita.setView([38.42,27.14], 9);
+  await new Promise(function(r){setTimeout(r,900);});
+  var once={z:D.harita.getZoom(), m:D.harita.getCenter()};
+  var g=document.querySelector('#mahalle-arama');
+  g.value='zeytindağ'; g.dispatchEvent(new Event('input',{bubbles:true}));
+  await new Promise(function(r){setTimeout(r,700);});
+  var b=document.querySelector('#mahalle-liste [data-mahalle]');
+  var ad=b? b.dataset.mahalle : null;
+  if(b) b.click();
+  await new Promise(function(r){setTimeout(r,2200);});
+  // Secilen mahallenin sinir kutusu ekranda mi?
+  var f=(D.sinir.mahalle.veri.features||[]).find(function(x){return x.properties.ad===ad;});
+  var dz=f.geometry.type==='MultiPolygon'? f.geometry.coordinates:[f.geometry.coordinates];
+  var k=null;
+  dz.forEach(function(p){p.forEach(function(h){h.forEach(function(c){
+    if(!k) k=L.latLngBounds([c[1],c[0]],[c[1],c[0]]); else k.extend([c[1],c[0]]);});});});
+  return {secilen:ad, oncekiZoom:once.z, sonrakiZoom:D.harita.getZoom(),
+          alanEkranda: D.harita.getBounds().contains(k),
+          yakinlasti: D.harita.getZoom() > once.z};})()`),
+  r => r.secilen && r.alanEkranda === true && r.yakinlasti === true);
+
+denetle("ilçe seçilince harita o ilçeye gidiyor", await ev(`(async function(){
+  var D=window.IZMIR_HARITA;
+  D.seciliMahalle.clear(); mahalleListesiCizVar=null;
+  document.querySelector('#mahalle-arama').value='';
+  document.querySelector('#mahalle-arama').dispatchEvent(new Event('input',{bubbles:true}));
+  await new Promise(function(r){setTimeout(r,600);});
+  D.harita.setView([38.42,27.14], 9);
+  await new Promise(function(r){setTimeout(r,900);});
+  var b=[].slice.call(document.querySelectorAll('#ilce-liste [data-ilce]'))
+          .find(function(x){return x.dataset.ilce==='Bergama';});
+  if(!b) return {yok:true};
+  b.click();
+  await new Promise(function(r){setTimeout(r,2200);});
+  var f=(D.sinir.ilce.veri.features||[]).find(function(x){return x.properties.ad==='Bergama';});
+  var dz=f.geometry.type==='MultiPolygon'? f.geometry.coordinates:[f.geometry.coordinates];
+  var k=null;
+  dz.forEach(function(p){p.forEach(function(h){h.forEach(function(c){
+    if(!k) k=L.latLngBounds([c[1],c[0]],[c[1],c[0]]); else k.extend([c[1],c[0]]);});});});
+  var sonuc={zoom:D.harita.getZoom(), alanEkranda:D.harita.getBounds().contains(k)};
+  b.click(); // secimi geri al
+  await new Promise(function(r){setTimeout(r,800);});
+  sonuc.kaldirincaKaldi = D.seciliIlce.size===0;
+  return sonuc;})()`),
+  r => r.alanEkranda === true && r.zoom > 9 && r.kaldirincaKaldi === true);
+
 console.log("\n— Yol seçimi —");
 denetle("yola tıklayınca bilgi kartı açılıyor", await ev(`(async function(){
   var D=window.IZMIR_HARITA;

@@ -1103,6 +1103,32 @@
     }
   };
 
+  // Secilen ilce/mahallenin uzerine git. Listeden bir ad secmek "orayi gormek"
+  // demek; haritayi oldugu yerde birakmak kullaniciyi aratip bulmaya zorluyordu.
+  function alanaGit(tur, adlar) {
+    var st = sinirDurum(tur);
+    if (!st.veri || !adlar.length) return false;
+    var istenen = {};
+    adlar.forEach(function (a) { istenen[a] = true; });
+    var k = null;
+    st.veri.features.forEach(function (f) {
+      if (!istenen[f.properties.ad]) return;
+      var dz = f.geometry.type === "MultiPolygon"
+        ? f.geometry.coordinates : [f.geometry.coordinates];
+      dz.forEach(function (poly) {
+        poly.forEach(function (halka) {
+          halka.forEach(function (c) {
+            if (!k) k = L.latLngBounds([c[1], c[0]], [c[1], c[0]]);
+            else k.extend([c[1], c[0]]);
+          });
+        });
+      });
+    });
+    if (!k || !k.isValid()) return false;
+    D.harita.fitBounds(k, { padding: [45, 45], maxZoom: tur === "mahalle" ? 15 : 13 });
+    return true;
+  }
+
   function sinirDurum(tur) {
     if (!D.sinir[tur]) {
       D.sinir[tur] = { veri: null, katman: null, vurgu: null, etiketler: null,
@@ -1465,8 +1491,10 @@
     kap.querySelectorAll("[data-ilce]").forEach(function (b) {
       b.onclick = function () {
         var i = b.dataset.ilce;
-        if (D.seciliIlce.has(i)) D.seciliIlce.delete(i); else D.seciliIlce.add(i);
+        var secildi = !D.seciliIlce.has(i);
+        if (secildi) D.seciliIlce.add(i); else D.seciliIlce.delete(i);
         ilceListesiCiz(); mahalleListesiCiz(); katmanlariYenile();
+        if (secildi) alanaGit("ilce", Array.from(D.seciliIlce));
       };
     });
     baslikSayisi("#bolum-ilce", D.seciliIlce.size);
@@ -1506,9 +1534,10 @@
     kap.querySelectorAll("[data-mahalle]").forEach(function (b) {
       b.onclick = function () {
         var m = b.dataset.mahalle;
-        if (D.seciliMahalle.has(m)) D.seciliMahalle.delete(m);
-        else D.seciliMahalle.add(m);
+        var secildi = !D.seciliMahalle.has(m);
+        if (secildi) D.seciliMahalle.add(m); else D.seciliMahalle.delete(m);
         mahalleListesiCiz(); katmanlariYenile(); sinirGuncelle("mahalle", true);
+        if (secildi) alanaGit("mahalle", Array.from(D.seciliMahalle));
       };
     });
 
