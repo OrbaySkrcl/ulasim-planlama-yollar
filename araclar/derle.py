@@ -341,6 +341,70 @@ PROJEKSIYONLAR = (
 )
 
 
+def kayitlari_ayir(kayitlar):
+    """Birleştirilmiş (dissolve edilmiş) kayıtları birbirine bağlı yollara ayırır.
+
+    QGIS'te aynı ada göre birleştirilen kayıtlar tek parça sayılır: İzmir'in iki
+    ucundaki iki ayrı "KADIKÖY" sokağı aynı kaydın parçası olduğu için haritada
+    birine tıklayınca ikisi de seçiliyordu. Adı boş olan yollarda bu daha da
+    belirgindi; adı boş + DURUM 0 olan her şey tek bir kayıttı (4.849 parça,
+    197 km'ye yayılan).
+
+    Burada her kayıt, parçaları ortak köşe noktası paylaşan gruplara ayrılır.
+    Gerçekten sürekli olan yollar (Çevre Yolu, otoyollar) tek kayıt olarak kalır;
+    birbirine değmeyen parçalar ayrı kayıt olur.
+    """
+    yeni = []
+    ayrilan_kayit = 0
+    for k in kayitlar:
+        parcalar = k["parcalar"]
+        if len(parcalar) == 1:
+            k["parca_no"] = 0
+            yeni.append(k)
+            continue
+
+        # Birlesim-bulma (union-find): ortak kose noktasi olan parcalari birlestir
+        n = len(parcalar)
+        kok = list(range(n))
+
+        def bul(i):
+            while kok[i] != i:
+                kok[i] = kok[kok[i]]
+                i = kok[i]
+            return i
+
+        dugum = {}
+        for i, parca in enumerate(parcalar):
+            for nokta in parca:
+                anahtar = (nokta[0], nokta[1])
+                onceki = dugum.get(anahtar)
+                if onceki is None:
+                    dugum[anahtar] = i
+                else:
+                    ra, rb = bul(onceki), bul(i)
+                    if ra != rb:
+                        kok[rb] = ra
+
+        gruplar = {}
+        for i in range(n):
+            gruplar.setdefault(bul(i), []).append(i)
+
+        if len(gruplar) == 1:
+            k["parca_no"] = 0
+            yeni.append(k)
+            continue
+
+        ayrilan_kayit += 1
+        # Uzun olandan kisaya: 1 numarali parca kaydin en uzun kolu olsun
+        gruplar_sirali = sorted(gruplar.values(),
+                                key=lambda g: -sum(len(parcalar[i]) for i in g))
+        for sira, grup in enumerate(gruplar_sirali, 1):
+            yeni.append({"ozellik": k["ozellik"], "renk": k["renk"],
+                         "parcalar": [parcalar[i] for i in grup],
+                         "parca_no": sira})
+    return yeni, ayrilan_kayit
+
+
 def ters_tm(x, y, lam0, k0, FE, FN, a, f):
     """Transverse Mercator ters dönüşümü: projeksiyonlu (x, y) -> (lon, lat) derece."""
     e2 = f * (2 - f)
@@ -806,6 +870,14 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
     # 2) KML
     kayitlar, bos_geometri = kml_oku(kml_yolu, ondalik)
 
+    # 2b) Birlestirilmis kayitlari bagli yollara ayir (kategoriler.json ile kapatilabilir)
+    if ayar.get("yollari_ayir", True):
+        onceki = len(kayitlar)
+        kayitlar, ayrilan = kayitlari_ayir(kayitlar)
+        if ayrilan:
+            log("  Birleşik kayıt ayrıldı: %d kayıt birbirine değmeyen yollara "
+                "bölündü (%d → %d yol)." % (ayrilan, onceki, len(kayitlar)))
+
     # 3) Sınır katmanları (opsiyonel) — projeksiyon denetimi için yol orta noktaları
     orta_noktalar = []
     for k in kayitlar:
@@ -901,6 +973,11 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
             "durum": durum,
             "uzunluk_m": round(uzunluk, 1),
         }
+        if k.get("parca_no"):
+            # Kaynak kayit bagli yollara ayrildi; fid degismedi ki QGIS'te
+            # orijinal katmanla eslestirilebilsin. parca_no kacinci kol oldugunu
+            # soyler, yani (fid, parca_no) ikilisi tekil anahtardir.
+            prop["parca_no"] = k["parca_no"]
         if ilce_indeks:
             prop["ilce"] = baskin_alan(ilce_indeks, k["parcalar"], uzunluk) or "Belirlenemedi"
             ist = ilce_istatistik.setdefault(prop["ilce"],

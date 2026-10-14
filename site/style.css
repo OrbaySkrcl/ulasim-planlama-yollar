@@ -142,14 +142,13 @@ html[data-tema="koyu"] a { color: var(--vurgu); }
   font-size: 11.5px; color: var(--yazi-soluk); white-space: nowrap;
   font-variant-numeric: tabular-nums; flex: 0 0 auto; margin-left: 2px;
 }
+/* Dugmeler her zaman gorunur: dokunmatik ekranda :hover yok, gizlenirse
+   ulasilamiyor (ilce/mahalle bolumundeki duzenle dugmeleri boyle kaybolmustu). */
 .kat-duzenle {
-  border: 1px solid transparent; background: transparent; color: var(--yazi-soluk);
+  border: 1px solid var(--cizgi); background: var(--panel); color: var(--yazi-soluk);
   border-radius: 6px; padding: 2px 5px; font-size: 12px; line-height: 1; flex: 0 0 auto;
-  visibility: hidden;
 }
-.kat:hover .kat-duzenle, .kat:focus-within .kat-duzenle {
-  visibility: visible; border-color: var(--cizgi); background: var(--panel);
-}
+.kat:hover .kat-duzenle, .kat:focus-within .kat-duzenle { color: var(--yazi); }
 .kat-duzenle:hover { color: var(--vurgu); border-color: var(--vurgu); }
 .kat .alt-satir {
   display: flex; align-items: center; gap: 4px; margin: 1px 0 0 46px; min-height: 19px;
@@ -161,13 +160,11 @@ html[data-tema="koyu"] a { color: var(--vurgu); }
 .kat.kapali-kat .cizgi-ornek, .kat.kapali-kat .bar > i { opacity: .35; }
 .kat.kapali-kat .ad, .kat.kapali-kat .sayi { color: var(--yazi-soluk); }
 .kat-yalniz {
-  border: 1px solid transparent; background: transparent; color: var(--yazi-soluk);
+  border: 1px solid var(--cizgi); background: var(--panel); color: var(--yazi-soluk);
   border-radius: 6px; padding: 2px 6px; font-size: 10.5px; font-weight: 650;
-  line-height: 1.4; flex: 0 0 auto; visibility: hidden;
+  line-height: 1.4; flex: 0 0 auto;
 }
-.kat:hover .kat-yalniz, .kat:focus-within .kat-yalniz {
-  visibility: visible; border-color: var(--cizgi); background: var(--panel);
-}
+.kat:hover .kat-yalniz, .kat:focus-within .kat-yalniz { color: var(--yazi); }
 .kat-yalniz:hover { color: var(--vurgu); border-color: var(--vurgu); }
 .kat .bar { height: 3px; border-radius: 3px; margin: 5px 0 0 46px; background: var(--panel-2); overflow: hidden; }
 .kat .bar > i { display: block; height: 100%; border-radius: 3px; }
@@ -426,6 +423,7 @@ html[data-tema="koyu"] a { color: var(--vurgu); }
 .pop-ad { font-size: 14.5px; font-weight: 650; margin-bottom: 2px; line-height: 1.3; }
 .pop-kat { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--yazi-soluk); margin-bottom: 9px; }
 .pop-kat i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.pop-ek { color: var(--yazi-soluk); font-size: 11px; }
 .pop-tablo { width: 100%; font-size: 12.5px; border-collapse: collapse; }
 .pop-tablo td { padding: 3px 0; }
 .pop-tablo td:first-child { color: var(--yazi-soluk); padding-right: 12px; }

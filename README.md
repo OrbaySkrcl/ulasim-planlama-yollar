@@ -18,6 +18,7 @@ _(Aşağıdaki "Tek seferlik kurulum" adımını yaptıktan birkaç dakika sonra
 3. [QGIS'ten doğru KML nasıl çıkarılır](#3-qgisten-doğru-kml-nasıl-çıkarılır)
 4. [Kategori adı, renk ve başlıkları değiştirme](#4-kategori-adı-renk-ve-başlıkları-değiştirme)
 5. [İlçe ve mahalle sınırları ekleme (isteğe bağlı)](#5-ilçe-ve-mahalle-sınırları-ekleme-isteğe-bağlı)
+5b. [Birleşik (dissolve) kayıtların ayrılması ve QGIS'e geri alma](#5b-birleşik-dissolve-kayıtların-ayrılması-ve-qgise-geri-alma)
 6. [Görünümü site üzerinden değiştirme](#6-görünümü-site-üzerinden-değiştirme-kategoriler-ve-ilçe-sınırı)
 7. [Depoyu müdürlük hesabına taşımak](#7-depoyu-müdürlük-hesabına-taşımak)
 8. [Sitede neler var](#8-sitede-neler-var)
@@ -257,6 +258,74 @@ uyarıları** bölümünde ne yapmanız gerektiği yazar. Bu durumda dosyayı QG
 
 ---
 
+## 5b. Birleşik (dissolve) kayıtların ayrılması ve QGIS'e geri alma
+
+### Sorun neydi
+
+QGIS'te yollar aynı ada göre **birleştirildiği (dissolve)** için, İzmir'in iki
+ucundaki birbiriyle hiç ilgisi olmayan iki yol tek kayıt sayılıyordu. Haritada
+birine tıklayınca ikisi de seçiliyordu. Adı boş olan yollarda bu çok daha
+belirgindi — adı boş ve `DURUM = 0` olan **her şey tek bir kayıttı**:
+
+| | Önce | Sonra |
+|---|---|---|
+| En büyük tek kayıt | 4.849 parça, **197 km'ye yayılan** | 123 parça, **1,6 km'ye yayılan** |
+| "KADIKÖY" adlı yollar | 1 kayıt (13 ilçeye yayılan) | **106 ayrı kayıt** |
+| Toplam kayıt | 42.753 | 75.981 |
+| 25 km'den geniş yayılan kayıt | çok sayıda | **6** (hepsi gerçekten sürekli otoyol) |
+
+### Ne yapılıyor
+
+Derleme sırasında her kayıt, **parçaları birbirine değiyor mu** diye kontrol
+edilerek bölünüyor. Ortak köşe noktası paylaşan parçalar bir arada kalıyor,
+paylaşmayanlar ayrı kayıt oluyor. Yani:
+
+- İzmir Çevre Yolu'nun 343 parçası **tek yol** olarak kalıyor (gerçekten sürekli).
+- İzmir–Çeşme Otoyolu'nun 194 parçası **tek yol** (68 km, kesintisiz).
+- Adı boş dev kayıt ise 2.440 ayrı köy yoluna bölünüyor.
+
+Toplam kilometre **değişmiyor** (31.655,2 km) — hiçbir geometri silinmiyor ya da
+eklenmiyor, sadece kayıtlar doğru şekilde ayrılıyor.
+
+Bu davranışı kapatmak isterseniz `veri/kategoriler.json` içine şunu ekleyin:
+
+```json
+"yollari_ayir": false
+```
+
+### Düzeltilmiş veriyi QGIS'e geri alma
+
+1. Sitede sağ üstteki **⬇︎ Veriyi indir → GeoJSON — düzeltilmiş** bağlantısına
+   tıklayın (`yollar.geojson`).
+2. QGIS'te **Katman → Katman Ekle → Vektör Katman Ekle…**
+3. **Kaynak:** indirdiğiniz `yollar.geojson` → **Ekle**.
+4. Katman `EPSG:4326 (WGS 84)` olarak açılır.
+
+Gelen alanlar:
+
+| Alan | Açıklama |
+|------|----------|
+| `fid` | **Orijinal QGIS kayıt numarası** — eski katmanla eşleştirmek için bozulmadan korunur |
+| `parca_no` | Kayıt bölündüyse kaçıncı kol olduğu (bölünmediyse boş). `fid` + `parca_no` birlikte tekil anahtardır |
+| `ad` | `ADINUMARASI` |
+| `durum` | `DURUM` kodu (0–5) |
+| `tip` | `TIP1` kodunun adı (Sokak, Cadde, Bulvar…) |
+| `uzunluk_m` | Hesaplanan uzunluk (metre) |
+| `ilce` | **Yeni** — yolun hangi ilçede olduğu, sınır katmanından hesaplanıyor |
+| `mahalle` | **Yeni** — yolun hangi mahallede olduğu |
+
+> `ilce` ve `mahalle` alanları kaynakta yoktu; derleme sırasında yol üzerinden
+> eşit aralıklı örnek noktalar alınıp hangi sınırın içine düştüğüne bakılarak
+> hesaplanıyor. QGIS'te ilçe bazlı filtre/rapor almak için doğrudan
+> kullanabilirsiniz.
+
+Eski katmanınızdaki başka alanları da taşımak isterseniz QGIS'te
+**Vektör → Veri Yönetimi Araçları → Öznitelikleri Konuma Göre Birleştir**
+yerine, daha basiti: iki katmanı `fid` alanı üzerinden
+**Özellikler → Birleşimler (Joins)** ile bağlayın.
+
+---
+
 ## 6. Görünümü site üzerinden değiştirme (kategoriler ve ilçe sınırı)
 
 Dosya düzenlemeden, doğrudan harita üzerinden de değiştirebilirsiniz:
@@ -452,6 +521,16 @@ tasks/                      çalışma planı ve notlar
 - **Büyük kaynak dosyalar.** KML akış hâlinde (streaming) okunur; her kayıt
   işlendikten sonra bellekten düşürülür, böylece 100 MB'lık dosyalarda da bellek
   sabit kalır. Sıkıştırılmış dosyalar açılmadan, doğrudan içinden okunur.
+- **Birleşik kayıtların ayrılması.** QGIS'te dissolve edilmiş kayıtlar, parçaları
+  ortak köşe noktası paylaşıyor mu diye birleşim-bulma (union-find) ile gruplanır.
+  Bitiş noktaları değil **tüm köşe noktaları** taranır, böylece T kavşaklar da
+  yakalanır. 42.753 kayıt → 75.981 yol, 0,4 saniye. Toplam kilometre değişmez.
+  Doğruluk ölçütü "ne bölündü" değil **"ne bölünmedi"**: İzmir Çevre Yolu'nun 343
+  parçası tek kayıt kalır, İzmir–Çeşme Otoyolu'nun 194 parçası tek kayıt kalır.
+- **Testler.** `araclar/testler/site_testi.mjs` gerçek bir tarayıcıda 15 denetim
+  yapar (açılış, seçim yayılımı, sınır düzenleyicileri, arama, süzgeç, ölçüm,
+  altlıklar, konsol temizliği). Çalıştırmak için dosyanın başındaki adımları
+  izleyin. Günlük kullanım için gerekmez.
 - **Bağımlılık yok.** Derleme yalnızca Python 3 standart kütüphanesiyle çalışır;
   site saf HTML/CSS/JavaScript'tir, Leaflet 1.9.4 depo içinde yerel olarak sunulur.
   Yani site, dış bir kütüphane sunucusu çökse bile açılır.

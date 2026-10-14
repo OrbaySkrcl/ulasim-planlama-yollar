@@ -585,7 +585,9 @@
       "<tr><td>Uzunluk</td><td>" + uzunlukYazi(p.uzunluk_m) + "</td></tr>" +
       (p.ilce ? "<tr><td>İlçe</td><td>" + kacar(p.ilce) + "</td></tr>" : "") +
       (p.mahalle ? "<tr><td>Mahalle</td><td>" + kacar(p.mahalle) + "</td></tr>" : "") +
-      "<tr><td>Kayıt no</td><td>#" + kacar(p.fid) + "</td></tr>" +
+      "<tr><td>Kayıt no</td><td>#" + kacar(p.fid) +
+        (p.parca_no ? ' <span class="pop-ek">(' + kacar(p.parca_no) +
+                      ". kol)</span>" : "") + "</td></tr>" +
       "<tr><td>Koordinat</td><td>" + koord + "</td></tr>" +
       "</table>" +
       '<div class="pop-eylem">' +

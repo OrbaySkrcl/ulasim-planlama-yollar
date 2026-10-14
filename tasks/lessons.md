@@ -200,3 +200,16 @@ Bu dosya, aynı hataların tekrarlanmaması için tutulur.
 - **Arayüz değişince ekran görüntüsüne bak.** "Panel 1560 px'e indi" ölçümü iyi
   görünürken ekran görüntüsü adların kırpıldığını gösterdi; sayısal ölçüm tek
   başına yetmiyor.
+- **QGIS'te "dissolve" edilmiş veri haritada tek nesne gibi davranır.** Aynı ada
+  göre birleştirilen yollar tek kayıt olur; haritada birine tıklayınca il genelinde
+  dağınık duran tüm parçalar seçilir. Çözüm: parçaları ortak köşe noktası üzerinden
+  birleşim-bulma (union-find) ile gruplayıp bağlı olanları ayrı kayıt yapmak.
+  Bitiş noktası değil **tüm köşe noktaları** taranmalı, yoksa T kavşaklar kaçar.
+- **Bu ayrımın doğruluğu "ne bölündü"den çok "ne bölünmedi" ile ölçülür.** İzmir
+  Çevre Yolu'nun 343 parçası tek kayıt kalıyorsa algoritma doğrudur; bölünseydi
+  fazla agresif demekti.
+- **`visibility:hidden` + `:hover` ile gösterilen düğme dokunmatik ekranda yok
+  demektir.** Üstelik kuralı `.kat:hover` ile yazınca `.kat` içinde olmayan aynı
+  sınıftaki düğmeler (ilçe/mahalle ✎) tamamen kayboldu. Kullanıcı bildirdi.
+  Ders: bir kuralı sınıfa göre gizlerken o sınıfın **başka nerede** kullanıldığını
+  `grep` ile kontrol et.

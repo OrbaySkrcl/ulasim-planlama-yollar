@@ -445,3 +445,62 @@ Sonuçta bu çalışma da veriler önemli ve o verileri kolayca görebilmekte ö
 senaryoları temiz derleme çıktısı üzerinde çalıştırıldı; hepsi geçti, tarayıcı
 konsolu temiz. Telefon ölçüsünde (390×844) yatay taşma yok, kategori adları
 kırpılmıyor, lejant ölçek çubuğunu kapatmıyor.
+
+---
+
+# Tur 9 — Birleşik (dissolve) yol kayıtlarını ayırma + sınır düzenleme düğmesi
+
+İstek: "x ilçesindeki bir yol parçasını seçtiğimde y ilçesindeki yol parçasını da
+seçiyor, aralarında bağlantı bile yok. ADINUMARASI merge olmasından kaynaklı
+muhtemelen, özellikle NULL olanlarda göze batıyor... ayrıca mahalle veya ilçe
+sınırlarının çizgi kalınlığı düzenleme seçeneği de yok son güncellemede."
+
+## Teşhis
+Kullanıcının tahmini doğru. KML'de kayıtlar (ADINUMARASI, DURUM) ikilisine göre
+birleştirilmiş (dissolve). Ölçüm:
+
+| | |
+|---|---|
+| Toplam kayıt | 42.753 |
+| Tek parçalı kayıt | 29.213 |
+| **Çok parçalı kayıt** | **13.540** |
+| Toplam parça | 106.322 |
+
+En kötü örnekler:
+| Ad | DURUM | Parça | Yayılım |
+|---|---|---|---|
+| (adı boş) | 0 | **4.849** | 197 km |
+| (adı boş) | 5 | **2.011** | 193 km |
+| (adı boş) | 3 | 386 | 167 km |
+| KADIKÖY | 1 | 114 | 100 km |
+| ATATÜRK | 3 | 129 | 117 km |
+
+Yani "adı boş + DURUM 0" olan her şey **tek bir kayıt**. Birine tıklayınca
+4.849 parçanın tamamı seçiliyor — kullanıcının gördüğü tam olarak bu.
+
+İkinci sorun benim geçen turda yaptığım bir hata: `.kat-duzenle` düğmesini
+`visibility:hidden` yapıp `.kat:hover` ile gösterdim. İlçe/Mahalle bölümündeki
+✎ düğmeleri `.kat` içinde değil, bu yüzden **hiç görünmez oldular**.
+
+## Plan
+- [x] `derle.py`: `kayitlari_ayir()` — birleşim-bulma (union-find) ile kaydın
+      parçaları ortak köşe noktası üzerinden gruplanıyor. Tüm köşe noktaları
+      taranıyor, böylece T kavşaklar da yakalanıyor. Süre: 0,4 sn.
+- [x] `fid` orijinal hâlinde korunuyor, ayrılan kayda `parca_no` ekleniyor.
+- [x] `.kat-duzenle` / `.kat-yalniz` her zaman görünür.
+- [x] README'ye "5b. Birleşik kayıtların ayrılması ve QGIS'e geri alma" bölümü.
+- [x] İndirme menüsünde GeoJSON "düzeltilmiş" olarak etiketlendi.
+
+## Sonuç
+| | Önce | Sonra |
+|---|---|---|
+| Kayıt | 42.753 | **75.981** (11.326 kayıt bölündü) |
+| Toplam km | 31.655,2 | **31.655,2** (değişmedi — geometri kaybı yok) |
+| En büyük tek kayıt | 4.849 parça / 197 km yayılım | **123 parça / 1,6 km** |
+| "KADIKÖY" | 1 kayıt | **106 kayıt, 13 ilçeye dağılmış** |
+| 25 km'den geniş yayılan | çok | **6** (Çeşme/Aydın/Kuzey Ege otoyolları, Çevre Yolu) |
+| İzmir Çevre Yolu (343 parça) | — | **2 yol** (gerçekten sürekli, doğru) |
+| İzmir–Çeşme Otoyolu (194 parça) | — | **1 yol** (68 km kesintisiz, doğru) |
+
+Doğru davranışın korunduğunun kanıtı: sürekli otoyollar bölünmedi, bölünenler
+yalnızca birbirine değmeyen kayıtlar.
