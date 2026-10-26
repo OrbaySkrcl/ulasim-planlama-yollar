@@ -295,20 +295,51 @@ Bu davranışı kapatmak isterseniz `veri/kategoriler.json` içine şunu ekleyin
 
 ### Düzeltilmiş veriyi QGIS'e geri alma
 
-1. Sitede sağ üstteki **⬇︎ Veriyi indir → GeoJSON — düzeltilmiş** bağlantısına
-   tıklayın (`yollar.geojson`).
-2. QGIS'te **Katman → Katman Ekle → Vektör Katman Ekle…**
-3. **Kaynak:** indirdiğiniz `yollar.geojson` → **Ekle**.
-4. Katman `EPSG:4326 (WGS 84)` olarak açılır.
+**GeoPackage'ı indirin, GeoJSON'u değil.** Sitede sağ üstteki
+**⬇︎ Veriyi indir → GeoPackage — QGIS için** bağlantısı (`yollar.gpkg`).
 
-Gelen alanlar:
+1. QGIS'te **Katman → Katman Ekle → Vektör Katman Ekle…**
+2. **Kaynak:** indirdiğiniz `yollar.gpkg` → **Ekle**.
+3. Katman `EPSG:4326 (WGS 84)` olarak açılır.
+
+Dosyayı sürükleyip QGIS penceresine bırakmak da olur.
+
+#### Neden GeoPackage?
+
+GeoJSON düz metindir ve **mekânsal indeksi yoktur**: QGIS dosyanın tamamını
+okur ve her kaydırma/yakınlaştırmada 75.981 kaydı tek tek tarar. Program bu
+yüzden kasar — kayıt sayısından çok biçim yüzünden.
+
+GeoPackage tek bir SQLite dosyasıdır ve içinde **R-tree mekânsal indeksi**
+taşır. QGIS yalnızca ekranda kalan kayıtları okur:
+
+Ölçüm (QGIS'in de kullandığı GDAL kütüphanesiyle, 40 rastgele harita
+penceresi — kaydırmayı taklit eder, ikisi de aynı 4.594 kaydı döndürdü):
+
+| | GeoJSON | GeoPackage |
+|---|---|---|
+| Mekânsal indeks | yok | **var (R-tree)** |
+| 40 pencere sorgusu | 44,63 sn | **0,04 sn** |
+| Pencere başına | 1.116 ms | **1 ms** |
+| Dosya boyutu | 38,5 MB | 35,0 MB |
+
+Yani dosya boyutu neredeyse aynı; fark tamamen indeksten geliyor. Haritayı
+kaydırmak **yaklaşık 1.000 kat** hızlanıyor.
+
+> GeoPackage, QGIS'in (ve ArcGIS'in) yerel biçimi sayılır; shapefile'ın yerine
+> geçmesi için OGC tarafından tanımlanmıştır. 10 karakterlik alan adı sınırı,
+> yan dosya kalabalığı ve 2 GB sınırı yoktur.
+
+#### Gelen alanlar
 
 | Alan | Açıklama |
 |------|----------|
-| `fid` | **Orijinal QGIS kayıt numarası** — eski katmanla eşleştirmek için bozulmadan korunur |
-| `parca_no` | Kayıt bölündüyse kaçıncı kol olduğu (bölünmediyse boş). `fid` + `parca_no` birlikte tekil anahtardır |
+| `fid` | GeoPackage'ın kendi satır numarası (zorunlu, 1'den başlar) |
+| `kayit_no` | **Sizin orijinal QGIS kayıt numaranız** — eski katmanla eşleştirmek için bozulmadan korunur |
+| `parca_no` | Kayıt bölündüyse kaçıncı kol olduğu (bölünmediyse boş). `kayit_no` + `parca_no` birlikte tekil anahtardır |
 | `ad` | `ADINUMARASI` |
 | `durum` | `DURUM` kodu (0–5) |
+| `durum_adi` | **Yeni** — kodun karşılığı ("Büyükşehir'e geçen köy yolları" gibi). QGIS'te *Kategorize Edilmiş* stil vermek için doğrudan bu alanı seçin |
 | `tip` | `TIP1` kodunun adı (Sokak, Cadde, Bulvar…) |
 | `uzunluk_m` | Hesaplanan uzunluk (metre) |
 | `ilce` | **Yeni** — yolun hangi ilçede olduğu, sınır katmanından hesaplanıyor |
@@ -319,10 +350,29 @@ Gelen alanlar:
 > hesaplanıyor. QGIS'te ilçe bazlı filtre/rapor almak için doğrudan
 > kullanabilirsiniz.
 
-Eski katmanınızdaki başka alanları da taşımak isterseniz QGIS'te
-**Vektör → Veri Yönetimi Araçları → Öznitelikleri Konuma Göre Birleştir**
-yerine, daha basiti: iki katmanı `fid` alanı üzerinden
-**Özellikler → Birleşimler (Joins)** ile bağlayın.
+Eski katmanınızdaki başka alanları da taşımak isterseniz iki katmanı
+`kayit_no` ↔ `fid` üzerinden **Katman Özellikleri → Birleşimler (Joins)** ile
+bağlayın.
+
+### Sadece ihtiyacınız olan yolları indirmek
+
+Tüm ili açmanız gerekmiyorsa sitede önce süzün (kategori, ilçe, mahalle), sonra
+**⬇︎ Veriyi indir → Yalnızca seçili yolları indir**. Düğmenin altında kaç yol ve
+kaç kilometre indireceğiniz yazar. Tek ilçeyle çalışırken 75.981 yerine birkaç
+bin kayıt inersiniz; QGIS'te fark çok büyüktür.
+
+### QGIS yine de ağır çalışıyorsa
+
+Bunlar veriyi değil, QGIS'in çizim ayarlarını değiştirir:
+
+1. **Katman Özellikleri → İşleme (Rendering)** → *Basitleştirme*'yi açın,
+   "Çizimde basitleştir" kutusunu işaretleyin. Uzaktan bakarken gereksiz
+   kırılma noktaları çizilmez.
+2. Aynı sekmede **Ölçeğe bağlı görünürlük**: örneğin 1:100.000'den uzakta
+   katman hiç çizilmesin.
+3. **Etiketleri kapatın.** 76 bin etiket, çizimden daha pahalıdır.
+4. Alttaki durum çubuğunda **İşlemeyi durdur** kutusunu işaretleyip tüm
+   ayarlarınızı yapın, sonra tekrar açın.
 
 ---
 

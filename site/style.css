@@ -386,6 +386,10 @@ html[data-tema="koyu"] a { color: var(--vurgu); }
 .menu .baslik { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--yazi-soluk); padding: 8px 10px 4px; font-weight: 700; }
 .menu .ayrac { height: 1px; background: var(--cizgi); margin: 5px 4px; }
 .menu small { display: block; color: var(--yazi-soluk); font-size: 11px; margin-top: 2px; }
+.menu { max-width: 330px; }
+.menu a.onerilen { border: 1px solid var(--vurgu); background: var(--vurgu-soluk, transparent); }
+.menu a.onerilen b { color: var(--vurgu); }
+.menu button:disabled { opacity: .5; }
 
 /* açılır pencere */
 .perde {

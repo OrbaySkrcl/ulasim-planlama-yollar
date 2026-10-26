@@ -381,6 +381,62 @@
     return true;
   }
 
+  // Ekrandaki süzgece uyan yolları dosya olarak ver. Tek bir ilçeyle çalışan
+  // birinin 76 bin kayıtlık dosyayı indirip QGIS'te beklemesi gerekmesin.
+  function suzgecliOzellikler() {
+    return D.ozellikler.filter(function (f) {
+      return D.seciliKategori.has(f.properties.durum) && gecerliMi(f.properties);
+    });
+  }
+
+  function suzgecDosyaAdi() {
+    var p = [];
+    if (D.seciliIlce.size && D.seciliIlce.size <= 3) {
+      p = p.concat(Array.from(D.seciliIlce));
+    }
+    if (D.seciliMahalle.size && D.seciliMahalle.size <= 3) {
+      p = p.concat(Array.from(D.seciliMahalle));
+    }
+    if (!p.length && D.seciliKategori.size === 1) {
+      p.push(katKisaAd(Array.from(D.seciliKategori)[0]));
+    }
+    var ek = p.join("-").toLowerCase()
+      .replace(/[ıİ]/g, "i").replace(/[şŞ]/g, "s").replace(/[ğĞ]/g, "g")
+      .replace(/[üÜ]/g, "u").replace(/[öÖ]/g, "o").replace(/[çÇ]/g, "c")
+      .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    return "yollar" + (ek ? "-" + ek : "-secili") + ".geojson";
+  }
+
+  function suzgecNotuGuncelle() {
+    var dugme = $("#indir-suzgec");
+    var not = $("#indir-suzgec-not");
+    if (!dugme || !not) return;
+    var liste = suzgecliOzellikler();
+    var km = liste.reduce(function (t, f) { return t + (f.properties.uzunluk_m || 0); }, 0);
+    dugme.disabled = !liste.length;
+    not.textContent = liste.length
+      ? sayi(liste.length) + " yol · " + sayi(km / 1000, 1) + " km — GeoJSON"
+      : "Süzgece uyan yol yok";
+  }
+
+  function suzgecliIndir() {
+    var liste = suzgecliOzellikler();
+    if (!liste.length) return;
+    var gj = {
+      type: "FeatureCollection",
+      crs: { type: "name", properties: { name: "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+      features: liste
+    };
+    var ad = suzgecDosyaAdi();
+    var bag = document.createElement("a");
+    var url = URL.createObjectURL(new Blob([JSON.stringify(gj)],
+                                           { type: "application/geo+json" }));
+    bag.href = url; bag.download = ad;
+    document.body.appendChild(bag); bag.click(); document.body.removeChild(bag);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+    bildir(ad + " indiriliyor (" + sayi(liste.length) + " yol).");
+  }
+
   function kategoriSiralari() {
     return Object.keys(D.ozet.kategoriler).sort(function (a, b) {
       return (D.ozet.kategoriler[a].sira || 999) - (D.ozet.kategoriler[b].sira || 999);
@@ -1769,7 +1825,9 @@
     $("#olcum-temizle").onclick = olcumTemizle;
     $("#olcum-bitir").onclick = olcumBitir;
 
+    $("#indir-suzgec").onclick = suzgecliIndir;
     $("#btn-indir").onclick = function (e) {
+      suzgecNotuGuncelle();
       e.stopPropagation();
       $("#menu-indir").classList.toggle("acik");
     };
@@ -1916,6 +1974,14 @@
     $("#kaynak").textContent = ozet.kaynak_dosya + " · " + sayi(ozet.toplam_km, 1) +
       " km · " + sayi(ozet.ad_sayisi || 0) + " farklı yol adı";
     $("#boyut-geojson").textContent = ozet.veri_boyut_mb + " MB";
+    // GeoPackage yazılamadıysa bağlantıyı hiç gösterme (ölü bağlantı olmasın)
+    var gpkgBag = $("#menu-indir a[href$='.gpkg']");
+    if (ozet.gpkg_boyut_mb) {
+      $("#boyut-gpkg").textContent = ozet.gpkg_boyut_mb + " MB";
+      if (gpkgBag) gpkgBag.hidden = false;
+    } else if (gpkgBag) {
+      gpkgBag.hidden = true;
+    }
     var kaynakBaglanti = $("#indir-kaynak");
     if (kaynakBaglanti) {
       if (ozet.kaynak_indirme) {

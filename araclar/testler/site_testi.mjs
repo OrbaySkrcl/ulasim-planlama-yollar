@@ -278,6 +278,52 @@ denetle("mesafe ölçer doğru ölçüyor", await ev(`(function(){
           sapma_yuzde:+Math.abs(km-gercek/1000)/(gercek/1000)*100};})()`),
   r => r.yazi && r.sapma_yuzde < 1);
 
+console.log("\n— İndirme menüsü —");
+denetle("GeoPackage bağlantısı ve boyutu var", await ev(`(async function(){
+  document.querySelector('#btn-indir').click();
+  await new Promise(function(r){setTimeout(r,400);});
+  var a=document.querySelector('#menu-indir a[href$=".gpkg"]');
+  var b=document.querySelector('#boyut-gpkg');
+  var y=await fetch(a.getAttribute('href'),{method:'HEAD'});
+  return {varMi:!!a, onerilen:a.classList.contains('onerilen'),
+          boyut:b.textContent, http:y.status,
+          tur:y.headers.get('content-type'),
+          bayt:+y.headers.get('content-length')};})()`),
+  r => r.varMi && r.onerilen && r.http === 200 && r.bayt > 1000000 && /MB/.test(r.boyut));
+
+denetle("süzgeçli indirme doğru sayıyı veriyor", await ev(`(async function(){
+  var D=window.IZMIR_HARITA;
+  D.seciliIlce.clear(); D.seciliMahalle.clear(); D.seciliTip.clear();
+  // yalnizca kategori 1 + Bergama
+  D.seciliKategori.clear(); D.seciliKategori.add('1');
+  D.seciliIlce.add('Bergama');
+  document.querySelector('#btn-indir').click();
+  await new Promise(function(r){setTimeout(r,500);});
+  var not=document.querySelector('#indir-suzgec-not').textContent;
+  // gercek sayi
+  var beklenen=D.ozellikler.filter(function(f){
+    return f.properties.durum==='1' && f.properties.ilce==='Bergama';}).length;
+  // sablon dizgisinde ters bolu yutuldugu icin kacis gerektirmeyen ifade:
+  var yazan=parseInt(not.split(' ')[0].replace(/[^0-9]/g,''),10);
+  var dugme=document.querySelector('#indir-suzgec');
+  return {not:not, beklenen:beklenen, yazan:yazan, kapali:dugme.disabled};})()`),
+  r => r.yazan === r.beklenen && r.beklenen > 0 && r.kapali === false);
+
+denetle("süzgeç boşsa düğme kapalı", await ev(`(async function(){
+  var D=window.IZMIR_HARITA;
+  D.seciliTip.clear();
+  D.seciliIlce.clear(); D.seciliIlce.add('Çeşme');
+  D.seciliMahalle.clear(); D.seciliMahalle.add('Zeytindağ');
+  document.querySelector('#btn-indir').click();
+  await new Promise(function(r){setTimeout(r,500);});
+  var d=document.querySelector('#indir-suzgec');
+  var sonuc={kapali:d.disabled, not:document.querySelector('#indir-suzgec-not').textContent};
+  D.seciliIlce.clear(); D.seciliMahalle.clear();
+  D.seciliKategori.clear(); ['1','2','3','4'].forEach(function(k){D.seciliKategori.add(k);});
+  document.querySelector('#btn-indir').click();
+  return sonuc;})()`),
+  r => r.kapali === true);
+
 console.log("\n— Konsol —");
 const konsol = konsolOlaylari
   .map(m => { const p = m.params; return p.entry ? p.entry.level + ": " + p.entry.text : p.type + ": " + (p.args || []).map(a => a.value ?? a.description ?? "").join(" "); })

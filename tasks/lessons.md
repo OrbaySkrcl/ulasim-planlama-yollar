@@ -220,3 +220,19 @@ Bu dosya, aynı hataların tekrarlanmaması için tutulur.
 - **Listeden bir alan seçmek "orayı görmek" istemektir.** İlçe/mahalle seçimi
   yalnızca süzgeci değiştiriyordu; haritayı elle bulmak gerekiyordu. Seçince
   `fitBounds`, seçimi kaldırınca yerinde bırakmak doğru davranış.
+- **QGIS'te "çok fazla kayıt var" diye bilinen sorun aslında biçim sorunudur.**
+  GeoJSON düz metindir ve mekânsal indeksi yoktur; QGIS her kaydırmada bütün
+  kayıtları tarar. Aynı 75.981 kayıt GeoPackage'da (SQLite + R-tree) pencere
+  başına 1116 ms yerine **1 ms** sürüyor. Veriyi küçültmeden önce biçime bak.
+- **GeoPackage yazmak için GDAL gerekmiyor.** `sqlite3` + `struct` yetiyor:
+  birkaç spec tablosu, geometri için 'GP' başlıklı WKB, bir R-tree sanal
+  tablosu ve 6 tetikleyici. Projenin "bağımlılık yok" kuralı bozulmadı.
+- **GeoPackage'da `fid` ayrılmış bir addır** (tamsayı birincil anahtar olmak
+  zorunda). Kaynaktaki `fid` alanını `kayit_no` diye yazmak gerekti.
+- **Kendi yazdığın ikili biçimi mutlaka üçüncü taraf kütüphaneyle doğrula.**
+  Kendi okuyucunla okumak hiçbir şey kanıtlamaz; aynı hatayı iki kez yaparsın.
+  GDAL (QGIS'in kullandığı kütüphanenin ta kendisi) ile 75.981 kaydın tamamı
+  kaynakla karşılaştırıldı: 0 fark.
+- **JavaScript şablon dizgisi (`` ` ``) içinde `\d` yazarsan `d` olur.** Testte
+  `/\d+/` sessizce `/d+/` oldu ve eşleşme bulamadı; hata kodda değil testteydi.
+  Şablon dizgisi içinde ya `\\d` yaz ya da `[0-9]` gibi kaçışsız ifade kullan.

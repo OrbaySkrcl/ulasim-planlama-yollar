@@ -531,3 +531,51 @@ göremedi; haklı. Teknik olarak "var olmak" ile "bulunabilir olmak" aynı şey 
 `Zeytindağ` arandı → rozete tıklandı → harita z9'dan **z13**'e gitti, mahalle
 sınırı tamamen ekranda. `Bergama` seçildi → **z10,5**, ilçe ekranda. Seçim
 kaldırılınca liste temizlendi. 17/17 denetim geçti, konsol temiz.
+
+---
+
+# Tur 11 — QGIS'te performans: GeoPackage çıktısı
+
+İstek: "yolları ayırdığın geojson dosyasını indirdim. qgiste açtığımda aşırı
+kasıyor program çünkü çok fazla parça var. ne yapabiliriz?"
+
+## Teşhis
+Asıl sebep parça sayısı değil, **dosya biçimi**. GeoJSON düz metindir ve
+**mekânsal indeksi yoktur**: QGIS 38,5 MB'ı baştan okur, her kaydırma/yakınlaştırma
+işleminde 75.981 kaydı tek tek tarar. GeoPackage ise SQLite tabanlıdır ve R-tree
+indeksi taşır — aynı veri, aynı kayıt sayısı, ama QGIS yalnızca ekrandaki
+kayıtları okur.
+
+(Karşılaştırma: 76 bin kayıt GeoPackage'da QGIS için normal bir boyut.
+Aynı kayıt GeoJSON'da ağırdır. Veriyi küçültmek değil, biçimi değiştirmek gerek.)
+
+## Plan
+- [x] `derle.py`'a `gpkg_yaz()`: yalnızca `sqlite3` + `struct`. R-tree indeksi,
+      spec tetikleyicileri (6 adet), `gpkg_extensions` kaydı dahil.
+- [x] `fid` çakışması çözüldü: orijinal kayıt numarası `kayit_no` alanında.
+- [x] `durum_adi` alanı eklendi.
+- [x] İndirme menüsü yeniden düzenlendi; GeoPackage en üstte "Önerilen".
+- [x] **Süzgeçli indirme**: ekrandaki süzgece uyan yollar tek tıkla GeoJSON.
+      Düğmenin altında kaç yol / kaç km olduğu yazıyor.
+- [x] README'ye "Neden GeoPackage", alan tablosu ve "QGIS yine de ağırsa" bölümü.
+- [x] GeoPackage yazılamazsa derleme çökmüyor; site GeoJSON ile yayınlanıyor,
+      menüdeki bağlantı gizleniyor.
+
+## Ölçüm (GDAL ile — QGIS'in kullandığı kütüphane)
+40 rastgele harita penceresi, ikisi de aynı 4.594 kaydı döndürdü:
+
+| | GeoJSON | GeoPackage |
+|---|---|---|
+| 40 pencere sorgusu | **44,63 sn** | **0,04 sn** |
+| Pencere başına | 1.116 ms | **1 ms** |
+| Dosya boyutu | 38,5 MB | 35,0 MB |
+
+Yani fark boyuttan değil, tamamen indeksten geliyor — yaklaşık **1.000 kat**.
+
+## Doğrulama
+`ogrinfo` dosyayı sorunsuz açıyor (75.981 kayıt, MultiLineString, EPSG:4326).
+75.981 kaydın tamamı kaynak GeoJSON ile karşılaştırıldı — öznitelikler ve
+319.759 koordinat — **0 fark**. R-tree sorgu planında kullanılıyor
+(`SCAN rtree_yollar_geom VIRTUAL TABLE`), 75.981 indeks satırı, 6 tetikleyici,
+`application_id = 0x47504B47`, `user_version = 10200`.
+Site testi 20/20 geçti, konsol temiz.

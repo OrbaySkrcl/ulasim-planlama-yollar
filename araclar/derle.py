@@ -23,6 +23,8 @@ import math
 import os
 import re
 import shutil
+import sqlite3
+import struct
 import sys
 import unicodedata
 from datetime import datetime, timezone, timedelta
@@ -339,6 +341,207 @@ PROJEKSIYONLAR = (
       dict(lam0=27 + 3 * i, k0=1.0, FE=500000.0, FN=0.0, a=ED50[0], f=ED50[1]))
      for i in range(7)]
 )
+
+
+# --------------------------------------------------------------------------
+# GeoPackage (QGIS icin hizli bicim)
+# --------------------------------------------------------------------------
+
+# WGS 84'un EPSG tanimi; GeoPackage spec'i srs tablosunda WKT istiyor.
+_WGS84_WKT = (
+    'GEOGCS["WGS 84",DATUM["WGS_1984",'
+    'SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],'
+    'AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],'
+    'UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],'
+    'AUTHORITY["EPSG","4326"]]'
+)
+
+
+def _gpkg_geometri(parcalar, srs_id=4326):
+    """Parca listesini GeoPackage ikili geometrisine (MultiLineString) cevirir.
+
+    Bicim: 'GP' + surum + bayraklar + srs + zarf + standart WKB.
+    Bayrak 0x03 = kucuk-endian + XY zarfi (zarf, QGIS'in kirpmasini hizlandirir).
+    """
+    minx = miny = 1e30
+    maxx = maxy = -1e30
+    govde = [struct.pack("<BII", 1, 5, len(parcalar))]
+    for parca in parcalar:
+        duz = []
+        for x, y in parca:
+            duz.append(x); duz.append(y)
+            if x < minx: minx = x
+            if x > maxx: maxx = x
+            if y < miny: miny = y
+            if y > maxy: maxy = y
+        govde.append(struct.pack("<BII", 1, 2, len(parca)))
+        govde.append(struct.pack("<%dd" % len(duz), *duz))
+    bas = struct.pack("<2sBBi", b"GP", 0, 0x03, srs_id)
+    zarf = struct.pack("<4d", minx, maxx, miny, maxy)
+    return sqlite3.Binary(bas + zarf + b"".join(govde)), (minx, maxx, miny, maxy)
+
+
+def gpkg_yaz(hedef, ozellikler, kategori_adlari, katman="yollar"):
+    """QGIS icin GeoPackage uretir — yalnizca Python standart kutuphanesiyle.
+
+    Neden: GeoJSON duz metindir ve mekansal indeksi yoktur. QGIS 76 bin yolu
+    her kaydirmada bastan tarar, program kasar. GeoPackage SQLite tabanlidir
+    ve R-tree indeksi tasir; QGIS yalnizca ekranda kalan kayitlari okur.
+
+    GeoPackage'da 'fid' tamsayi birincil anahtar olmak zorunda, bu yuzden
+    QGIS'ten gelen kayit numarasi 'kayit_no' alanina yazilir.
+    """
+    if hedef.exists():
+        hedef.unlink()
+    baglanti = sqlite3.connect(str(hedef))
+    try:
+        c = baglanti.cursor()
+        # 0x47504B47 = 'GPKG'; surum 1.2
+        c.execute("PRAGMA application_id = 1196444487")
+        c.execute("PRAGMA user_version = 10200")
+        c.execute("PRAGMA journal_mode = MEMORY")
+        c.execute("PRAGMA synchronous = OFF")
+
+        c.execute("""CREATE TABLE gpkg_spatial_ref_sys (
+            srs_name TEXT NOT NULL, srs_id INTEGER NOT NULL PRIMARY KEY,
+            organization TEXT NOT NULL, organization_coordsys_id INTEGER NOT NULL,
+            definition TEXT NOT NULL, description TEXT)""")
+        c.executemany(
+            "INSERT INTO gpkg_spatial_ref_sys VALUES (?,?,?,?,?,?)",
+            [("Undefined cartesian SRS", -1, "NONE", -1, "undefined",
+              "undefined cartesian coordinate reference system"),
+             ("Undefined geographic SRS", 0, "NONE", 0, "undefined",
+              "undefined geographic coordinate reference system"),
+             ("WGS 84 geodetic", 4326, "EPSG", 4326, _WGS84_WKT,
+              "longitude/latitude coordinates in decimal degrees")])
+
+        c.execute("""CREATE TABLE gpkg_contents (
+            table_name TEXT NOT NULL PRIMARY KEY, data_type TEXT NOT NULL,
+            identifier TEXT UNIQUE, description TEXT DEFAULT '',
+            last_change DATETIME NOT NULL
+                DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+            min_x DOUBLE, min_y DOUBLE, max_x DOUBLE, max_y DOUBLE,
+            srs_id INTEGER,
+            CONSTRAINT fk_gc_r_srs_id FOREIGN KEY (srs_id)
+                REFERENCES gpkg_spatial_ref_sys(srs_id))""")
+        c.execute("""CREATE TABLE gpkg_geometry_columns (
+            table_name TEXT NOT NULL, column_name TEXT NOT NULL,
+            geometry_type_name TEXT NOT NULL, srs_id INTEGER NOT NULL,
+            z TINYINT NOT NULL, m TINYINT NOT NULL,
+            CONSTRAINT pk_geom_cols PRIMARY KEY (table_name, column_name),
+            CONSTRAINT uk_gc_table_name UNIQUE (table_name),
+            CONSTRAINT fk_gc_tn FOREIGN KEY (table_name)
+                REFERENCES gpkg_contents(table_name),
+            CONSTRAINT fk_gc_srs FOREIGN KEY (srs_id)
+                REFERENCES gpkg_spatial_ref_sys (srs_id))""")
+        c.execute("""CREATE TABLE gpkg_extensions (
+            table_name TEXT, column_name TEXT, extension_name TEXT NOT NULL,
+            definition TEXT NOT NULL, scope TEXT NOT NULL,
+            CONSTRAINT ge_tce UNIQUE (table_name, column_name, extension_name))""")
+
+        c.execute("""CREATE TABLE "%s" (
+            fid INTEGER PRIMARY KEY AUTOINCREMENT,
+            geom MULTILINESTRING,
+            kayit_no TEXT, parca_no INTEGER, ad TEXT, tip TEXT,
+            durum TEXT, durum_adi TEXT, uzunluk_m REAL,
+            ilce TEXT, mahalle TEXT)""" % katman)
+
+        minx = miny = 1e30
+        maxx = maxy = -1e30
+        kutular = []
+
+        def satirlar():
+            nonlocal minx, miny, maxx, maxy
+            for sira, oz in enumerate(ozellikler, 1):
+                g = oz["geometry"]
+                parcalar = (g["coordinates"] if g["type"] == "MultiLineString"
+                            else [g["coordinates"]])
+                blob, kutu = _gpkg_geometri(parcalar)
+                kutular.append((sira, kutu[0], kutu[1], kutu[2], kutu[3]))
+                if kutu[0] < minx: minx = kutu[0]
+                if kutu[1] > maxx: maxx = kutu[1]
+                if kutu[2] < miny: miny = kutu[2]
+                if kutu[3] > maxy: maxy = kutu[3]
+                p = oz["properties"]
+                yield (sira, blob, p.get("fid"), p.get("parca_no"), p.get("ad"),
+                       p.get("tip"), p.get("durum"),
+                       kategori_adlari.get(p.get("durum"), ""),
+                       p.get("uzunluk_m"), p.get("ilce"), p.get("mahalle"))
+
+        c.executemany(
+            'INSERT INTO "%s" (fid, geom, kayit_no, parca_no, ad, tip, durum, '
+            'durum_adi, uzunluk_m, ilce, mahalle) '
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?)" % katman, satirlar())
+
+        c.execute("INSERT INTO gpkg_contents (table_name, data_type, identifier, "
+                  "description, min_x, min_y, max_x, max_y, srs_id) "
+                  "VALUES (?,?,?,?,?,?,?,?,?)",
+                  (katman, "features", katman,
+                   "Izmir koy yollari devir calismasi", minx, miny, maxx, maxy, 4326))
+        c.execute("INSERT INTO gpkg_geometry_columns VALUES (?,?,?,?,?,?)",
+                  (katman, "geom", "MULTILINESTRING", 4326, 0, 0))
+
+        # R-tree mekansal indeksi: QGIS'in yalnizca ekrandaki kayitlari
+        # okumasini saglayan asil parca. Kurulu SQLite'ta rtree modulu
+        # kapaliysa dosya yine gecerli kalir, sadece indekssiz olur.
+        try:
+            c.execute('CREATE VIRTUAL TABLE "rtree_%s_geom" USING rtree('
+                      "id, minx, maxx, miny, maxy)" % katman)
+            c.executemany('INSERT INTO "rtree_%s_geom" VALUES (?,?,?,?,?)' % katman,
+                          kutular)
+            c.execute("INSERT INTO gpkg_extensions VALUES (?,?,?,?,?)",
+                      (katman, "geom", "gpkg_rtree_index",
+                       "http://www.geopackage.org/spec120/#extension_rtree",
+                       "write-only"))
+            # Spec tetikleyicileri: kullanici QGIS'te duzenleme yaparsa indeks
+            # bayatlamasin. ST_* fonksiyonlarini GDAL/QGIS saglar.
+            for sql in _gpkg_rtree_tetikleyicileri(katman):
+                c.execute(sql)
+            indeksli = True
+        except sqlite3.Error as e:
+            log("  Uyarı: GeoPackage mekânsal indeksi oluşturulamadı (%s). "
+                "Dosya geçerli ama QGIS'te daha yavaş açılır." % e)
+            indeksli = False
+
+        baglanti.commit()
+        c.execute("ANALYZE")
+        baglanti.commit()
+    finally:
+        baglanti.close()
+    return hedef.stat().st_size, indeksli
+
+
+def _gpkg_rtree_tetikleyicileri(t):
+    """GeoPackage 1.2 spec'indeki R-tree bakim tetikleyicileri."""
+    r = 'rtree_%s_geom' % t
+    return [
+        'CREATE TRIGGER "%s_insert" AFTER INSERT ON "%s"'
+        ' WHEN (new.geom NOT NULL AND NOT ST_IsEmpty(NEW.geom)) BEGIN'
+        ' INSERT OR REPLACE INTO "%s" VALUES (NEW.fid, ST_MinX(NEW.geom),'
+        ' ST_MaxX(NEW.geom), ST_MinY(NEW.geom), ST_MaxY(NEW.geom)); END;' % (r, t, r),
+
+        'CREATE TRIGGER "%s_update1" AFTER UPDATE OF geom ON "%s"'
+        ' WHEN OLD.fid = NEW.fid AND (NEW.geom NOTNULL AND NOT ST_IsEmpty(NEW.geom))'
+        ' BEGIN INSERT OR REPLACE INTO "%s" VALUES (NEW.fid, ST_MinX(NEW.geom),'
+        ' ST_MaxX(NEW.geom), ST_MinY(NEW.geom), ST_MaxY(NEW.geom)); END;' % (r, t, r),
+
+        'CREATE TRIGGER "%s_update2" AFTER UPDATE OF geom ON "%s"'
+        ' WHEN OLD.fid = NEW.fid AND (NEW.geom ISNULL OR ST_IsEmpty(NEW.geom))'
+        ' BEGIN DELETE FROM "%s" WHERE id = OLD.fid; END;' % (r, t, r),
+
+        'CREATE TRIGGER "%s_update3" AFTER UPDATE ON "%s"'
+        ' WHEN OLD.fid != NEW.fid AND (NEW.geom NOTNULL AND NOT ST_IsEmpty(NEW.geom))'
+        ' BEGIN DELETE FROM "%s" WHERE id = OLD.fid;'
+        ' INSERT OR REPLACE INTO "%s" VALUES (NEW.fid, ST_MinX(NEW.geom),'
+        ' ST_MaxX(NEW.geom), ST_MinY(NEW.geom), ST_MaxY(NEW.geom)); END;' % (r, t, r, r),
+
+        'CREATE TRIGGER "%s_update4" AFTER UPDATE ON "%s"'
+        ' WHEN OLD.fid != NEW.fid AND (NEW.geom ISNULL OR ST_IsEmpty(NEW.geom))'
+        ' BEGIN DELETE FROM "%s" WHERE id IN (OLD.fid, NEW.fid); END;' % (r, t, r),
+
+        'CREATE TRIGGER "%s_delete" AFTER DELETE ON "%s" WHEN old.geom NOT NULL'
+        ' BEGIN DELETE FROM "%s" WHERE id = OLD.fid; END;' % (r, t, r),
+    ]
 
 
 def kayitlari_ayir(kayitlar):
@@ -1121,6 +1324,19 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
     gj_yolu = veri_cikti / "yollar.geojson"
     _geojson_yaz(gj_yolu, ozellikler)
 
+    # QGIS için GeoPackage: aynı veri, ama mekânsal indeksli.
+    # GeoJSON'u QGIS her kaydırmada baştan tarıyor; bu dosya o sorunu çözer.
+    # Burada bir aksilik olursa site yine yayınlansın; GeoJSON zaten duruyor.
+    gpkg_yolu = veri_cikti / "yollar.gpkg"
+    try:
+        gpkg_boyut, gpkg_indeksli = gpkg_yaz(
+            gpkg_yolu, ozellikler, {d: k["ad"] for d, k in kategoriler.items()})
+    except Exception as e:
+        log("  Uyarı: GeoPackage yazılamadı (%s). Site GeoJSON ile yayınlanacak." % e)
+        if gpkg_yolu.exists():
+            gpkg_yolu.unlink()
+        gpkg_boyut, gpkg_indeksli = 0, False
+
     # Kategori başına ayrı dosya: site yalnızca açık kategorileri indirir.
     # 40 bin yolun tamamını birden yüklemek tarayıcıyı gereksiz yorar.
     kategori_dosyalari = {}
@@ -1210,6 +1426,8 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
         "ad_dosyasi": "adlar.json",
         "ad_dosya_mb": round(ad_yolu.stat().st_size / 1048576, 2),
         "veri_boyut_mb": round(gj_yolu.stat().st_size / 1048576, 2),
+        "gpkg_boyut_mb": round(gpkg_boyut / 1048576, 2) if gpkg_boyut else 0,
+        "gpkg_indeksli": gpkg_indeksli,
     }
     (veri_cikti / "ozet.json").write_text(
         json.dumps(ozet, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
@@ -1234,6 +1452,10 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
         log("  ! %s: %s" % (u["baslik"], u["mesaj"]))
     log("  " + "-" * 58)
     log("  yollar.geojson : %.2f MB (tamamı, indirme için)" % ozet["veri_boyut_mb"])
+    if ozet["gpkg_boyut_mb"]:
+        log("  yollar.gpkg    : %.2f MB (QGIS için%s)"
+            % (ozet["gpkg_boyut_mb"],
+               ", mekânsal indeksli" if gpkg_indeksli else ", indekssiz"))
     log("  ozet.json      : %.2f MB | adlar.json: %.2f MB (ilk aramada iner)"
         % ((veri_cikti / "ozet.json").stat().st_size / 1048576 if (veri_cikti / "ozet.json").exists() else 0,
            ozet["ad_dosya_mb"]))
