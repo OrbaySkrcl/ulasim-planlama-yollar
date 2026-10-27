@@ -24,6 +24,7 @@ import os
 import re
 import shutil
 import sqlite3
+import subprocess
 import struct
 import sys
 import unicodedata
@@ -62,8 +63,13 @@ def depo_bilgisi():
     return {"sahip": sahip or "", "depo": depo or "", "dal": dal or "main"}
 
 
+SESSIZ = False
+
+
 def log(msg):
-    print(msg, flush=True)
+    # Onceki surumu karsilastirmak icin ikinci kez okurken gunluge yazmayalim
+    if not SESSIZ:
+        print(msg, flush=True)
 
 
 def hata(msg):
@@ -151,7 +157,7 @@ def normalize(s):
 # Kaynak dosyayı açma (düz, sıkıştırılmış ya da GeoJSON)
 # --------------------------------------------------------------------------
 
-YOL_UZANTILARI = (".kml", ".kmz", ".zip", ".geojson", ".json", ".gz")
+YOL_UZANTILARI = (".kml", ".kmz", ".zip", ".geojson", ".json", ".gz", ".gpkg")
 
 
 def _zipten_sec(zf):
@@ -194,6 +200,11 @@ def kaynak_ac(yol):
 # --------------------------------------------------------------------------
 
 def kml_oku(yol, ondalik=6):
+    # GeoPackage ikili bir veritabani; akis olarak degil dogrudan acilir
+    if yol.name.lower().endswith(".gpkg"):
+        log("  Kaynak okunuyor: %s (%.1f MB, GeoPackage)"
+            % (yol.name, yol.stat().st_size / 1048576))
+        return gpkg_yol_oku(yol, ondalik)
     kaynak, bicim, ic_ad = kaynak_ac(yol)
     boyut = yol.stat().st_size / 1048576
     if ic_ad != yol.name:
@@ -379,6 +390,101 @@ def _gpkg_geometri(parcalar, srs_id=4326):
     bas = struct.pack("<2sBBi", b"GP", 0, 0x03, srs_id)
     zarf = struct.pack("<4d", minx, maxx, miny, maxy)
     return sqlite3.Binary(bas + zarf + b"".join(govde)), (minx, maxx, miny, maxy)
+
+
+def _wkb_cizgiler(ham, konum=0):
+    """WKB'den cizgi listesi okur (LineString / MultiLineString)."""
+    duzen = "<" if ham[konum] == 1 else ">"
+    tip = struct.unpack_from(duzen + "I", ham, konum + 1)[0]
+    konum += 5
+    if tip == 2:                      # LineString
+        n = struct.unpack_from(duzen + "I", ham, konum)[0]
+        konum += 4
+        d = struct.unpack_from(duzen + "%dd" % (2 * n), ham, konum)
+        konum += 16 * n
+        return [[[d[i * 2], d[i * 2 + 1]] for i in range(n)]], konum
+    if tip == 5:                      # MultiLineString
+        adet = struct.unpack_from(duzen + "I", ham, konum)[0]
+        konum += 4
+        cizgiler = []
+        for _ in range(adet):
+            alt, konum = _wkb_cizgiler(ham, konum)
+            cizgiler.extend(alt)
+        return cizgiler, konum
+    raise ValueError("desteklenmeyen WKB geometri tipi: %s" % tip)
+
+
+def gpkg_geometri_coz(blob, ondalik=6):
+    """GeoPackage ikili geometrisini [[ [x,y], ... ], ...] listesine cevirir."""
+    if blob is None or len(blob) < 8:
+        return []
+    ham = bytes(blob)
+    if ham[:2] != b"GP":
+        raise ValueError("GeoPackage geometri basligi bozuk")
+    bayrak = ham[3]
+    zarf_tipi = (bayrak >> 1) & 0x07
+    # zarf boyutlari: 0 yok, 1 XY(32B), 2 XYZ(48B), 3 XYM(48B), 4 XYZM(64B)
+    zarf = (0, 32, 48, 48, 64, 0, 0, 0)[zarf_tipi]
+    cizgiler, _ = _wkb_cizgiler(ham, 8 + zarf)
+    temiz = []
+    for c in cizgiler:
+        nokta = []
+        for x, y in c:
+            x, y = round(x, ondalik), round(y, ondalik)
+            if nokta and nokta[-1] == [x, y]:
+                continue
+            nokta.append([x, y])
+        if len(nokta) >= 2:
+            temiz.append(nokta)
+    return temiz
+
+
+# Ana katmandaki sade alan adlari -> derlemenin bekledigi KML alan adlari
+GPKG_ALAN_ESLEME = {
+    "durum": "DURUM", "ad": "ADINUMARASI", "tip": "TIP1",
+    "DURUM": "DURUM", "ADINUMARASI": "ADINUMARASI", "TIP1": "TIP1",
+}
+
+
+def gpkg_yol_oku(yol, ondalik=6):
+    """Yollari GeoPackage'dan okur. Ana katman dogrudan kaynak olabilsin diye."""
+    baglanti = sqlite3.connect("file:%s?mode=ro" % yol, uri=True)
+    try:
+        c = baglanti.cursor()
+        try:
+            satir = c.execute("SELECT table_name, column_name FROM "
+                              "gpkg_geometry_columns LIMIT 1").fetchone()
+        except sqlite3.Error:
+            hata("%s bir GeoPackage gibi görünmüyor." % yol.name)
+        if not satir:
+            hata("%s içinde katman yok." % yol.name)
+        katman, geom_alani = satir
+        sutunlar = [r[1] for r in c.execute('PRAGMA table_info("%s")' % katman)]
+        oznitelikler = [s for s in sutunlar if s != geom_alani]
+        c.execute('SELECT "%s", %s FROM "%s"'
+                  % (geom_alani, ", ".join('"%s"' % s for s in oznitelikler), katman))
+        kayitlar = []
+        atlanan = []
+        for satir in c:
+            parcalar = gpkg_geometri_coz(satir[0], ondalik)
+            oz = {}
+            for ad, deger in zip(oznitelikler, satir[1:]):
+                if deger is None:
+                    continue
+                oz[GPKG_ALAN_ESLEME.get(ad, ad)] = str(deger).strip()
+            if not parcalar:
+                atlanan.append(str(oz.get("fid") or "?"))
+                continue
+            kayitlar.append({"ozellik": oz, "renk": None, "parcalar": parcalar})
+    finally:
+        baglanti.close()
+    if atlanan:
+        log("  Uyarı: çizgi geometrisi olmayan %d kayıt atlandı (fid: %s)."
+            % (len(atlanan), ", ".join(atlanan[:10]) + ("…" if len(atlanan) > 10 else "")))
+    if not kayitlar:
+        hata("%s içinde çizgi geometrili kayıt bulunamadı." % yol.name)
+    log("  %d yol okundu (GeoPackage, katman '%s')." % (len(kayitlar), katman))
+    return kayitlar, atlanan
 
 
 def gpkg_yaz(hedef, ozellikler, kategori_adlari, katman="yollar"):
@@ -1149,6 +1255,48 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
     # 2) KML
     kayitlar, bos_geometri = kml_oku(kml_yolu, ondalik)
 
+    # 2a0) Degisiklik gunlugu: bir onceki surumle karsilastir.
+    # "Bu guncellemede ne degisti?" sorusunun cevabi; uzunluklerin karismamasi
+    # icin en pratik guvence.
+    global SESSIZ
+    degisiklikler = None
+    onceki_bilgi = None
+    try:
+        import tempfile
+        with tempfile.TemporaryDirectory() as td:
+            onceki = onceki_surumu_al(kml_yolu, Path(td))
+            if onceki:
+                onceki_yol, onceki_commit, onceki_tarih = onceki
+                SESSIZ = True
+                try:
+                    eski_kayitlar, _ = kml_oku(onceki_yol, ondalik)
+                finally:
+                    SESSIZ = False
+                degisiklikler = degisiklikleri_karsilastir(eski_kayitlar, kayitlar)
+                onceki_bilgi = {"commit": onceki_commit, "tarih": onceki_tarih}
+                del eski_kayitlar
+    except Exception as e:
+        log("  Uyarı: değişiklik günlüğü çıkarılamadı (%s)." % e)
+
+    if degisiklikler:
+        g = degisiklikler["gecisler"]
+        if g or degisiklikler["eklenen"]["adet"] or degisiklikler["silinen"]["adet"]:
+            log("  Bir önceki sürüme göre değişiklikler (%s):"
+                % (onceki_bilgi["tarih"] or onceki_bilgi["commit"]))
+            for x in g[:12]:
+                log("    DURUM %s → %s : %d yol, %.1f km"
+                    % (x["eski"], x["yeni"], x["adet"], x["km"]))
+            if len(g) > 12:
+                log("    … ve %d geçiş daha" % (len(g) - 12))
+            if degisiklikler["eklenen"]["adet"]:
+                log("    Yeni eklenen : %d yol, %.1f km"
+                    % (degisiklikler["eklenen"]["adet"], degisiklikler["eklenen"]["km"]))
+            if degisiklikler["silinen"]["adet"]:
+                log("    Silinen      : %d yol, %.1f km"
+                    % (degisiklikler["silinen"]["adet"], degisiklikler["silinen"]["km"]))
+        else:
+            log("  Bir önceki sürüme göre yol durumu değişmemiş.")
+
     # 2a) Ustun durumla birebir ortusen cizgileri digerlerinden sil.
     # Ayni yol hem "devredilen" (1) hem "bos" (0) / "ilce belediyesi" (5) olarak
     # cizilmis durumda; bu hem ustuste cizime hem de kilometrenin iki kez
@@ -1533,6 +1681,8 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
         "mahalle_sinir": sinir_gorunumu(ayar.get("mahalle_sinir"),
                                         "#b45309", "#f59e0b", 0.8, 12, 11),
         "uyarilar": uyarilar,
+        "degisiklikler": degisiklikler,
+        "onceki_surum": onceki_bilgi,
         "depo": depo_bilgisi(),
         "ayar_ham": ayar,
         "ad_sayisi": len(ad_listesi),
@@ -1579,8 +1729,90 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
     return ozet
 
 
-def kml_bul(veri_dizini):
-    """Yol verisini bulur: ibb_yollar.(kml|kmz|zip|geojson|json|gz) ve benzerleri."""
+def _git(*arg, ikili=False):
+    """git komutu çalıştırır; depo yoksa veya git yoksa None döner."""
+    try:
+        s = subprocess.run(["git"] + list(arg), cwd=str(KOK),
+                           stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                           timeout=60)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if s.returncode != 0:
+        return None
+    return s.stdout if ikili else s.stdout.decode("utf-8", "replace").strip()
+
+
+def onceki_surumu_al(kaynak, gecici_dizin):
+    """Kaynak dosyanın bir önceki sürümünü git'ten çıkarır.
+
+    Değişiklik günlüğü için gerekli: "bu güncellemede ne değişti?" sorusunun
+    cevabı, dosyanın şimdiki hâli ile bir öncekinin karşılaştırmasıdır.
+    """
+    try:
+        gorece = kaynak.resolve().relative_to(KOK).as_posix()
+    except ValueError:
+        return None
+    gecmis = _git("log", "--format=%H", "-n", "5", "--", gorece)
+    if not gecmis:
+        return None
+    satirlar = [h for h in gecmis.splitlines() if h.strip()]
+    # Calisma kopyasinda kaydedilmemis degisiklik varsa HEAD ile, yoksa bir
+    # oncekiyle karsilastir.
+    kirli = _git("status", "--porcelain", "--", gorece)
+    hedef_commit = satirlar[0] if kirli else (satirlar[1] if len(satirlar) > 1 else None)
+    if not hedef_commit:
+        return None
+    ham = _git("show", "%s:%s" % (hedef_commit, gorece), ikili=True)
+    if not ham:
+        return None
+    gecici = gecici_dizin / ("onceki_" + kaynak.name)
+    gecici.write_bytes(ham)
+    tarih = _git("show", "-s", "--format=%cd", "--date=format:%d.%m.%Y %H:%M",
+                 hedef_commit) or ""
+    return gecici, hedef_commit[:8], tarih
+
+
+def degisiklikleri_karsilastir(eski_kayitlar, yeni_kayitlar):
+    """İki sürüm arasında DURUM değişimlerini çıkarır (kimlik: fid)."""
+    def tablo(kayitlar):
+        d = {}
+        for k in kayitlar:
+            fid = (k["ozellik"].get("fid") or "").strip()
+            if not fid:
+                continue
+            d[fid] = ((k["ozellik"].get("DURUM") or "").strip() or "0",
+                      sum(cizgi_uzunlugu(p) for p in k["parcalar"]))
+        return d
+
+    eski, yeni = tablo(eski_kayitlar), tablo(yeni_kayitlar)
+    gecisler = {}
+    for fid, (d_yeni, m) in yeni.items():
+        onceki = eski.get(fid)
+        if onceki and onceki[0] != d_yeni:
+            g = gecisler.setdefault((onceki[0], d_yeni), [0, 0.0])
+            g[0] += 1
+            g[1] += m
+    eklenen = [(f, v) for f, v in yeni.items() if f not in eski]
+    silinen = [(f, v) for f, v in eski.items() if f not in yeni]
+    return {
+        "gecisler": [{"eski": a, "yeni": b, "adet": v[0],
+                      "km": round(v[1] / 1000.0, 1)}
+                     for (a, b), v in sorted(gecisler.items(),
+                                             key=lambda x: -x[1][1])],
+        "eklenen": {"adet": len(eklenen),
+                    "km": round(sum(v[1] for _f, v in eklenen) / 1000.0, 1)},
+        "silinen": {"adet": len(silinen),
+                    "km": round(sum(v[1] for _f, v in silinen) / 1000.0, 1)},
+    }
+
+
+def kml_bul(veri_dizini, gpkg_haric=False):
+    """Yol verisini bulur: ibb_yollar.(kml|kmz|zip|geojson|json|gz|gpkg) ve benzerleri.
+
+    Ana katman (.gpkg) varsa o esas alınır: QGIS'te yerinde düzenlenen,
+    kalıcı kimlik taşıyan asıl kaynak odur. gpkg_haric=True, ana katmanı
+    kaynaktan ilk kez üretirken kullanılır.
+    """
     # Yol verisi olmayan, klasördeki diğer dosyalar
     ayrilmis_adlar = {"kategoriler.json"}
     ayrilmis_onekler = ("ilce_sinirlari", "mahalle_sinirlari")
@@ -1593,7 +1825,15 @@ def kml_bul(veri_dizini):
             continue
         if ad in ayrilmis_adlar or any(ad.startswith(o) for o in ayrilmis_onekler):
             continue
+        if gpkg_haric and ad.endswith(".gpkg"):
+            continue
         adaylar.append(dosya)
+    ana = [a for a in adaylar if a.name.lower().endswith(".gpkg")]
+    if ana and len(ana) == 1:
+        if len(adaylar) > 1:
+            log("  Ana katman kullanılıyor: %s (diğer kaynak dosyalar yok sayıldı)."
+                % ana[0].name)
+        return ana[0]
     if not adaylar:
         hata("veri/ klasöründe yol verisi bulunamadı.\n"
              "QGIS'ten dışa aktardığınız dosyayı 'veri' klasörüne yükleyin.\n"

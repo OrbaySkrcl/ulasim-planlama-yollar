@@ -633,3 +633,43 @@ Kalan "yakın" parçalar ayrıştırıldı: tek ucu yakın olanlar (92+38+101 km
 **3,11 km** (ağın %0,01'i) — birebir olmayan şüpheli kopyalar, dokunulmadı.
 `ogrinfo` ile GeoPackage: 75.583 kayıt, DURUM 1 → 2.924 yol / 2.122,3 km.
 Site testi 22/22 geçti, konsol temiz.
+
+---
+
+# Tur 13 — Ana veri GeoPackage'a taşınsın (düzenlenebilir ana katman)
+
+İstek: "ana veriyi GeoPackage'a taşıyalım... en mantıklısı neyse onları uygula.
+çok karmaşaya gerek yok. pratiklik ve sadelik önemli. benim için en önemlisi bir
+yolun durumunu kolayca değiştirebilmek, o yolları seçebilmek, veya
+değişiklikleri geri alabilmek yani istediğim gibi oynayabileyim."
+
+## Teşhis
+Kaynakta yalnızca 4 alan var: `fid`, `ADINUMARASI`, `TIP1`, `DURUM`.
+`fid` dissolve'da her seferinde yeniden üretiliyor, yani **kalıcı kimlik yok**.
+Kimlik olmadan "bu yol geçen ay 5'ti, şimdi 1" denemiyor; devir takibi de,
+geri alma da güvenilir olmuyor. Kök sorun bu.
+
+## Plan (sade tutulacak)
+- [ ] **`yol_id`**: kalıcı kimlik. Bir kez üretilip sonsuza dek taşınacak.
+- [ ] **`veri/yollar_master.gpkg`**: temizlenmiş ana katman (ayrılmış geometri,
+      çakışma yok), QGIS'te doğrudan düzenlenecek dosya.
+- [ ] **Gömülü QGIS stili**: açınca renkler sitedekiyle aynı; `durum` ve `tip`
+      elle yazılan alan değil **açılır liste**. Toplu seçip tek hamlede
+      değiştirmek için.
+- [ ] **derle.py GeoPackage okusun** — böylece ana katman doğrudan kaynak olur,
+      dışa aktarma/dissolve adımı tamamen kalkar.
+- [ ] **Değişiklik günlüğü**: bir önceki sürümle karşılaştırıp "şu kadar yol /
+      şu kadar km A'dan B'ye geçti" dökümü. Actions özetinde ve sitede.
+- [ ] **Koruma bandı (tek kural)**: toplam km beklenmedik oynadıysa yüksek sesle
+      uyar. Fazlası karmaşa olur.
+- [ ] **README: "Bir değişikliği geri almak"** — GitHub'da sürüm geçmişinden
+      dönme adımları.
+
+## Tasarım kararları
+- Ana katmandaki alanlar: `yol_id` (kalıcı), `ad`, `tip`, `durum`, `not`
+  (serbest metin, karar no vb. için) + türetilmiş `ilce`, `mahalle`,
+  `uzunluk_m`. Türetilmişler her derlemede yeniden hesaplanır.
+- `tip` ve `durum` **kod** olarak tutulur (1,2,3…) ki QGIS açılır listesi
+  ve site aynı kaynaktan (kategoriler.json) beslensin.
+- Çakışma ayıklama ve kayıt ayırma açık kalır; ana katman zaten temiz
+  olduğu için no-op olurlar, yani koruma görevi görürler.

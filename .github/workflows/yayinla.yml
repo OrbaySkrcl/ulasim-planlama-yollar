@@ -28,6 +28,10 @@ jobs:
     steps:
       - name: Depoyu al
         uses: actions/checkout@v4
+        with:
+          # Değişiklik günlüğü bir önceki sürümle karşılaştırma yapıyor;
+          # bunun için birkaç commit'lik geçmiş gerekiyor.
+          fetch-depth: 20
 
       - name: Python kur
         uses: actions/setup-python@v5

@@ -1635,6 +1635,42 @@
     }).join("");
   }
 
+  // Bir önceki sürüme göre ne değişti? Devir takibinin en pratik güvencesi.
+  function degisiklikCiz() {
+    var d = D.ozet.degisiklikler;
+    if (!d) return;
+    var g = d.gecisler || [];
+    var ek = d.eklenen || { adet: 0, km: 0 };
+    var si = d.silinen || { adet: 0, km: 0 };
+    if (!g.length && !ek.adet && !si.adet) return;
+    $("#bolum-degisiklik").style.display = "";
+
+    var onceki = D.ozet.onceki_surum || {};
+    var satirlar = g.map(function (x) {
+      return '<div class="degisiklik-satir">' +
+        '<i style="background:' + kacar(katRenk(x.eski)) + '"></i>' +
+        '<span class="ok">→</span>' +
+        '<i style="background:' + kacar(katRenk(x.yeni)) + '"></i>' +
+        '<span class="ad">' + kacar(katKisaAd(x.eski)) + " → " +
+        kacar(katKisaAd(x.yeni)) + "</span>" +
+        '<span class="bilgi">' + sayi(x.adet) + " yol · " + sayi(x.km, 1) +
+        " km</span></div>";
+    });
+    if (ek.adet) {
+      satirlar.push('<div class="degisiklik-satir"><span class="ad">Yeni eklenen' +
+        '</span><span class="bilgi">' + sayi(ek.adet) + " yol · " +
+        sayi(ek.km, 1) + " km</span></div>");
+    }
+    if (si.adet) {
+      satirlar.push('<div class="degisiklik-satir"><span class="ad">Silinen' +
+        '</span><span class="bilgi">' + sayi(si.adet) + " yol · " +
+        sayi(si.km, 1) + " km</span></div>");
+    }
+    $("#degisiklik-liste").innerHTML = satirlar.join("") +
+      '<p class="kucuk" style="margin:9px 0 0">Karşılaştırma tabanı: ' +
+      kacar(onceki.tarih || onceki.commit || "bir önceki sürüm") + "</p>";
+  }
+
   function yardimCiz() {
     var el = $("#yardim-kategoriler");
     if (!el) return;
@@ -2053,7 +2089,8 @@
             (yolsuz ? ", " + sayi(yolsuz) + " ilçede henüz yok (soluk gösterilenler)" : "") + ".";
         }
         kategoriListesiCiz(); tipListesiCiz(); ilceListesiCiz(); mahalleListesiCiz();
-        kaliteCiz(); yardimCiz(); aramaKur(); aramaCiz(""); dugmeleriKur();
+        kaliteCiz();
+    degisiklikCiz(); yardimCiz(); aramaKur(); aramaCiz(""); dugmeleriKur();
 
         return kategorileriYukle(Array.from(D.seciliKategori));
       })
