@@ -90,11 +90,16 @@ denetle("hiçbir yol il geneline yayılmıyor", await ev(`(function(){
   // Yalnizca gercekten surekli otoyollar 25 km'yi asabilir (Cesme Otoyolu 68 km)
   r => r.genis25km <= 8 && r.enGenis_km < 80);
 
-denetle("ayrılan kayıtta fid korunmuş + parca_no var", await ev(`(function(){
-  var D=window.IZMIR_HARITA, b=null;
-  D.ozellikler.some(function(f){ if(f.properties.parca_no){b=f.properties; return true;} });
-  return b? {fid:b.fid, parca_no:b.parca_no, ad:b.ad, ilce:b.ilce} : {yok:true};})()`),
-  r => r.fid && !/-/.test(r.fid) && r.parca_no >= 1);
+denetle("her yolun kalıcı ve tekil kimliği var", await ev(`(function(){
+  var D=window.IZMIR_HARITA, gorulen={}, cift=0, bos=0;
+  D.ozellikler.forEach(function(f){
+    var k=f.properties.fid;
+    if(k===undefined||k===null||k==='') { bos++; return; }
+    if(gorulen[k]) cift++; else gorulen[k]=1;
+  });
+  return {yol:D.ozellikler.length, tekil:Object.keys(gorulen).length,
+          cift:cift, kimliksiz:bos};})()`),
+  r => r.yol > 1000 && r.cift === 0 && r.kimliksiz === 0 && r.tekil === r.yol);
 
 console.log("\n— Düzenleme düğmeleri (dokunmatik ekranda da görünmeli) —");
 denetle("düğmeler görünür", await ev(`(function(){
@@ -325,12 +330,18 @@ denetle("süzgeç boşsa düğme kapalı", await ev(`(async function(){
   r => r.kapali === true);
 
 console.log("\n— Çakışma giderme —");
-denetle("üst üste çizim uyarısı görünüyor", await ev(`(function(){
-  var u=(window.IZMIR_HARITA.ozet.uyarilar||[]).filter(function(x){
-    return /Üst üste/.test(x.baslik);});
-  return u.length? {baslik:u[0].baslik, adet:u[0].adet,
-                    mesaj:u[0].mesaj.slice(0,70)} : {yok:true};})()`),
-  r => !r.yok && r.adet > 0);
+denetle("son değişiklikler bölümü veriyle tutarlı", await ev(`(function(){
+  var D=window.IZMIR_HARITA, d=D.ozet.degisiklikler;
+  var bolum=document.getElementById('bolum-degisiklik');
+  var gorunur = bolum && getComputedStyle(bolum).display !== 'none';
+  var varMi = !!(d && ((d.gecisler||[]).length || (d.eklenen||{}).adet ||
+                       (d.silinen||{}).adet));
+  var satir = document.querySelectorAll('.degisiklik-satir').length;
+  return {degisiklikVar:varMi, bolumGorunur:!!gorunur, satir:satir,
+          gecis:(d&&d.gecisler||[]).length};})()`),
+  // Degisiklik varsa bolum gorunmeli ve satir basmali; yoksa gizli kalmali
+  r => r.degisiklikVar === r.bolumGorunur &&
+       (!r.degisiklikVar || r.satir > 0));
 
 denetle("devredilen yollar dokunulmadan kaldı", await ev(`(function(){
   var k=window.IZMIR_HARITA.ozet.kategoriler;

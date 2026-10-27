@@ -650,20 +650,21 @@ Kimlik olmadan "bu yol geçen ay 5'ti, şimdi 1" denemiyor; devir takibi de,
 geri alma da güvenilir olmuyor. Kök sorun bu.
 
 ## Plan (sade tutulacak)
-- [ ] **`yol_id`**: kalıcı kimlik. Bir kez üretilip sonsuza dek taşınacak.
-- [ ] **`veri/yollar_master.gpkg`**: temizlenmiş ana katman (ayrılmış geometri,
-      çakışma yok), QGIS'te doğrudan düzenlenecek dosya.
-- [ ] **Gömülü QGIS stili**: açınca renkler sitedekiyle aynı; `durum` ve `tip`
-      elle yazılan alan değil **açılır liste**. Toplu seçip tek hamlede
-      değiştirmek için.
-- [ ] **derle.py GeoPackage okusun** — böylece ana katman doğrudan kaynak olur,
-      dışa aktarma/dissolve adımı tamamen kalkar.
-- [ ] **Değişiklik günlüğü**: bir önceki sürümle karşılaştırıp "şu kadar yol /
-      şu kadar km A'dan B'ye geçti" dökümü. Actions özetinde ve sitede.
-- [ ] **Koruma bandı (tek kural)**: toplam km beklenmedik oynadıysa yüksek sesle
-      uyar. Fazlası karmaşa olur.
-- [ ] **README: "Bir değişikliği geri almak"** — GitHub'da sürüm geçmişinden
-      dönme adımları.
+- [x] **Kalıcı kimlik**: ayrı bir alan açmak yerine GeoPackage'ın kendi `fid`
+      birincil anahtarı kullanıldı. QGIS yerinde düzenlemede korur, yeni kayda
+      kendiliğinden atar. Bir alan eksik, bir kafa karışıklığı eksik.
+- [x] **`veri/yollar_master.gpkg`** (30,8 MB, 75.583 yol) — `araclar/ana_katman.py`.
+      İkinci çalıştırmada düzenlemelere dokunmadan yalnızca otomatik alanları
+      tazeler.
+- [x] **Gömülü QGIS stili** (`araclar/qgis_stili.py`): `layer_styles` tablosuna
+      yazılan QML. Renkler sitedekiyle aynı; `durum` ve `tip` açılır liste.
+- [x] **derle.py GeoPackage okuyor** (`gpkg_yol_oku`, `gpkg_geometri_coz`);
+      `kml_bul` ana katman varsa onu esas alıyor.
+- [x] **Değişiklik günlüğü**: git'teki bir önceki sürümle `fid` üzerinden
+      karşılaştırma. Derleme günlüğünde ve sitede "Son değişiklikler".
+- [x] **README**: yeni iş akışı, çoklu düzenleme adımları, geri alma yöntemleri.
+- [ ] Koruma bandı (km sıçraması uyarısı) — değişiklik günlüğü zaten bunu
+      gösterdiği için ayrı bir kural eklenmedi; gerekirse sonra.
 
 ## Tasarım kararları
 - Ana katmandaki alanlar: `yol_id` (kalıcı), `ad`, `tip`, `durum`, `not`

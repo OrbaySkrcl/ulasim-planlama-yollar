@@ -58,17 +58,71 @@ kendiliğinden yenilenir.
 
 ## 2. Veriyi güncelleme (her değişiklikte)
 
-QGIS'te yolları güncelledikten sonra:
+Ana veri artık **`veri/yollar_master.gpkg`** dosyasıdır. QGIS'te doğrudan bu
+dosyayı düzenlersiniz — dışa aktarma, dissolve, KML dönüşümü yoktur.
 
-1. QGIS'te katmanı KML olarak dışa aktarın → dosya adı **`ibb_yollar.kml`**
-   (nasıl yapılacağı [3. bölümde](#3-qgisten-doğru-kml-nasıl-çıkarılır)).
-2. Bu depoda **`veri`** klasörüne girin.
-3. Sağ üstten **Add file → Upload files**.
-4. Yeni `ibb_yollar.kml` dosyasını pencereye sürükleyin.
-5. Aşağıdaki **Commit changes** düğmesine basın.
+### Bir yolu devretmek
 
-2–3 dakika içinde site otomatik olarak yeni veriyle yenilenir.
-İlerlemeyi **Actions** sekmesinden izleyebilirsiniz.
+1. `veri/yollar_master.gpkg` dosyasını bilgisayarınıza indirin (GitHub'da
+   dosyaya tıklayıp **Download** deyin). QGIS penceresine sürükleyip bırakın;
+   renkler ve açılır listeler hazır gelir.
+2. Devredilecek yolları seçin. Birkaç pratik yol:
+   - Haritada tıklayarak (Ctrl basılı tutarak çoklu seçim)
+   - **Öznitelik tablosunda** süzerek: alt köşedeki süzgece
+     `"ilce" = 'Bergama' AND "durum" = '5'` yazın
+   - **Seçim ifadesiyle**: Katman → Seçim → İfadeyle Öznitelik Seç
+3. Düzenleme kalemini açın (**Ctrl+E**), **Çoklu Düzenleme** kipine geçin,
+   **Durum** açılır listesinden yeni durumu seçin. Hepsi tek hamlede değişir.
+4. İsterseniz **Not** alanına karar numarası/tarih yazın.
+5. **Ctrl+S** ile kaydedin, düzenlemeyi kapatın.
+6. GitHub'da **`veri`** klasörüne girin → **Add file → Upload files** →
+   dosyayı sürükleyin → **Commit changes**.
+
+2–3 dakika içinde site yenilenir. **Actions** sekmesindeki özette
+"bu güncellemede şu kadar yol / şu kadar km, A'dan B'ye geçti" dökümünü
+görürsünüz; aynı döküm sitede **Son değişiklikler** bölümünde de çıkar.
+
+> `durum` ve `tip` açılır listedir, elle yazılmaz — yazım hatası yapamazsınız.
+> `ilce`, `mahalle` ve `uzunluk_m` her derlemede otomatik hesaplanır; onlara
+> dokunmanıza gerek yok.
+
+> **Bu dosyayı QGIS'te "Farklı Kaydet" ile dışa aktarmayın.** Yerinde
+> düzenleyin. Dışa aktarım kalıcı kimlikleri (`fid`) yeniden numaralandırır ve
+> değişiklik günlüğü anlamını yitirir.
+
+### Bir değişikliği geri almak
+
+Her yükleme bir sürümdür; hiçbir şey kaybolmaz.
+
+**Tek bir güncellemeyi geri almak:** Depoda **Commits** listesine girin,
+geri almak istediğiniz güncellemeye tıklayın, sağ üstteki **⋯ → Revert**
+deyin. Site eski hâline döner.
+
+**Belirli bir tarihteki dosyayı geri getirmek:** `veri/yollar_master.gpkg`
+dosyasına tıklayın → sağ üstteki **History** → istediğiniz tarihe tıklayın →
+**View file** → **Download**. İndirdiğiniz dosyayı aynı adla tekrar yükleyin.
+
+**Yalnızca birkaç yolu geri almak:** O yolları QGIS'te seçip Durum'u eski
+değerine çevirmek en kolayı. Hangi yolların değiştiğini **Son değişiklikler**
+bölümünden görebilirsiniz.
+
+### Ana katmanı tazelemek
+
+İlçe/mahalle sınırlarını güncellediyseniz ya da QGIS'te yeni yol çizdiyseniz:
+
+```
+python3 araclar/ana_katman.py
+```
+
+Düzenlemelerinize dokunmadan yalnızca otomatik alanları (ilçe, mahalle,
+uzunluk) yeniden hesaplar ve QGIS stilini tazeler.
+
+### Eski KML yöntemi
+
+Hâlâ çalışır: `veri` klasöründe `yollar_master.gpkg` yoksa derleme eski
+KML/zip/GeoJSON dosyasını kullanır. Ana katman varken eski kaynak dosyalar
+yok sayılır (derleme günlüğünde bunu yazar). Artık kullanmayacaksanız
+`veri/ibb_yollar.zip` dosyasını silebilirsiniz.
 
 > Dosya adının **aynı** kalması önemlidir; GitHub eskisinin üzerine yazar.
 > Farklı bir ada (ya da farklı bir uzantıya) geçerseniz **eskisini silin** —

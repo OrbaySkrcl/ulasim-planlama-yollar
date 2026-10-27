@@ -251,3 +251,20 @@ Bu dosya, aynı hataların tekrarlanmaması için tutulur.
 - **Türetilmiş düzeltme kaynağı düzeltmez.** Derleme haritayı tutarlı yapıyor
   ama asıl sorun QGIS'teki DURUM alanının tekilleştirilmemesi. Bunu sitedeki
   veri kalitesi uyarısında açıkça yazdım ki kullanıcı kaynağı da düzeltsin.
+- **Kalıcı kimlik için yeni alan açmaya gerek yoktu.** GeoPackage'ın kendi `fid`
+  birincil anahtarı zaten kalıcı: QGIS yerinde düzenlemede korur, yeni kayda
+  kendiliğinden atar. Eski sorunun sebebi fid'in kötü olması değil, her dışa
+  aktarımda **yeniden üretilmesiydi**. Dışa aktarmayı kaldırınca sorun bitti.
+- **Kendi yazdığın biçimi referans uygulamayla karşılaştır, "düzeltmeden" önce.**
+  Ana katmanda düz sqlite3 ile UPDATE `ST_IsEmpty` yok diye patlıyordu. Hata
+  sandım; GDAL'ın kendi ürettiği GeoPackage'ı denedim, o da aynı şekilde
+  patlıyordu. Yani bu standardın davranışı — QGIS fonksiyonları sağlıyor.
+  Referansa bakmasaydım çalışan bir şeyi bozacaktım.
+- **Üstün durum kuralı devir iş akışında kendiliğinden işe yarıyor.** 40 yolu
+  5'ten 1'e çevirdiğimde, aynı çizgiyi taşıyan 3 "Belirsiz" kayıt otomatik
+  çakışık sayılıp çıktı. Yani kullanıcı devir yaptıkça kopyalar kendiliğinden
+  temizleniyor; kuralı bir kez doğru kurmak her güncellemede iş görüyor.
+- **Stili üretirken gerçek QGIS'le doğrula.** QML şemasını tahminle yazmak
+  kolay, yanlış yazmak daha kolay. apt'ten python3-qgis kurup
+  `loadNamedStyle` + `editorWidgetSetup` ile denetlemek dakikalar aldı ve
+  açılır listelerin gerçekten geldiğini kanıtladı.
