@@ -268,3 +268,9 @@ Bu dosya, aynı hataların tekrarlanmaması için tutulur.
   kolay, yanlış yazmak daha kolay. apt'ten python3-qgis kurup
   `loadNamedStyle` + `editorWidgetSetup` ile denetlemek dakikalar aldı ve
   açılır listelerin gerçekten geldiğini kanıtladı.
+- **Dosya boyutu sınırını iş akışını tasarlarken kontrol et, sonunda değil.**
+  Ana katmanı 30,8 MB yaptım, sonra fark ettim ki GitHub'ın tarayıcıdan yükleme
+  sınırı 25 MB. Kullanıcı kodlama bilmiyor ve tarayıcıdan yüklüyor — yani
+  yazdığım "şu adımları izleyin" talimatı onda hiç çalışmayacaktı. Tablonun
+  kendisi 26,7 MB olduğu için indeksi atmak bile yetmiyor; çözüm zip (15,8 MB)
+  ya da GitHub Desktop. Derleme ikisini de okuyacak şekilde genişletildi.

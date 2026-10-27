@@ -75,12 +75,72 @@ dosyayı düzenlersiniz — dışa aktarma, dissolve, KML dönüşümü yoktur.
    **Durum** açılır listesinden yeni durumu seçin. Hepsi tek hamlede değişir.
 4. İsterseniz **Not** alanına karar numarası/tarih yazın.
 5. **Ctrl+S** ile kaydedin, düzenlemeyi kapatın.
-6. GitHub'da **`veri`** klasörüne girin → **Add file → Upload files** →
-   dosyayı sürükleyin → **Commit changes**.
+6. Dosyayı GitHub'a yükleyin — aşağıdaki iki yöntemden biriyle.
 
 2–3 dakika içinde site yenilenir. **Actions** sekmesindeki özette
 "bu güncellemede şu kadar yol / şu kadar km, A'dan B'ye geçti" dökümünü
 görürsünüz; aynı döküm sitede **Son değişiklikler** bölümünde de çıkar.
+
+> **Neden iki yöntem var?** Ana katman 30,8 MB ve GitHub'ın **tarayıcıdan
+> yükleme sınırı dosya başına 25 MB**. Bu yüzden ya sınırı olmayan bir
+> program (GitHub Desktop) kullanırsınız, ya da dosyayı sıkıştırıp (15,8 MB)
+> tarayıcıdan yüklersiniz. Derleme ikisini de okur.
+
+### Yükleme yöntemi 1 — GitHub Desktop (önerilen)
+
+Bir kez kurulur, sonrasında en az adımlı yöntemdir: dosyayı indirip
+sıkıştırmanız gerekmez, QGIS doğrudan bilgisayarınızdaki kopyayı düzenler.
+
+**Tek seferlik kurulum**
+
+1. [desktop.github.com](https://desktop.github.com) adresinden indirip kurun.
+2. **Sign in to GitHub.com** ile hesabınıza girin.
+3. **File → Clone repository** → listeden `ulasim-planlama-yollar`'ı seçin →
+   bilgisayarda bir klasör seçin → **Clone**.
+
+Artık `...\ulasim-planlama-yollar\veri\yollar_master.gpkg` bilgisayarınızda.
+
+**Her güncellemede**
+
+1. QGIS'te o dosyayı açıp düzenleyin, **Ctrl+S** ile kaydedin, **Ctrl+E** ile
+   düzenleme kipini kapatın.
+2. GitHub Desktop'ı açın. Solda `veri/yollar_master.gpkg` değişmiş görünür.
+3. Sol alttaki **Summary** kutusuna kısa bir not yazın
+   (ör. `Bergama'da 40 yol devredildi`).
+4. **Commit to …** düğmesine basın.
+5. Üstteki **Push origin** düğmesine basın.
+
+**Geri almak için:** **History** sekmesi → geri alacağınız satıra sağ tık →
+**Revert changes in commit** → sonra **Push origin**.
+
+### Yükleme yöntemi 2 — Tarayıcıdan (program kurmadan)
+
+Ana katmanı sıkıştırılmış tutarsınız; 30,8 MB yerine 15,8 MB olur ve
+tarayıcıdan yüklenebilir.
+
+**Tek seferlik geçiş**
+
+1. `veri/yollar_master.gpkg` dosyasını bilgisayarınıza indirin.
+2. Dosyaya sağ tık → **Gönder → Sıkıştırılmış (zip) klasör**. Oluşan dosyanın
+   adı **`yollar_master.zip`** olmalı.
+3. GitHub'da `veri/yollar_master.gpkg` dosyasına tıklayın → sağ üstteki çöp
+   kutusu simgesiyle **silin** → **Commit changes**.
+4. **Add file → Upload files** ile `yollar_master.zip` dosyasını yükleyin.
+
+**Her güncellemede**
+
+1. GitHub'da `veri/yollar_master.zip` → **Download**.
+2. İndirdiğiniz dosyaya sağ tık → **Tümünü ayıkla** → `yollar_master.gpkg`
+   çıkar.
+3. QGIS'te düzenleyin, **Ctrl+S**, düzenleme kipini kapatın.
+4. `yollar_master.gpkg` dosyasına sağ tık → **Gönder → Sıkıştırılmış (zip)
+   klasör** → yeniden `yollar_master.zip` olur.
+5. GitHub'da **`veri`** klasörü → **Add file → Upload files** → dosyayı
+   sürükleyin → **Commit changes**.
+
+> Dosya adının her seferinde **`yollar_master.zip`** kalması önemlidir;
+> GitHub eskisinin üzerine yazar. Adı değişirse `veri` klasöründe iki ana
+> katman kalır ve derleme hangisinin geçerli olduğunu soramadan durur.
 
 > `durum` ve `tip` açılır listedir, elle yazılmaz — yazım hatası yapamazsınız.
 > `ilce`, `mahalle` ve `uzunluk_m` her derlemede otomatik hesaplanır; onlara

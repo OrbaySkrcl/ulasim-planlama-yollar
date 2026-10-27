@@ -674,3 +674,32 @@ geri alma da güvenilir olmuyor. Kök sorun bu.
   ve site aynı kaynaktan (kategoriler.json) beslensin.
 - Çakışma ayıklama ve kayıt ayırma açık kalır; ana katman zaten temiz
   olduğu için no-op olurlar, yani koruma görevi görürler.
+
+
+---
+
+# Tur 14 — Yükleme yolu: 25 MB sınırı
+
+İstek: "qgiste düzenledim... adım adım nasıl yüklemeliyim bu değişiklikleri githuba"
+
+## Teşhis
+Ana katman **30,81 MB**; GitHub'ın **tarayıcıdan yükleme sınırı 25 MB**.
+Yani 13. turda yazdığım "Add file → Upload files" adımı kullanıcıda
+çalışmayacaktı. Tablo tek başına 26,71 MB olduğu için mekânsal indeksi (4 MB)
+atmak bile altına indirmiyor — zaten indeksi atmak QGIS'i yavaşlatıp bütün
+amacı bozardı. Sıkıştırılmış hali 15,77 MB.
+
+## Yapılanlar
+- [x] `zipte_gpkg()` + `kml_oku` zip içindeki GeoPackage'ı geçici dosyaya
+      çıkarıp okuyor (sqlite akıştan okuyamıyor).
+- [x] `kml_bul` zip'li ana katmanı da ana katman sayıyor; hem `.gpkg` hem
+      `.zip` varsa düzenlenen dosya olan `.gpkg` tercih ediliyor.
+- [x] README'ye iki yükleme yöntemi: GitHub Desktop (önerilen, sınırsız,
+      indirip sıkıştırma derdi yok) ve tarayıcı+zip (program kurmadan).
+- [x] Geri alma adımları her iki yöntem için yazıldı.
+
+## Doğrulama
+Yalnızca `yollar_master.zip` içeren bir klasörde `kml_bul` + `kml_oku`
+çalıştırıldı: 75.583 kayıt, durum dağılımı birebir aynı, fid korunuyor.
+Normal (sıkıştırılmamış) yolla tam derleme: 75.583 yol, 29.680,7 km.
+Site testi 22/22, konsol temiz.

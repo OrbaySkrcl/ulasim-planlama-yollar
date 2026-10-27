@@ -205,6 +205,19 @@ def kml_oku(yol, ondalik=6):
         log("  Kaynak okunuyor: %s (%.1f MB, GeoPackage)"
             % (yol.name, yol.stat().st_size / 1048576))
         return gpkg_yol_oku(yol, ondalik)
+    ic_gpkg = zipte_gpkg(yol)
+    if ic_gpkg:
+        # sqlite akistan okuyamaz; gecici bir dosyaya cikariyoruz
+        import tempfile
+        import zipfile
+        log("  Kaynak okunuyor: %s → %s (sıkıştırılmış GeoPackage, %.1f MB)"
+            % (yol.name, ic_gpkg, yol.stat().st_size / 1048576))
+        with tempfile.TemporaryDirectory() as td:
+            hedef = Path(td) / Path(ic_gpkg).name
+            with zipfile.ZipFile(str(yol)) as zf:
+                with zf.open(ic_gpkg) as kaynak, open(str(hedef), "wb") as cikti:
+                    shutil.copyfileobj(kaynak, cikti)
+            return gpkg_yol_oku(hedef, ondalik)
     kaynak, bicim, ic_ad = kaynak_ac(yol)
     boyut = yol.stat().st_size / 1048576
     if ic_ad != yol.name:
@@ -444,6 +457,25 @@ GPKG_ALAN_ESLEME = {
     "durum": "DURUM", "ad": "ADINUMARASI", "tip": "TIP1",
     "DURUM": "DURUM", "ADINUMARASI": "ADINUMARASI", "TIP1": "TIP1",
 }
+
+
+def zipte_gpkg(yol):
+    """Zip icinde .gpkg varsa ic dosya adini dondurur, yoksa None.
+
+    Ana katman 30 MB; GitHub'in tarayici yukleme siniri 25 MB. Sikistirilmis
+    hali 16 MB oldugu icin tarayicidan yuklenebiliyor. Derleme ikisini de okur.
+    """
+    if not yol.name.lower().endswith(".zip"):
+        return None
+    try:
+        import zipfile
+        with zipfile.ZipFile(str(yol)) as zf:
+            for ad in zf.namelist():
+                if ad.lower().endswith(".gpkg") and not ad.startswith("__MACOSX"):
+                    return ad
+    except Exception:
+        return None
+    return None
 
 
 def gpkg_yol_oku(yol, ondalik=6):
@@ -1828,7 +1860,12 @@ def kml_bul(veri_dizini, gpkg_haric=False):
         if gpkg_haric and ad.endswith(".gpkg"):
             continue
         adaylar.append(dosya)
-    ana = [a for a in adaylar if a.name.lower().endswith(".gpkg")]
+    ana = [a for a in adaylar
+           if a.name.lower().endswith(".gpkg") or zipte_gpkg(a)]
+    # Hem .gpkg hem sikistirilmis hali varsa, duzenlenen dosya .gpkg'dir
+    sikistirilmamis = [a for a in ana if a.name.lower().endswith(".gpkg")]
+    if len(ana) > 1 and len(sikistirilmamis) == 1:
+        ana = sikistirilmamis
     if ana and len(ana) == 1:
         if len(adaylar) > 1:
             log("  Ana katman kullanılıyor: %s (diğer kaynak dosyalar yok sayıldı)."
