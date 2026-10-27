@@ -236,3 +236,18 @@ Bu dosya, aynı hataların tekrarlanmaması için tutulur.
 - **JavaScript şablon dizgisi (`` ` ``) içinde `\d` yazarsan `d` olur.** Testte
   `/\d+/` sessizce `/d+/` oldu ve eşleşme bulamadı; hata kodda değil testteydi.
   Şablon dizgisi içinde ya `\\d` yaz ya da `[0-9]` gibi kaçışsız ifade kullan.
+- **"Üst üste biniyor mu?" sorusuna önce ölçerek cevap ver.** Tahmin etmek
+  yerine segment bazında saydım: devredilen yolların %93'ü başka bir DURUM'da
+  da kayıtlıymış. Bu, kilometrelerin iki kez sayılması demekti — kullanıcının
+  fark ettiği görsel sorun aslında bir veri bütünlüğü sorunuymuş.
+- **Geometrik ayıklamada "ne silinmedi" en az "ne silindi" kadar önemli.**
+  Yalnızca birebir aynı segmentleri sildim; yan yana giden ayrı yollar ve
+  kavşakta buluşan yollar korundu. Kalan yakınlığı sınıflandırdım: segmentin
+  **tek ucu** yakınsa kavşak, **iki ucu** yakınsa şüpheli kopya. 232 km'lik
+  yakınlığın yalnızca 3,11 km'si gerçek şüphe çıktı.
+- **Toleranslı silme cazip ama tehlikeli.** 2 m toleransla silseydim çift yönlü
+  yolları ve servis yollarını da yok ederdim. Birebir eşleşme + kalıntıyı
+  raporlamak daha dürüst.
+- **Türetilmiş düzeltme kaynağı düzeltmez.** Derleme haritayı tutarlı yapıyor
+  ama asıl sorun QGIS'teki DURUM alanının tekilleştirilmemesi. Bunu sitedeki
+  veri kalitesi uyarısında açıkça yazdım ki kullanıcı kaynağı da düzeltsin.

@@ -324,6 +324,23 @@ denetle("süzgeç boşsa düğme kapalı", await ev(`(async function(){
   return sonuc;})()`),
   r => r.kapali === true);
 
+console.log("\n— Çakışma giderme —");
+denetle("üst üste çizim uyarısı görünüyor", await ev(`(function(){
+  var u=(window.IZMIR_HARITA.ozet.uyarilar||[]).filter(function(x){
+    return /Üst üste/.test(x.baslik);});
+  return u.length? {baslik:u[0].baslik, adet:u[0].adet,
+                    mesaj:u[0].mesaj.slice(0,70)} : {yok:true};})()`),
+  r => !r.yok && r.adet > 0);
+
+denetle("devredilen yollar dokunulmadan kaldı", await ev(`(function(){
+  var k=window.IZMIR_HARITA.ozet.kategoriler;
+  return {devredilen_km:k['1'].uzunluk_km, devredilen_adet:k['1'].adet,
+          ilce_bld_km:k['5']?k['5'].uzunluk_km:null,
+          bos_km:k['0']?k['0'].uzunluk_km:null};})()`),
+  // Ayiklama kategori 1'e dokunmaz; digerlerinin km'si dusmus olmali
+  r => r.devredilen_km > 2100 && r.devredilen_km < 2150 &&
+       r.ilce_bld_km < 14000 && r.bos_km < 10000);
+
 console.log("\n— Konsol —");
 const konsol = konsolOlaylari
   .map(m => { const p = m.params; return p.entry ? p.entry.level + ": " + p.entry.text : p.type + ": " + (p.args || []).map(a => a.value ?? a.description ?? "").join(" "); })

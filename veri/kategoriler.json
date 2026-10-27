@@ -63,6 +63,8 @@
     "5": "Küme Evler",
     "7": "Otoyol"
   },
+  "_ustun_durum_aciklama": "Ayni yol birden fazla DURUM ile cizilmisse, bu durumdaki cizgi ustun sayilir ve birebir ortusen bolumler diger durumlardan silinir. Boylece ayni kilometre iki kez sayilmaz. Kapatmak icin: null",
+  "ustun_durum": "1",
   "ilce_sinir": {
     "_aciklama": "Ilce sinir cizgisinin gorunumu. renk_koyu, koyu altlik haritalarda (Koyu/Uydu) kullanilir. etiket_min_zoom: ilce adlarinin gorunmeye basladigi yakinlastirma seviyesi. Site uzerinden de degistirilebilir.",
     "renk": "#6b7280",

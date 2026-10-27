@@ -579,3 +579,57 @@ Yani fark boyuttan değil, tamamen indeksten geliyor — yaklaşık **1.000 kat*
 (`SCAN rtree_yollar_geom VIRTUAL TABLE`), 75.981 indeks satırı, 6 tetikleyici,
 `application_id = 0x47504B47`, `user_version = 10200`.
 Site testi 20/20 geçti, konsol temiz.
+
+---
+
+# Tur 12 — Üst üste çizilmiş yolları ayıkla (DURUM 1 üstün)
+
+İstek: "devredilen köy yolları yani durum=1 olanlar, diğer durum=0,2,3,4,5
+olanlarla üst üste biniyor mu? eğer öyleyse o kısımlarda sadece durum=1 olan
+yollar olsun. diğerleri olmasın."
+
+## Ölçüm (önce)
+Evet, ciddi şekilde biniyor. Segment bazında birebir örtüşme:
+
+| DURUM | Örtüşen | Kategorinin toplamı | Oran | Etkilenen kayıt |
+|---|---|---|---|---|
+| 0 Boş | **876,0 km** | 10.735,5 km | %8,2 | 651 |
+| 5 İlçe belediyesi | **1.084,8 km** | 14.725,0 km | %7,4 | 616 |
+| 2 Belirsiz | 8,5 km | 141,1 km | %6,0 | 5 |
+| 4 Mevcut BŞB | 4,2 km | 1.219,4 km | %0,3 | 9 |
+| 3 Karayolları | 1,1 km | 2.712,0 km | %0,04 | 2 |
+
+Devredilen yolların 2.131,7 km'sinin **1.974,5 km'si (%93)** başka bir durumda
+da kayıtlıymış — aynı kilometre iki kez sayılıyordu.
+
+## Yapılanlar
+- [x] `ustun_durum_ayikla()`: üstün durumun segmentleri toplanıyor, diğer
+      durumlardan birebir aynı olanlar siliniyor, kalanlar koptuğu yerden
+      bölünüyor. Segment anahtarı yönden bağımsız.
+- [x] Ayıklama, kayıt ayırmadan **önce** çalışıyor; kopan parçalar sonra
+      doğal olarak ayrı yollara bölünüyor.
+- [x] `kategoriler.json` → `"ustun_durum": "1"` (null ile kapanır).
+- [x] Sitedeki **Veri kalitesi uyarıları**'na dökümlü uyarı eklendi.
+- [x] `araclar/testler/ortusme_denetimi.py`: bağımsız denetim betiği.
+- [x] Site testine 2 denetim eklendi (toplam 22).
+
+## Sonuç
+| Kategori | Önce | Sonra |
+|---|---|---|
+| Devredilen köy yolları | 2.122,3 km | **2.122,3 km** (dokunulmadı) |
+| İlçe belediyesi | 14.725,0 km | **13.640,2 km** |
+| Boş | 10.735,5 km | **9.859,5 km** |
+| Belirsiz | 141,1 km | 132,6 km |
+| Mevcut Büyükşehir | 1.219,4 km | 1.215,2 km |
+| Karayolları | 2.712,0 km | 2.710,9 km |
+| Toplam | 31.655,2 km | **29.680,7 km** |
+
+Kayıt 75.981 → 75.583. GeoPackage 35,02 → 33,67 MB.
+
+## Doğrulama
+`ortusme_denetimi.py`: birebir örtüşme **0,00 km** (her kategoride).
+Kalan "yakın" parçalar ayrıştırıldı: tek ucu yakın olanlar (92+38+101 km)
+**kavşak teması**, iki ucu da yakın ve 10 m'den uzun olanlar yalnızca
+**3,11 km** (ağın %0,01'i) — birebir olmayan şüpheli kopyalar, dokunulmadı.
+`ogrinfo` ile GeoPackage: 75.583 kayıt, DURUM 1 → 2.924 yol / 2.122,3 km.
+Site testi 22/22 geçti, konsol temiz.

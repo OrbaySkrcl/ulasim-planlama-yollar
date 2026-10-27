@@ -18,7 +18,8 @@ _(Aşağıdaki "Tek seferlik kurulum" adımını yaptıktan birkaç dakika sonra
 3. [QGIS'ten doğru KML nasıl çıkarılır](#3-qgisten-doğru-kml-nasıl-çıkarılır)
 4. [Kategori adı, renk ve başlıkları değiştirme](#4-kategori-adı-renk-ve-başlıkları-değiştirme)
 5. [İlçe ve mahalle sınırları ekleme (isteğe bağlı)](#5-ilçe-ve-mahalle-sınırları-ekleme-isteğe-bağlı)
-5b. [Birleşik (dissolve) kayıtların ayrılması ve QGIS'e geri alma](#5b-birleşik-dissolve-kayıtların-ayrılması-ve-qgise-geri-alma)
+5b. [Üst üste çizilmiş yollar (aynı yolun iki DURUM'u)](#5b-üst-üste-çizilmiş-yollar-aynı-yolun-iki-durumu)
+5c. [Birleşik (dissolve) kayıtların ayrılması ve QGIS'e geri alma](#5c-birleşik-dissolve-kayıtların-ayrılması-ve-qgise-geri-alma)
 6. [Görünümü site üzerinden değiştirme](#6-görünümü-site-üzerinden-değiştirme-kategoriler-ve-ilçe-sınırı)
 7. [Depoyu müdürlük hesabına taşımak](#7-depoyu-müdürlük-hesabına-taşımak)
 8. [Sitede neler var](#8-sitede-neler-var)
@@ -258,7 +259,68 @@ uyarıları** bölümünde ne yapmanız gerektiği yazar. Bu durumda dosyayı QG
 
 ---
 
-## 5b. Birleşik (dissolve) kayıtların ayrılması ve QGIS'e geri alma
+## 5b. Üst üste çizilmiş yollar (aynı yolun iki DURUM'u)
+
+### Sorun
+
+Veride aynı yol birden fazla DURUM ile çizilmişti. Ölçüm:
+
+| DURUM | Devredilenle örtüşen | O kategorinin toplamı | Oran |
+|---|---|---|---|
+| 0 — Boş | **876,0 km** | 10.735,5 km | %8,2 |
+| 5 — İlçe belediyesi | **1.084,8 km** | 14.725,0 km | %7,4 |
+| 2 — Belirsiz | 8,5 km | 141,1 km | %6,0 |
+| 4 — Mevcut Büyükşehir | 4,2 km | 1.219,4 km | %0,3 |
+| 3 — Karayolları | 1,1 km | 2.712,0 km | %0,04 |
+
+Yani devredilen köy yollarının 2.131,7 km'sinin **1.974,5 km'si** (%93'ü) aynı
+zamanda başka bir durumda da kayıtlıydı. Bu hem haritada üst üste çizime hem de
+**aynı kilometrenin iki kez sayılmasına** yol açıyordu.
+
+### Ne yapılıyor
+
+Derleme, üstün durumun (varsayılan **1 — devredilen köy yolları**) tüm çizgi
+parçalarını toplayıp **birebir aynı** olanları diğer durumlardan siler. Kalan
+bölümler koptukları yerden ayrı yollara bölünür.
+
+- Yalnızca koordinatları birebir örtüşen parçalar silinir.
+- **Yan yana giden ama ayrı çizilmiş yollara dokunulmaz.**
+- Kavşakta buluşan yollar etkilenmez (orada ortak olan nokta, parça değil).
+- Üstün durumun kendisi (DURUM 1) hiç değişmez.
+
+Sonuç:
+
+| Kategori | Önce | Sonra |
+|---|---|---|
+| Devredilen köy yolları | 2.122,3 km | **2.122,3 km** (değişmedi) |
+| İlçe belediyesi | 14.725,0 km | **13.640,2 km** |
+| Boş | 10.735,5 km | **9.859,5 km** |
+| Belirsiz | 141,1 km | 132,6 km |
+| Mevcut Büyükşehir | 1.219,4 km | 1.215,2 km |
+| Karayolları | 2.712,0 km | 2.710,9 km |
+| **Toplam** | 31.655,2 km | **29.680,7 km** |
+
+Denetim (`araclar/testler/ortusme_denetimi.py`): birebir örtüşme **0,00 km**.
+Geriye birebir olmayan, iki ucu da 2 m içinde kalan **3,11 km** şüpheli parça
+kalıyor (ağın %0,01'i). Bunlar büyük olasılıkla az farkla ayrı çizilmiş
+kopyalardır; silmek, gerçekten yan yana giden yolları (çift yönlü yol, servis
+yolu) yanlışlıkla yok etme riski taşıdığı için dokunulmuyor.
+
+> **Asıl düzeltme QGIS'te yapılmalı.** Buradaki işlem, yayınlanan haritayı ve
+> indirilen dosyayı tutarlı tutar; ama kaynaktaki asıl sorun bu yolların DURUM
+> alanının tekilleştirilmemiş olmasıdır. Hangi kayıtların etkilendiğini sitedeki
+> **Veri kalitesi uyarıları** bölümünden görebilirsiniz.
+
+Başka bir durumu üstün yapmak ya da bu işlemi kapatmak için
+`veri/kategoriler.json`:
+
+```json
+"ustun_durum": "1"      // başka kod yazabilir, kapatmak için null
+```
+
+---
+
+## 5c. Birleşik (dissolve) kayıtların ayrılması ve QGIS'e geri alma
 
 ### Sorun neydi
 
@@ -582,10 +644,15 @@ tasks/                      çalışma planı ve notlar
   yakalanır. 42.753 kayıt → 75.981 yol, 0,4 saniye. Toplam kilometre değişmez.
   Doğruluk ölçütü "ne bölündü" değil **"ne bölünmedi"**: İzmir Çevre Yolu'nun 343
   parçası tek kayıt kalır, İzmir–Çeşme Otoyolu'nun 194 parçası tek kayıt kalır.
-- **Testler.** `araclar/testler/site_testi.mjs` gerçek bir tarayıcıda 15 denetim
+- **Üst üste çizilmiş yollar.** Aynı yol birden fazla DURUM ile çizilmişse,
+  üstün durumun (varsayılan 1) çizgi parçaları diğer durumlardan silinir.
+  Segment anahtarı yönden bağımsızdır; yalnızca birebir aynı parçalar silinir,
+  yan yana giden ayrı yollar korunur. Bkz. 5b.
+- **Testler.** `araclar/testler/site_testi.mjs` gerçek bir tarayıcıda 22 denetim
   yapar (açılış, seçim yayılımı, sınır düzenleyicileri, arama, süzgeç, ölçüm,
-  altlıklar, konsol temizliği). Çalıştırmak için dosyanın başındaki adımları
-  izleyin. Günlük kullanım için gerekmez.
+  altlıklar, indirme menüsü, konsol temizliği). `ortusme_denetimi.py` ise üst
+  üste çizim kalmadığını bağımsız olarak ölçer. Çalıştırmak için dosyaların
+  başındaki adımları izleyin. Günlük kullanım için gerekmez.
 - **Bağımlılık yok.** Derleme yalnızca Python 3 standart kütüphanesiyle çalışır;
   site saf HTML/CSS/JavaScript'tir, Leaflet 1.9.4 depo içinde yerel olarak sunulur.
   Yani site, dış bir kütüphane sunucusu çökse bile açılır.

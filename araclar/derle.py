@@ -544,6 +544,82 @@ def _gpkg_rtree_tetikleyicileri(t):
     ]
 
 
+def ustun_durum_ayikla(kayitlar, ustun, durum_alani=("DURUM",)):
+    """Ustun durumla birebir ortusen cizgileri diger durumlardan siler.
+
+    Veride ayni yol birden fazla DURUM ile kayitli olabiliyor: Izmir'de
+    devredilen koy yollarinin (DURUM 1) 1.983 km'si ayni zamanda "bos" (0) ya
+    da "ilce belediyesi" (5) olarak da cizilmis. Bu, hem haritada ustuste
+    cizime hem de kilometrelerin iki kez sayilmasina yol aciyor.
+
+    Burada ustun durumun (varsayilan 1) tum cizgi parcalari (segmentleri)
+    toplanir ve diger durumlardaki ayni segmentler silinir. Kalanlar kopmus
+    yerlerden bolunur. Yalnizca **birebir ayni** segmentler silinir; yan yana
+    giden ama ayri cizilmis yollara dokunulmaz.
+
+    Donus: (yeni kayitlar, rapor)
+    """
+    def durum_oku(k):
+        oz = k["ozellik"]
+        for a in durum_alani:
+            if a in oz:
+                return (oz.get(a) or "").strip()
+        return ""
+
+    def anahtar(p, q):
+        a = (p[0], p[1]); b = (q[0], q[1])
+        return (a, b) if a <= b else (b, a)
+
+    ustun_segmentler = set()
+    for k in kayitlar:
+        if durum_oku(k) != ustun:
+            continue
+        for parca in k["parcalar"]:
+            for i in range(len(parca) - 1):
+                ustun_segmentler.add(anahtar(parca[i], parca[i + 1]))
+    if not ustun_segmentler:
+        return kayitlar, {}
+
+    rapor = {}
+    yeni = []
+    for k in kayitlar:
+        d = durum_oku(k)
+        if d == ustun:
+            yeni.append(k)
+            continue
+        # Bos DURUM ileride 0 kategorisine yaziliyor; rapor da oyle gostersin
+        rapor_d = d or "0"
+        kalan = []
+        silinen_m = 0.0
+        degisti = False
+        for parca in k["parcalar"]:
+            kesit = [parca[0]]
+            for i in range(len(parca) - 1):
+                if anahtar(parca[i], parca[i + 1]) in ustun_segmentler:
+                    degisti = True
+                    silinen_m += haversine(parca[i][0], parca[i][1],
+                                       parca[i + 1][0], parca[i + 1][1])
+                    if len(kesit) >= 2:
+                        kalan.append(kesit)
+                    kesit = [parca[i + 1]]
+                else:
+                    kesit.append(parca[i + 1])
+            if len(kesit) >= 2:
+                kalan.append(kesit)
+        if not degisti:
+            yeni.append(k)
+            continue
+        r = rapor.setdefault(rapor_d, {"kayit": 0, "silinen_m": 0.0, "bos_kalan": 0})
+        r["kayit"] += 1
+        r["silinen_m"] += silinen_m
+        if kalan:
+            k["parcalar"] = kalan
+            yeni.append(k)
+        else:
+            r["bos_kalan"] += 1
+    return yeni, rapor
+
+
 def kayitlari_ayir(kayitlar):
     """Birleştirilmiş (dissolve edilmiş) kayıtları birbirine bağlı yollara ayırır.
 
@@ -1073,6 +1149,26 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
     # 2) KML
     kayitlar, bos_geometri = kml_oku(kml_yolu, ondalik)
 
+    # 2a) Ustun durumla birebir ortusen cizgileri digerlerinden sil.
+    # Ayni yol hem "devredilen" (1) hem "bos" (0) / "ilce belediyesi" (5) olarak
+    # cizilmis durumda; bu hem ustuste cizime hem de kilometrenin iki kez
+    # sayilmasina yol aciyor. kategoriler.json'da "ustun_durum": null ile kapanir.
+    ustun = ayar.get("ustun_durum", "1")
+    if ustun not in (None, False, ""):
+        ustun = str(ustun)
+        kayitlar, ortusme_raporu = ustun_durum_ayikla(kayitlar, ustun)
+        if ortusme_raporu:
+            toplam_km = sum(r["silinen_m"] for r in ortusme_raporu.values()) / 1000.0
+            log("  Çakışma giderildi: DURUM %s ile birebir örtüşen %.1f km, diğer "
+                "durumlardan silindi." % (ustun, toplam_km))
+            for d in sorted(ortusme_raporu):
+                r = ortusme_raporu[d]
+                log("    DURUM %-3s %8.1f km  (%d kayıt etkilendi, %d kayıt tamamen "
+                    "çakışıktı)" % (d, r["silinen_m"] / 1000.0, r["kayit"],
+                                    r["bos_kalan"]))
+    else:
+        ortusme_raporu = {}
+
     # 2b) Birlestirilmis kayitlari bagli yollara ayir (kategoriler.json ile kapatilabilir)
     if ayar.get("yollari_ayir", True):
         onceki = len(kayitlar)
@@ -1254,6 +1350,23 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
 
     # 5b) Veri kalitesi uyarıları (QGIS'te düzeltmek isteyebileceğiniz kayıtlar)
     uyarilar = []
+    if ortusme_raporu:
+        ort_km = sum(r["silinen_m"] for r in ortusme_raporu.values()) / 1000.0
+        ort_kayit = sum(r["kayit"] for r in ortusme_raporu.values())
+        kat_ad = kategoriler.get(ustun, {}).get("ad", "DURUM " + str(ustun))
+        dokum = ", ".join(
+            "%s: %.1f km" % (kategoriler.get(d, {}).get("kisa_ad", "DURUM " + d),
+                             ortusme_raporu[d]["silinen_m"] / 1000.0)
+            for d in sorted(ortusme_raporu))
+        uyarilar.append({
+            "baslik": "Üst üste çizilmiş yollar",
+            "mesaj": "%.1f km yol hem \u201c%s\u201d hem de başka bir durumla "
+                     "çizilmişti (%d kayıt). Aynı kilometre iki kez sayılmasın diye "
+                     "bu bölümler yalnızca \u201c%s\u201d olarak gösteriliyor. "
+                     "Çıkarılan: %s. QGIS'te asıl düzeltme, bu yolların DURUM "
+                     "alanını tekilleştirmektir."
+                     % (ort_km, kat_ad, ort_kayit, kat_ad, dokum),
+            "adet": ort_kayit, "ornek": []})
     if bos_geometri:
         uyarilar.append({
             "baslik": "Geometrisi boş kayıtlar",
