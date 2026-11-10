@@ -7,3 +7,6 @@ Thumbs.db
 *.qgz~
 *.swp
 __pycache__/
+
+# ana_katman.py calisirken uretilen yerel dosya; depoya zip hali konur
+veri/yollar_master.gpkg
