@@ -703,3 +703,81 @@ Yalnızca `yollar_master.zip` içeren bir klasörde `kml_bul` + `kml_oku`
 çalıştırıldı: 75.583 kayıt, durum dağılımı birebir aynı, fid korunuyor.
 Normal (sıkıştırılmamış) yolla tam derleme: 75.583 yol, 29.680,7 km.
 Site testi 22/22, konsol temiz.
+
+---
+
+# Tur 15 — Geniş yollar (17 m+) ayrı katman olarak
+
+İstek: "elimde böyle bir excel listesi var... açık mavi ve koyu mavi satırlar
+bizi ilgilendiriyor. ileride onaylanırsa büyükşehir sorumluluğuna geçecek
+yollar. bu farklı bir proje, ayrı bir katmanda çalışmalıyız... projeler
+karışmamalı."
+
+## Excel'in çözümü
+1 sayfa, 1820 satır. A sütunu yol adı (ilçe adları ara başlık), B sütunu imar
+genişliği. Açıklama/Kontrol sütunları konu dışı.
+
+Renkler tema renkleri olarak saklanmış; çözülmüş hâlleri:
+
+| Renk | Kaynak | RGB | Satır |
+|---|---|---|---|
+| Açık mavi | theme 4, tint 0,6 | **#B3CEFB** | **620** |
+| Koyu mavi | theme 4, tint 0 | **#4285F4** | **188** |
+| Kırmızı | theme 5 | #EA4335 | 19 (konu dışı) |
+| Turuncu | doğrudan | #FF9900 | 3 (konu dışı) |
+
+İlgilendiğimiz: **808 satır**, 29 ilçeye dağılmış.
+
+## Eşleştirme ölçümü (ana katmana karşı)
+İsim normalleştirme: Türkçe duyarsız, parantez içi atılıyor, tip soneki
+(CADDESİ/SOKAK/BULVARI/MEYDANI/YOLU) ayrılıyor — çünkü ana katmanda ad
+"ABDİ İPEKÇİ", tip ayrı alanda.
+
+| | |
+|---|---|
+| Eşleşen satır | **771 / 808 (%95,4)** |
+| Seçilen yol kaydı | 1.214 |
+| Toplam uzunluk | 1.182,6 km |
+| Satır başına ortanca | 0,80 km |
+
+Aşırı seçim riski incelendi: "FATİH CADDESİ → 34 kayıt" korkutucu görünüyor
+ama toplam 4,4 km — bizim bölme işlemimiz bir caddeyi parçalara ayırdığı için.
+30 km'yi aşan 5 satırın hepsi gerçek uzun karayolu (ÇANAKKALE ASFALTI 46 km,
+İZMİR AYDIN 31 km). **Ad çakışması bulunamadı.**
+
+Tip kısıtı denendi, **kullanılmayacak**: ana katmanda tip çoğunlukla ham kod
+("1", "2") ve bir kısmı boş; kısıt eşleşmeyi %5,7'ye düşürüyor.
+
+## Plan
+- [ ] `araclar/genis_yollar.py`: **yalnızca standart kütüphaneyle** xlsx okuma
+      (zipfile + XML). Renk tema/tint çözülüp RGB'ye indirgenecek ve
+      "mavi mi" diye sınıflandırılacak — tema indeksine bağlı kalmayacak ki
+      Excel başka programda kaydedilse de çalışsın.
+- [ ] Çıktı **ayrı dosya**: `veri/genis_yollar.geojson`. Ana veriye, DURUM
+      kategorilerine, toplam kilometreye **karışmayacak**.
+- [ ] Sitede **ayrı bölüm**: "Geniş yollar (17 m+)", kendi aç/kapa düğmesi,
+      açık/koyu mavi iki alt katman. Kategoriler listesine girmeyecek.
+- [ ] Eşleşmeyen 37 satır veri kalitesi uyarısı olarak listelenecek ki
+      Excel'de ya da QGIS'te düzeltilebilsin.
+- [ ] Excel yoksa hiçbir şey olmayacak (tamamen isteğe bağlı).
+
+## Yapılanlar
+- [x] `araclar/genis_yollar.py` — standart kütüphaneyle .xlsx okuma
+      (zipfile + XML). Renk tema/tint çözülüp RGB'ye indiriliyor; "mavi mi"
+      diye sınıflandırılıyor, tema indeksine bağlı değil.
+- [x] `derle.py` → `genis_yollar_eslestir()`; çıktı ayrı dosya
+      `veri/genis_yollar.geojson` (0,93 MB).
+- [x] Sitede ayrı bölüm: "ayrı çalışma" rozeti, sol kenar çizgisi, iki
+      onay kutusu, tembel yükleme, kendi Leaflet düzlemi (z 420).
+- [x] Eşleşmeyen 36 satır veri kalitesi uyarısında listeleniyor.
+- [x] `kategoriler.json` → `genis_yollar` ile başlık/renkler değiştirilebilir.
+      Koyu mavi #1d4ed8 → **#1e3a8a** (ana kategorideki Büyükşehir mavisi
+      #2563eb ile karışmasın diye).
+- [x] README 5d bölümü.
+
+## Doğrulama
+Standart kütüphane okuyucusu openpyxl ile **birebir aynı** sonucu verdi
+(620 açık + 188 koyu = 808, 29 ilçe, ilçesiz satır yok).
+Tarayıcı testi 8/8 geçti, konsol temiz. En kritik denetim:
+**ana kategorilerin tamamı kapalıyken bile katman duruyor** — projeler
+gerçekten ayrı.

@@ -20,6 +20,7 @@ _(Aşağıdaki "Tek seferlik kurulum" adımını yaptıktan birkaç dakika sonra
 5. [İlçe ve mahalle sınırları ekleme (isteğe bağlı)](#5-ilçe-ve-mahalle-sınırları-ekleme-isteğe-bağlı)
 5b. [Üst üste çizilmiş yollar (aynı yolun iki DURUM'u)](#5b-üst-üste-çizilmiş-yollar-aynı-yolun-iki-durumu)
 5c. [Birleşik (dissolve) kayıtların ayrılması ve QGIS'e geri alma](#5c-birleşik-dissolve-kayıtların-ayrılması-ve-qgise-geri-alma)
+5d. [Geniş yollar (17 m+) — ayrı bir çalışma](#5d-geniş-yollar-17-m--ayrı-bir-çalışma)
 6. [Görünümü site üzerinden değiştirme](#6-görünümü-site-üzerinden-değiştirme-kategoriler-ve-ilçe-sınırı)
 7. [Depoyu müdürlük hesabına taşımak](#7-depoyu-müdürlük-hesabına-taşımak)
 8. [Sitede neler var](#8-sitede-neler-var)
@@ -549,6 +550,80 @@ Bunlar veriyi değil, QGIS'in çizim ayarlarını değiştirir:
 3. **Etiketleri kapatın.** 76 bin etiket, çizimden daha pahalıdır.
 4. Alttaki durum çubuğunda **İşlemeyi durdur** kutusunu işaretleyip tüm
    ayarlarınızı yapın, sonra tekrar açın.
+
+---
+
+## 5d. Geniş yollar (17 m+) — ayrı bir çalışma
+
+Bu, ana devir çalışmasından **bağımsız** bir projedir. "Yol Sorumluluğu
+Tespiti" Excel listesindeki **mavi** satırlar — ileride onaylanırsa Büyükşehir
+sorumluluğuna geçecek 17 metre ve üzeri genişlikteki yollar — haritada ayrı bir
+katman olarak gösterilir.
+
+**Ana çalışmayla karışmaz:** DURUM kategorilerine girmez, toplam kilometreye
+eklenmez, lejantta yer almaz, indirme dosyalarını değiştirmez. Kategorilerin
+tamamını kapatsanız bile bu katman görünmeye devam eder.
+
+### Nasıl güncellenir
+
+`veri/` klasörüne Excel dosyasını (`.xlsx`) koymanız yeterli. Yeni sürüm
+geldiğinde eskisinin üzerine aynı adla yüklersiniz. Katmanı tamamen kaldırmak
+isterseniz Excel'i silin — site, katman olmadan yayınlanır.
+
+### Listeden ne okunuyor
+
+| Okunan | Okunmayan |
+|---|---|
+| A sütunu: ilçe başlıkları ve yol adları | Açıklama, Kontrol sütunları |
+| B sütunu: imar genişliği (bilgi kartında gösterilir) | Diğer renkler (kırmızı, turuncu) |
+| Satırın **dolgu rengi**: mavi tonları | |
+
+Renk tanıma **tema indeksine değil gerçek renge** bakar: hücrenin rengi
+(tema rengi + açma/koyultma hesaplanarak) RGB'ye indirgenir, sonra "mavi mi"
+diye bakılır. Böylece liste başka bir programda kaydedilse de çalışır.
+Parlaklığa göre açık/koyu ayrımı yapılır.
+
+| Renk | Çözülen RGB | Satır |
+|---|---|---|
+| Açık mavi | #B3CEFB | 620 |
+| Koyu mavi | #4285F4 | 188 |
+| Kırmızı / turuncu | #EA4335 / #FF9900 | yok sayılır |
+
+### Eşleştirme nasıl yapılıyor
+
+Excel'de geometri yok, yalnızca **ilçe + yol adı** var. Bu yüzden eşleştirme ad
+üzerindendir: Türkçe karakter farkları giderilir, parantez içi atılır ve tip
+soneki (CADDESİ, SOKAK, BULVARI, MEYDANI, YOLU, ASFALTI) ayrılır — çünkü ana
+ağda ad `ABDİ İPEKÇİ`, tip ayrı alandadır.
+
+Son ölçüm: **808 satırın 772'si (%95,5)** ana ağda bulundu → 1.215 yol kaydı,
+1.182,9 km.
+
+Eşleşmeyen satırlar sitede **Veri kalitesi uyarıları** bölümünde listelenir.
+Genellikle adın listede farklı yazılmasından olur (`RASULZADE BULVARU`,
+`1580SOKAK` gibi) ya da yol ağda hiç yoktur. Excel'deki adı düzeltip yeniden
+yüklemek yeterlidir.
+
+> Bu bir **ad eşleşmesidir, kesin geometri eşlemesi değildir.** Aynı adı
+> taşıyan birden fazla yol varsa hepsi seçilir. Ölçüldü: satır başına ortanca
+> 0,80 km, en uzunları gerçek karayolları (ÇANAKKALE ASFALTI 46 km). Ad
+> çakışmasına rastlanmadı, ama liste büyüdükçe bilgi kartındaki
+> "Listedeki adı" satırından kontrol edebilirsiniz.
+
+### Görünümü değiştirme
+
+`veri/kategoriler.json` → `genis_yollar`:
+
+```json
+"genis_yollar": {
+  "baslik": "Geniş yollar (17 m+)",
+  "aciklama": "...",
+  "acik_ad": "Açık mavi liste",
+  "acik_renk": "#60a5fa",
+  "koyu_ad": "Koyu mavi liste",
+  "koyu_renk": "#1e3a8a"
+}
+```
 
 ---
 

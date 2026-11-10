@@ -1528,8 +1528,51 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
                 "veri/kategoriler.json içine ekleyebilirsiniz."
                 % (durum, istatistik[durum]["adet"]))
 
+    # 5a) Geniş yollar (17 m+) — AYRI PROJE. Ana ağın kategorilerine, toplam
+    # kilometresine ve indirme dosyalarına karışmaz; kendi dosyasına yazılır.
+    # Eşleştirme burada yapılır, dosya çıktı klasörü hazır olunca yazılır.
+    genis_bilgi = None
+    genis_ozlikler = None
+    genis_xlsx = next((x for x in sorted(veri_dizini.glob("*.xlsx"))
+                       if not x.name.startswith("~$")), None)
+    if genis_xlsx:
+        try:
+            genis_ozlikler, genis_bilgi = genis_yollar_eslestir(
+                genis_xlsx, ozellikler, ayar)
+        except Exception as e:
+            log("  Uyarı: geniş yollar listesi işlenemedi (%s). "
+                "Site bu katman olmadan yayınlanacak." % e)
+            genis_bilgi = genis_ozlikler = None
+    if genis_bilgi:
+        t = genis_bilgi["tonlar"]
+        log("  Geniş yollar katmanı (%s): %d/%d satır eşleşti · "
+            "açık mavi %d yol / %.1f km · koyu mavi %d yol / %.1f km"
+            % (genis_bilgi["kaynak"], genis_bilgi["eslesen_satir"],
+               genis_bilgi["liste_satiri"], t["acik"]["adet"],
+               t["acik"]["uzunluk_km"], t["koyu"]["adet"],
+               t["koyu"]["uzunluk_km"]))
+        if genis_bilgi["eslesmeyen"]:
+            log("    %d satır ana ağda bulunamadı (ad farklı olabilir); "
+                "listesi sitede Veri kalitesi bölümünde."
+                % len(genis_bilgi["eslesmeyen"]))
+
     # 5b) Veri kalitesi uyarıları (QGIS'te düzeltmek isteyebileceğiniz kayıtlar)
     uyarilar = []
+    if genis_bilgi and genis_bilgi.get("eslesmeyen"):
+        eks = genis_bilgi["eslesmeyen"]
+        ornekler = ", ".join("%s: %s" % (e["ilce"], e["ad"].replace("\n", " ")[:40])
+                             for e in eks[:8])
+        uyarilar.append({
+            "baslik": "Geniş yollar listesinde eşleşmeyen satırlar",
+            "mesaj": "\u201c%s\u201d listesindeki %d satır yol ağında "
+                     "bulunamadı. Genellikle adın listede farklı yazılmasından "
+                     "olur (ör. kısaltma, yazım farkı) ya da yol ağda hiç "
+                     "yoktur. Örnekler — %s%s. Bu AYRI bir çalışmadır; ana "
+                     "kategorileri etkilemez."
+                     % (genis_bilgi.get("baslik") or "Geniş yollar", len(eks),
+                        ornekler, " …" if len(eks) > 8 else ""),
+            "adet": len(eks),
+            "ornek": []})
     if ortusme_raporu:
         ort_km = sum(r["silinen_m"] for r in ortusme_raporu.values()) / 1000.0
         ort_kayit = sum(r["kayit"] for r in ortusme_raporu.values())
@@ -1616,6 +1659,20 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
     # Tamamı tek dosyada (indirme için)
     gj_yolu = veri_cikti / "yollar.geojson"
     _geojson_yaz(gj_yolu, ozellikler)
+
+    # Geniş yollar katmanının dosyasını yaz (eşleştirme yukarıda yapıldı)
+    if genis_bilgi and genis_ozlikler:
+        _hedef = veri_cikti / genis_bilgi["dosya"]
+        with _hedef.open("w", encoding="utf-8") as f:
+            json.dump({"type": "FeatureCollection",
+                       "crs": {"type": "name",
+                               "properties": {"name": "urn:ogc:def:crs:OGC:1.3:CRS84"}},
+                       "features": genis_ozlikler}, f,
+                      ensure_ascii=False, separators=(",", ":"))
+        # genis_bilgi ozet sozlugune asagida konuyor; burada yalnizca boyutu doldur
+        genis_bilgi["boyut_mb"] = round(_hedef.stat().st_size / 1048576, 2)
+        log("  genis_yollar.geojson : %.2f MB (ayri katman)"
+            % genis_bilgi["boyut_mb"])
 
     # QGIS için GeoPackage: aynı veri, ama mekânsal indeksli.
     # GeoJSON'u QGIS her kaydırmada baştan tarıyor; bu dosya o sorunu çözer.
@@ -1713,6 +1770,7 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
         "mahalle_sinir": sinir_gorunumu(ayar.get("mahalle_sinir"),
                                         "#b45309", "#f59e0b", 0.8, 12, 11),
         "uyarilar": uyarilar,
+        "genis_yollar": genis_bilgi,
         "degisiklikler": degisiklikler,
         "onceki_surum": onceki_bilgi,
         "depo": depo_bilgisi(),
@@ -1835,6 +1893,96 @@ def degisiklikleri_karsilastir(eski_kayitlar, yeni_kayitlar):
                     "km": round(sum(v[1] for _f, v in eklenen) / 1000.0, 1)},
         "silinen": {"adet": len(silinen),
                     "km": round(sum(v[1] for _f, v in silinen) / 1000.0, 1)},
+    }
+
+
+def genis_yollar_eslestir(xlsx, ozellikler, ayar):
+    """Geniş yollar listesini (17 m+) ayrı bir katman olarak üretir.
+
+    Bu AYRI BİR PROJEDİR: ana yol ağının DURUM kategorileriyle, toplam
+    kilometresiyle ya da indirme dosyalarıyla karışmaz. Yalnızca Excel'de
+    mavi işaretli satırların haritadaki karşılığını gösterir.
+
+    Eşleştirme ad üzerindendir (ilçe + sadeleştirilmiş yol adı); kesin
+    geometri eşlemesi değildir, bu yüzden eşleşmeyen satırlar raporlanır.
+    """
+    import importlib.util
+    _yol = Path(__file__).resolve().parent / "genis_yollar.py"
+    _spec = importlib.util.spec_from_file_location("genis_yollar", _yol)
+    gy = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(gy)
+
+    ilceler = {oz["properties"].get("ilce") for oz in ozellikler}
+    ilceler.discard(None)
+    ilceler.discard("Belirlenemedi")
+    kayitlar, ist = gy.listeyi_coz(xlsx, ilceler)
+    if not kayitlar:
+        return None, None
+
+    # Ana ağı (ilçe, sadeleştirilmiş ad) ile indeksle
+    dizin = {}
+    for oz in ozellikler:
+        p = oz["properties"]
+        ad, ilce = p.get("ad"), p.get("ilce")
+        if not ad or not ilce or ad == "İsimsiz yol":
+            continue
+        g = gy.govde(ad)
+        if g:
+            dizin.setdefault((ilce, g), []).append(oz)
+
+    secilen = {}
+    eslesmeyen = []
+    for k in kayitlar:
+        adaylar = dizin.get((k["ilce"], gy.govde(k["ad"])), [])
+        if not adaylar:
+            eslesmeyen.append({"ilce": k["ilce"], "ad": k["ad"],
+                               "satir": k["satir"]})
+            continue
+        for oz in adaylar:
+            anahtar = id(oz)
+            onceki = secilen.get(anahtar)
+            # Koyu mavi, açık maviyi ezer (daha kesin bilgi sayılır)
+            if onceki is None or (k["renk"] == "koyu" and onceki[1] == "acik"):
+                secilen[anahtar] = (oz, k["renk"], k["ad"], k["genislik"])
+
+    ozlikler = []
+    say = {"acik": [0, 0.0], "koyu": [0, 0.0]}
+    for oz, ton, liste_adi, genislik in secilen.values():
+        p = oz["properties"]
+        uz = p.get("uzunluk_m") or 0.0
+        say[ton][0] += 1
+        say[ton][1] += uz
+        ozlikler.append({
+            "type": "Feature",
+            "properties": {"fid": p.get("fid"), "ad": p.get("ad"),
+                           "ilce": p.get("ilce"), "mahalle": p.get("mahalle"),
+                           "renk": ton, "liste_adi": liste_adi,
+                           "genislik": genislik, "uzunluk_m": uz,
+                           "durum": p.get("durum")},
+            "geometry": oz["geometry"]})
+
+    g_ayar = (ayar.get("genis_yollar") or {})
+    return ozlikler, {
+        "dosya": "genis_yollar.geojson",
+        "boyut_mb": 0,
+        "kaynak": xlsx.name,
+        "baslik": g_ayar.get("baslik") or "Geniş yollar (17 m+)",
+        "aciklama": g_ayar.get("aciklama") or
+                    "Onaylanırsa Büyükşehir sorumluluğuna geçecek yollar. "
+                    "Ayrı bir çalışmadır; yukarıdaki kategorilerle ilgisi yoktur.",
+        "tonlar": {
+            "acik": {"ad": g_ayar.get("acik_ad") or "Açık mavi liste",
+                     "renk": g_ayar.get("acik_renk") or "#60a5fa",
+                     "adet": say["acik"][0],
+                     "uzunluk_km": round(say["acik"][1] / 1000.0, 1)},
+            "koyu": {"ad": g_ayar.get("koyu_ad") or "Koyu mavi liste",
+                     "renk": g_ayar.get("koyu_renk") or "#1d4ed8",
+                     "adet": say["koyu"][0],
+                     "uzunluk_km": round(say["koyu"][1] / 1000.0, 1)},
+        },
+        "liste_satiri": len(kayitlar),
+        "eslesen_satir": len(kayitlar) - len(eslesmeyen),
+        "eslesmeyen": eslesmeyen,
     }
 
 

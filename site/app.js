@@ -1671,6 +1671,126 @@
       kacar(onceki.tarih || onceki.commit || "bir önceki sürüm") + "</p>";
   }
 
+  /* ------------------------------------------------- geniş yollar (ayrı proje)
+     Bu katman ana çalışmadan bağımsızdır: kendi dosyasından yüklenir, kendi
+     düzleminde çizilir, kategori süzgeçlerinden ve toplam kilometreden
+     etkilenmez ve onları etkilemez. */
+  function genisCiz() {
+    var g = D.ozet.genis_yollar;
+    if (!g) return;
+    D.genis = D.genis || { secili: new Set(), veri: null, katman: {},
+                           yukleniyor: false, cizer: null };
+    $("#bolum-genis").style.display = "";
+    var b = $("#bolum-genis").querySelector("h2");
+    if (b && g.baslik) b.firstChild.nodeValue = g.baslik + " ";
+    $("#genis-aciklama").textContent = g.aciklama || "";
+
+    $("#genis-liste").innerHTML = ["acik", "koyu"].map(function (ton) {
+      var t = g.tonlar[ton];
+      return '<label class="genis-satir">' +
+        '<input type="checkbox" data-genis="' + ton + '"' +
+        (D.genis.secili.has(ton) ? " checked" : "") + ">" +
+        '<i style="background:' + kacar(t.renk) + '"></i>' +
+        '<span class="ad">' + kacar(t.ad) + "</span>" +
+        '<span class="bilgi">' + sayi(t.adet) + " yol · " +
+        sayi(t.uzunluk_km, 1) + " km</span></label>";
+    }).join("");
+
+    $$("#genis-liste [data-genis]").forEach(function (kutu) {
+      kutu.onchange = function () {
+        var ton = kutu.dataset.genis;
+        if (kutu.checked) D.genis.secili.add(ton);
+        else D.genis.secili.delete(ton);
+        genisYukleVeCiz();
+      };
+    });
+    genisNotuYaz();
+  }
+
+  function genisNotuYaz(mesaj) {
+    var g = D.ozet.genis_yollar;
+    if (!g) return;
+    if (mesaj) { $("#genis-not").textContent = mesaj; return; }
+    var eksik = (g.eslesmeyen || []).length;
+    $("#genis-not").textContent =
+      sayi(g.liste_satiri) + " satırlık listenin " + sayi(g.eslesen_satir) +
+      " tanesi haritada bulundu" +
+      (eksik ? "; " + sayi(eksik) + " satır eşleşmedi (adı farklı olabilir, " +
+               "Veri kalitesi bölümünde listeli)." : ".");
+  }
+
+  function genisYukleVeCiz() {
+    var g = D.ozet.genis_yollar;
+    if (!g) return;
+    if (D.genis.veri) { genisGuncelle(); return; }
+    if (!D.genis.secili.size || D.genis.yukleniyor) return;
+    D.genis.yukleniyor = true;
+    genisNotuYaz("Katman yükleniyor…");
+    fetch("veri/" + g.dosya, { cache: "no-cache" })
+      .then(function (y) { return y.json(); })
+      .then(function (gj) {
+        D.genis.veri = gj;
+        D.genis.yukleniyor = false;
+        if (!D.harita.getPane("genisPane")) {
+          D.harita.createPane("genisPane");
+          D.harita.getPane("genisPane").style.zIndex = 420;
+        }
+        D.genis.cizer = L.canvas({ pane: "genisPane", padding: 0.3 });
+        genisNotuYaz();
+        genisGuncelle();
+      })
+      .catch(function () {
+        D.genis.yukleniyor = false;
+        genisNotuYaz("Katman yüklenemedi.");
+      });
+  }
+
+  function genisGuncelle() {
+    var g = D.ozet.genis_yollar;
+    if (!g || !D.genis || !D.genis.veri) return;
+    ["acik", "koyu"].forEach(function (ton) {
+      var acikMi = D.genis.secili.has(ton);
+      var katman = D.genis.katman[ton];
+      if (!acikMi) {
+        if (katman && D.harita.hasLayer(katman)) D.harita.removeLayer(katman);
+        return;
+      }
+      if (!katman) {
+        var ozlikler = D.genis.veri.features.filter(function (f) {
+          return f.properties.renk === ton;
+        });
+        katman = L.geoJSON({ type: "FeatureCollection", features: ozlikler }, {
+          renderer: D.genis.cizer,
+          style: { color: g.tonlar[ton].renk, weight: 4, opacity: 0.95 },
+          onEachFeature: function (f, kat) {
+            kat.on("click", function (e) {
+              L.DomEvent.stopPropagation(e);
+              genisBilgiAc(f.properties, ton, e.latlng);
+            });
+          }
+        });
+        D.genis.katman[ton] = katman;
+      }
+      if (!D.harita.hasLayer(katman)) katman.addTo(D.harita);
+    });
+  }
+
+  function genisBilgiAc(p, ton, latlng) {
+    var g = D.ozet.genis_yollar;
+    var html = '<div class="pop-ad">' + kacar(p.ad || "İsimsiz yol") + "</div>" +
+      '<div class="pop-kat"><i style="background:' + kacar(g.tonlar[ton].renk) +
+      '"></i>' + kacar(g.tonlar[ton].ad) + "</div>" +
+      '<table class="pop-tablo">' +
+      "<tr><td>Listedeki adı</td><td>" + kacar(p.liste_adi || "") + "</td></tr>" +
+      (p.genislik ? "<tr><td>İmar genişliği</td><td>" + kacar(p.genislik) +
+                    " m</td></tr>" : "") +
+      "<tr><td>İlçe</td><td>" + kacar(p.ilce || "") + "</td></tr>" +
+      "<tr><td>Uzunluk</td><td>" + uzunlukYazi(p.uzunluk_m) + "</td></tr>" +
+      "<tr><td>Şu anki durum</td><td>" + kacar(katAd(p.durum)) + "</td></tr>" +
+      "</table>";
+    L.popup({ maxWidth: 300 }).setLatLng(latlng).setContent(html).openOn(D.harita);
+  }
+
   function yardimCiz() {
     var el = $("#yardim-kategoriler");
     if (!el) return;
@@ -2090,7 +2210,8 @@
         }
         kategoriListesiCiz(); tipListesiCiz(); ilceListesiCiz(); mahalleListesiCiz();
         kaliteCiz();
-    degisiklikCiz(); yardimCiz(); aramaKur(); aramaCiz(""); dugmeleriKur();
+    degisiklikCiz();
+    genisCiz(); yardimCiz(); aramaKur(); aramaCiz(""); dugmeleriKur();
 
         return kategorileriYukle(Array.from(D.seciliKategori));
       })

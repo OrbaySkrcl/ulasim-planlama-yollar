@@ -274,3 +274,19 @@ Bu dosya, aynı hataların tekrarlanmaması için tutulur.
   yazdığım "şu adımları izleyin" talimatı onda hiç çalışmayacaktı. Tablonun
   kendisi 26,7 MB olduğu için indeksi atmak bile yetmiyor; çözüm zip (15,8 MB)
   ya da GitHub Desktop. Derleme ikisini de okuyacak şekilde genişletildi.
+- **Excel'de renk "bilgi" taşıyorsa, tema indeksine değil çözülmüş RGB'ye bak.**
+  Liste theme:4/tint:0.6 ve theme:4/tint:0 kullanıyordu. Tema indeksine göre
+  kural yazmak, dosya başka bir programda kaydedilince kırılırdı. Tema
+  paletini + tint'i hesaplayıp gerçek rengi bulmak ve "mavi mi" diye sormak
+  hem daha sağlam hem daha okunur.
+- **.xlsx okumak için kütüphane şart değil.** Zip içinde XML: sharedStrings,
+  styles (cellXfs → fills → fgColor) ve theme1. Projenin "bağımlılık yok"
+  kuralı korundu. Doğruluğu openpyxl ile karşılaştırarak kanıtladım — kendi
+  okuyucumu kendi başına doğru saymadım.
+- **Korkutucu görünen sayıyı yorumlamadan önce aç.** "FATİH CADDESİ → 34 kayıt"
+  aşırı eşleşme sandım; toplamı 4,4 km çıktı, yani kendi bölme işlemimizin
+  bir caddeyi parçalara ayırmasıydı. 30 km'yi aşanlar da gerçek karayollarıydı.
+- **"Ayrı proje" sözü arayüzde de görünmeli.** Veriyi ayırmak yetmiyor;
+  bölüme "ayrı çalışma" rozeti ve kenar çizgisi koymak, kullanıcının iki
+  çalışmayı karıştırmasını önlüyor. Testte de bunu bir değişmez olarak
+  doğruladım: ana kategoriler kapalıyken katman durmaya devam ediyor.

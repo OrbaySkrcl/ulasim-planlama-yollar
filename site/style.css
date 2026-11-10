@@ -207,6 +207,25 @@ html[data-tema="koyu"] a { color: var(--vurgu); }
   font-size: 11.5px; font-weight: 600; line-height: 1; white-space: nowrap;
 }
 .sinir-duzenle:hover { border-color: var(--vurgu); color: var(--vurgu); }
+/* Ayri proje: ana calismadan gorsel olarak ayrilsin */
+.bolum.ayri-proje { border-left: 3px solid var(--vurgu); }
+.bolum.ayri-proje > h2::after {
+  content: "ayrı çalışma"; margin-left: 7px; font-size: 9.5px; font-weight: 700;
+  letter-spacing: .04em; color: var(--vurgu); border: 1px solid var(--vurgu);
+  border-radius: 999px; padding: 1px 6px; vertical-align: 1px;
+  text-transform: none;
+}
+.ayri-not { font-size: 11.5px; color: var(--yazi-soluk); margin: 0 0 10px;
+  line-height: 1.45; }
+.genis-satir { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
+.genis-satir input { flex: 0 0 auto; }
+.genis-satir i { width: 18px; height: 4px; border-radius: 2px; flex: 0 0 auto;
+  box-shadow: 0 0 0 1px rgba(128,128,128,.35); }
+.genis-satir .ad { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.genis-satir .bilgi { color: var(--yazi-soluk); font-size: 11.5px;
+  white-space: nowrap; font-variant-numeric: tabular-nums; }
+
 .degisiklik-satir {
   display: flex; align-items: center; gap: 6px; padding: 5px 0;
   border-bottom: 1px solid var(--cizgi); font-size: 12px;
