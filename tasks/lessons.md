@@ -334,3 +334,11 @@ Bu dosya, aynı hataların tekrarlanmaması için tutulur.
   Üçü birden olmazsa dosya çift tıklamayla düzgün açılmaz. Testte BOM'u
   `fetch().text()` ile aradım, tarayıcı çözerken sildiği için "yok" sandım;
   `arrayBuffer()` ile baytlara bakmak gerekti.
+- **Rehberi mekanizmaya göre değil, kullanıcının gördüğü soruna göre kur.**
+  "duzeltme.txt nasıl yazılır" değil, "haritada yanlış çizgi var → şunu yap".
+  Kullanıcı dosya adlarını değil, karşılaştığı durumu biliyor.
+- **Aynı soruyu iki kez soruyorsa açıklama değil, ayrım eksiktir.** Kullanıcı
+  "düzeltme Excel'i değiştiriyor mu?" diye iki kez sordu. Sorun cevabın
+  yanlışlığı değil, "listeden çıkarmak"ın iki ayrı anlama gelmesiydi
+  (haritadaki yanlış çizgi vs. gerçek karar değişikliği). Rehbere bu ayrımı
+  ayrı bir başlık olarak koydum.

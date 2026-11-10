@@ -2193,6 +2193,14 @@
     $("#guncelleme").textContent = ozet.guncelleme;
     $("#kaynak").textContent = ozet.kaynak_dosya + " · " + sayi(ozet.toplam_km, 1) +
       " km · " + sayi(ozet.ad_sayisi || 0) + " farklı yol adı";
+    // Düzeltme rehberi: depo adresinden türetilir
+    var rehber = $("#link-rehber");
+    var d = ozet.depo || {};
+    if (rehber && d.sahip && d.depo) {
+      rehber.href = "https://github.com/" + d.sahip + "/" + d.depo +
+        "/blob/" + (d.dal || "main") + "/REHBER.md";
+      rehber.hidden = false;
+    }
     $("#boyut-geojson").textContent = ozet.veri_boyut_mb + " MB";
     // GeoPackage yazılamadıysa bağlantıyı hiç gösterme (ölü bağlantı olmasın)
     var gpkgBag = $("#menu-indir a[href$='.gpkg']");

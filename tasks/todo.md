@@ -890,3 +890,33 @@ Gerçek yazım farkı 8 tane çıktı; hepsi kurala bağlandı.
 ## Doğrulama
 Geniş yollar testi 13/13 (CSV'nin BOM'u ve noktalı virgülü dahil),
 site testi 22/22, konsol temiz.
+
+---
+
+# Tur 19 — Düzeltme rehberi
+
+İstek: "bana bir rehber hazırlar mısın düzeltmeleri nerede nasıl yapacağımla
+ilgili? sade ve anlaşılır olsun"
+
+## Yapılanlar
+- [x] `REHBER.md` (186 satır, 974 kelime) — problem odaklı, mekanizma odaklı
+      değil. Önce "üç dosya, üç iş" tablosu, sonra "ne yapmak istiyorsunuz?"
+      karar tablosu, sonra 6 kısa tarif.
+- [x] README'nin en üstünden bağlantı.
+- [x] Sitenin alt bilgisinden bağlantı (depo adresinden türetiliyor).
+- [x] İç bağlantılar denetlendi: 6 bağlantı, kırık yok.
+
+## Rehberin kapsadığı 6 iş
+1. Bir yolun durumunu değiştirmek (QGIS)
+2. Haritadaki yanlış çizgiyi çıkarmak (duzeltme.txt)
+3. Listedeki yol haritada çıkmıyorsa (üç sebep, üç çözüm)
+4. Bir yolu listeden çıkarmak (Excel)
+5. Listeye yeni yol eklemek (Excel + ağda çizgi şartı)
+6. Geri almak (git geçmişi)
+
+Sonda "sık karışan iki şey": düzeltme dosyası Excel'i değiştirmez; ve
+"listeden çıkarmak" iki ayrı anlama gelebilir.
+
+## Doğrulama
+Site testi 22/22, geniş yollar testi 13/13, konsol temiz.
+Rehber bağlantısı sitede görünüyor ve doğru adrese gidiyor.

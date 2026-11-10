@@ -1,5 +1,7 @@
 # İzmir Köy Yolları Devir Haritası
 
+> 📖 **Günlük işler için [Düzeltme Rehberi](REHBER.md)** — bir şeyi değiştirmek istediğinizde hangi dosyaya dokunacağınızı tek sayfada anlatır.
+
 İzmir'de **İl Özel İdaresi'nden Büyükşehir Belediyesi'ne geçen mahalle ve köy yollarının**
 belirlenmesi çalışmasının herkese açık harita sitesi.
 
