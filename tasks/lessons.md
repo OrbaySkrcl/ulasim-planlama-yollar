@@ -298,3 +298,15 @@ Bu dosya, aynı hataların tekrarlanmaması için tutulur.
 - **Kullanıcı veriyi değiştirdikten sonra mutlaka onun dosyasıyla derle.**
   Kendi ürettiğim ana katmanla her şey yeşildi; kullanıcının yüklediği zip ile
   derleyince ortaya çıkan tek fark bu oldu ve gerçek bir ayrıntıyı gösterdi.
+- **İki benzer dosya varsa kullanıcı er geç yanlışını düzenler.** Ana katman
+  (`yollar_master.gpkg`) ile yayın kopyası (`yollar.gpkg`) karıştı. Suçlamadan
+  önce şemayı karşılaştırıp kanıtladım, sonra onaran bir yol açtım
+  (`ana_katman.py` yayın şemasını da okuyor). Belgeye uyarı yazmak yetmiyor;
+  **yanlış yoldan dönüşü de kolay yapmak** gerekiyor.
+- **"Senin düzenlemen bozmuş" demeden önce kendi çıktını kontrol et.** 190,8
+  km kopya geometriyi kullanıcının eklediğini sandım; kendi ürettiğim ilk ana
+  katmanda da birebir aynı sayılar çıktı. Kaynak veriden geliyormuş.
+- **Durumsuz (stateless) tasarım güncelleme sorusunu kendiliğinden çözer.**
+  Geniş yollar listesi her derlemede sıfırdan okunduğu için "nasıl çıkarırım,
+  nasıl eklerim" diye bir mekanizmaya gerek kalmadı: Excel'i düzenle, yükle.
+  Eksik olan tek şey "ne değişti" görünürlüğüydü, o da karşılaştırmayla geldi.

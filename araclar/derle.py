@@ -1555,6 +1555,16 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
             log("    %d satır ana ağda bulunamadı (ad farklı olabilir); "
                 "listesi sitede Veri kalitesi bölümünde."
                 % len(genis_bilgi["eslesmeyen"]))
+        ld = genis_bilgi.get("liste_degisimi")
+        if ld:
+            log("    Bir önceki listeye göre (%s): %d eklendi, %d çıkarıldı, "
+                "%d ton değişti."
+                % (ld["tarih"] or "önceki sürüm", ld["eklenen_adet"],
+                   ld["cikarilan_adet"], ld["ton_adet"]))
+            for k in ld["eklenen"][:6]:
+                log("      + %s / %s" % (k["ilce"], k["ad"][:44]))
+            for k in ld["cikarilan"][:6]:
+                log("      - %s / %s" % (k["ilce"], k["ad"][:44]))
 
     # 5b) Veri kalitesi uyarıları (QGIS'te düzeltmek isteyebileceğiniz kayıtlar)
     uyarilar = []
@@ -1965,8 +1975,43 @@ def genis_yollar_eslestir(xlsx, ozellikler, ayar):
                            "durum": p.get("durum")},
             "geometry": oz["geometry"]})
 
+    # Bir önceki listeyle karşılaştır: hangi yol eklendi, hangisi çıkarıldı,
+    # hangisinin tonu değişti. Liste her derlemede sıfırdan okunduğu için
+    # "ne değişti" sorusunun tek cevabı bu karşılaştırmadır.
+    liste_degisimi = None
+    try:
+        import tempfile
+        with tempfile.TemporaryDirectory() as td:
+            onceki = onceki_surumu_al(xlsx, Path(td))
+            if onceki:
+                onceki_yol, _commit, onceki_tarih = onceki
+                eski_kayitlar, _ = gy.listeyi_coz(onceki_yol, ilceler)
+                anahtar = lambda k: (k["ilce"], gy.sade(k["ad"]))
+                eskisi = {anahtar(k): k for k in eski_kayitlar}
+                yenisi = {anahtar(k): k for k in kayitlar}
+                eklenen = [yenisi[a] for a in yenisi if a not in eskisi]
+                cikan = [eskisi[a] for a in eskisi if a not in yenisi]
+                ton = [{"ilce": yenisi[a]["ilce"], "ad": yenisi[a]["ad"],
+                        "eski": eskisi[a]["renk"], "yeni": yenisi[a]["renk"]}
+                       for a in yenisi
+                       if a in eskisi and eskisi[a]["renk"] != yenisi[a]["renk"]]
+                if eklenen or cikan or ton:
+                    liste_degisimi = {
+                        "tarih": onceki_tarih,
+                        "eklenen": [{"ilce": k["ilce"], "ad": k["ad"],
+                                     "renk": k["renk"]} for k in eklenen[:40]],
+                        "eklenen_adet": len(eklenen),
+                        "cikarilan": [{"ilce": k["ilce"], "ad": k["ad"],
+                                       "renk": k["renk"]} for k in cikan[:40]],
+                        "cikarilan_adet": len(cikan),
+                        "ton_degisen": ton[:40],
+                        "ton_adet": len(ton)}
+    except Exception as e:
+        log("  Uyarı: geniş yollar listesinin değişim günlüğü çıkarılamadı (%s)." % e)
+
     g_ayar = (ayar.get("genis_yollar") or {})
     return ozlikler, {
+        "liste_degisimi": liste_degisimi,
         "dosya": "genis_yollar.geojson",
         "boyut_mb": 0,
         "kaynak": xlsx.name,

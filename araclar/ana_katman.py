@@ -149,8 +149,43 @@ def gpkg_kur(hedef, satirlar, qml, katman=ANA_KATMAN):
     return hedef.stat().st_size
 
 
+def _gpkg_cikar(yol, gecici_dizin):
+    """Zip içindeki GeoPackage'ı geçici bir dosyaya çıkarır (sqlite akıştan okumaz)."""
+    import shutil as _sh
+    import zipfile
+    with zipfile.ZipFile(str(yol)) as zf:
+        ic = [n for n in zf.namelist()
+              if n.lower().endswith(".gpkg") and not n.startswith("__MACOSX")]
+        if not ic:
+            return None
+        hedef = Path(gecici_dizin) / Path(ic[0]).name
+        with zf.open(ic[0]) as k, open(str(hedef), "wb") as c:
+            _sh.copyfileobj(k, c)
+        return hedef
+
+
+def ana_katman_bul(veri):
+    """veri/ içindeki ana katmanı bulur: .gpkg ya da içinde .gpkg olan .zip."""
+    gpkg = veri / "yollar_master.gpkg"
+    if gpkg.exists():
+        return gpkg
+    for aday in sorted(veri.glob("*.zip")):
+        try:
+            import zipfile
+            with zipfile.ZipFile(str(aday)) as zf:
+                if any(n.lower().endswith(".gpkg") for n in zf.namelist()):
+                    return aday
+        except Exception:
+            continue
+    return None
+
+
 def mevcut_oku(yol):
-    """Var olan ana katmanı okur: fid, parçalar ve kullanıcının girdiği alanlar."""
+    """Var olan ana katmanı okur: fid, parçalar ve kullanıcının girdiği alanlar.
+
+    Hem ana katman şemasını hem de siteden indirilen yayın dosyasının şemasını
+    kabul eder; yayın dosyasında 'aciklama' alanı bulunmaz, boş bırakılır.
+    """
     baglanti = sqlite3.connect("file:%s?mode=ro" % yol, uri=True)
     try:
         c = baglanti.cursor()
@@ -174,6 +209,9 @@ def mevcut_oku(yol):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    ap.add_argument("--zip", action="store_true",
+                    help="Yüklemeye hazır yollar_master.zip de üret "
+                         "(GitHub'ın tarayıcı sınırı 25 MB)")
     ap.add_argument("--yeniden", action="store_true",
                     help="Var olan ana katmanı yok sayıp kaynaktan baştan üret "
                          "(DİKKAT: elle yaptığınız düzenlemeler kaybolur)")
@@ -193,10 +231,22 @@ def main():
     log("Ana katman: %s" % hedef.name)
     log("-" * 58)
 
-    tazeleme = hedef.exists() and not a.yeniden
+    mevcut = ana_katman_bul(veri)
+    tazeleme = mevcut is not None and not a.yeniden
+    _gecici = None
     if tazeleme:
-        log("Var olan ana katman tazeleniyor (düzenlemeleriniz korunur).")
-        satirlar = mevcut_oku(hedef)
+        log("Var olan ana katman tazeleniyor: %s" % mevcut.name)
+        log("(Durum, ad ve notlarınıza dokunulmaz; yalnızca otomatik alanlar "
+            "yeniden hesaplanır ve QGIS stili tazelenir.)")
+        kaynak_gpkg = mevcut
+        if mevcut.suffix.lower() == ".zip":
+            import tempfile
+            _gecici = tempfile.TemporaryDirectory()
+            kaynak_gpkg = _gpkg_cikar(mevcut, _gecici.name)
+            if kaynak_gpkg is None:
+                log("HATA: %s içinde GeoPackage yok." % mevcut.name)
+                return 2
+        satirlar = mevcut_oku(kaynak_gpkg)
         log("%d yol okundu." % len(satirlar))
     else:
         if hedef.exists():
@@ -266,6 +316,17 @@ def main():
     log("")
     log("Toplam %d yol, %.1f km → %.2f MB" % (len(satirlar), toplam_m / 1000,
                                               boyut / 1048576))
+    if a.zip:
+        import zipfile
+        zip_yolu = veri / "yollar_master.zip"
+        with zipfile.ZipFile(str(zip_yolu), "w", zipfile.ZIP_DEFLATED,
+                             compresslevel=9) as zf:
+            zf.write(str(hedef), "yollar_master.gpkg")
+        log("Yüklemeye hazır: %s (%.2f MB)"
+            % (zip_yolu.name, zip_yolu.stat().st_size / 1048576))
+
+    if _gecici is not None:
+        _gecici.cleanup()
     log("")
     log("Sırada: bu dosyayı QGIS'te açın (sürükleyip bırakmanız yeter).")
     log("Renkler ve Durum açılır listesi hazır gelir.")

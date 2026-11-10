@@ -781,3 +781,42 @@ Standart kütüphane okuyucusu openpyxl ile **birebir aynı** sonucu verdi
 Tarayıcı testi 8/8 geçti, konsol temiz. En kritik denetim:
 **ana kategorilerin tamamı kapalıyken bile katman duruyor** — projeler
 gerçekten ayrı.
+
+---
+
+# Tur 16 — Liste güncelleme + yanlış dosya onarımı
+
+İstek: "sonradan sorumluluğu değişen yollar var, nasıl güncelleyebiliriz?
+yeni yollar eklenebilir, varolan yollar çıkabilir listeden."
+
+## Bulgu: yüklenen dosya ana katman değil, yayın dosyasıymış
+Şema karşılaştırması kesin: yüklenen `yollar_master.zip` içindeki GeoPackage
+siteden indirilen `yollar.gpkg`'nin şemasını taşıyor
+(`kayit_no`, `parca_no`, `durum_adi` var; `aciklama` yok; gömülü stil yok).
+
+- Kullanıcının 87 düzenlemesi sağlam.
+- Kayıp: `aciklama` (Not) alanı, gömülü QGIS stili; `fid` yeniden numaralanmış.
+- Onarıldı: `ana_katman.py` artık zip'li ve yayın şemalı kaynağı da okuyor.
+  Tazeleme sonucu: 75.670 kayıt, **0 kayıp fid, 0 durum değişikliği**,
+  `aciklama` ve stil geri geldi, `--zip` ile 15,82 MB yükleme dosyası üretildi.
+
+## Bulgu: 190,8 km kopya geometri (kullanıcı kaynaklı DEĞİL)
+273 grup / 348 fazla kayıt. Kendi ürettiğim ilk ana katmanda da **birebir aynı**
+sayılar çıktı, yani kaynak KML'den geliyor. Üstün durum kuralı yalnızca
+DURUM 1 ile çakışanları temizliyor; aynı kategori içindeki kopyalar duruyor.
+**Henüz dokunulmadı** — karar kullanıcıya ait.
+
+## Yapılanlar
+- [x] `ana_katman.py`: zip okuma, yayın şemasını hoş görme, `--zip` ile
+      yüklemeye hazır dosya üretme.
+- [x] Geniş yollar listesi için **değişim günlüğü**: bir önceki Excel ile
+      karşılaştırıp eklenen / çıkarılan / tonu değişen satırları yazıyor.
+      Hem derleme günlüğünde hem sitede.
+- [x] README: hangi dosyanın indirileceği (uyarı kutusu + ayırt etme yöntemi),
+      liste güncelleme tablosu, ana projedeki durum değişikliğiyle farkı.
+
+## Doğrulama
+Liste davranışı testle kanıtlandı: satır eklendi → katmana girdi; rengi
+kaldırıldı ve kırmızı yapıldı → çıktı; açık→koyu çevrildi → ton değişti.
+Beklenen 1/2/1, çıkan 1/2/1. Değişim günlüğü uçtan uca derlemede de doğru
+yazdı. Site testi 22/22, geniş yollar testi 8/8, konsol temiz.

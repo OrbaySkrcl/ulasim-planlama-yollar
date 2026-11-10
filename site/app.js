@@ -1705,6 +1705,39 @@
       };
     });
     genisNotuYaz();
+    genisDegisimCiz();
+  }
+
+  // Liste her derlemede sıfırdan okunur; "ne değişti" sorusunun cevabı
+  // bir önceki Excel ile karşılaştırmadır.
+  function genisDegisimCiz() {
+    var g = D.ozet.genis_yollar;
+    var kap = $("#genis-degisim");
+    if (!kap) return;
+    var d = g && g.liste_degisimi;
+    if (!d) { kap.hidden = true; return; }
+    kap.hidden = false;
+    var satir = function (isaret, k) {
+      return '<div class="degisiklik-satir">' +
+        '<span class="ok">' + isaret + "</span>" +
+        '<span class="ad">' + kacar(k.ilce) + " · " + kacar(k.ad) + "</span>" +
+        (k.eski ? '<span class="bilgi">' +
+          kacar(k.eski === "acik" ? "açık" : "koyu") + " → " +
+          kacar(k.yeni === "acik" ? "açık" : "koyu") + "</span>" : "") +
+        "</div>";
+    };
+    var parcalar = [];
+    (d.eklenen || []).forEach(function (k) { parcalar.push(satir("+", k)); });
+    (d.cikarilan || []).forEach(function (k) { parcalar.push(satir("−", k)); });
+    (d.ton_degisen || []).forEach(function (k) { parcalar.push(satir("↕", k)); });
+    var fazla = (d.eklenen_adet + d.cikarilan_adet + d.ton_adet) - parcalar.length;
+    kap.innerHTML = '<p class="kucuk" style="margin:0 0 6px"><strong>' +
+      "Listede değişenler</strong> (" + kacar(d.tarih || "önceki sürüm") +
+      " sürümüne göre): " + sayi(d.eklenen_adet) + " eklendi, " +
+      sayi(d.cikarilan_adet) + " çıkarıldı, " + sayi(d.ton_adet) +
+      " ton değişti.</p>" + parcalar.join("") +
+      (fazla > 0 ? '<p class="kucuk" style="margin:6px 0 0">… ve ' +
+        sayi(fazla) + " tane daha</p>" : "");
   }
 
   function genisNotuYaz(mesaj) {

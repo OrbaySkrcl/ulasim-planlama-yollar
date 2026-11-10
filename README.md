@@ -151,6 +151,24 @@ tarayıcıdan yüklenebilir.
 > düzenleyin. Dışa aktarım kalıcı kimlikleri (`fid`) yeniden numaralandırır ve
 > değişiklik günlüğü anlamını yitirir.
 
+> ### ⚠️ Doğru dosyayı indirdiğinizden emin olun
+>
+> İki ayrı GeoPackage var ve karıştırılması kolaydır:
+>
+> | Dosya | Nerede | Ne için |
+> |---|---|---|
+> | **`veri/yollar_master.gpkg`** (ya da `.zip`) | **Depoda, `veri` klasöründe** | **Düzenlediğiniz ana katman.** `aciklama` (Not) alanı ve gömülü QGIS stili vardır |
+> | `yollar.gpkg` | Sitede ⬇︎ Veriyi indir menüsünde | Paylaşmak/incelemek için üretilen kopya. Stili ve Not alanı yoktur |
+>
+> Yanlışlıkla **yayın dosyasını** düzenleyip yüklerseniz: Not alanınız ve
+> açılır listeli stil kaybolur, `fid` numaraları kayar. Düzenlemeleriniz
+> kaybolmaz; onarmak için `python3 araclar/ana_katman.py --zip` çalıştırmanız
+> yeterlidir — durum/ad bilgilerinize dokunmadan eksikleri geri koyar.
+>
+> **Ayırt etmenin en hızlı yolu:** QGIS'te katmanı açtığınızda renkler
+> kendiliğinden geliyorsa ve öznitelik tablosunda **Not** sütunu varsa ana
+> katmandasınız demektir.
+
 ### Bir değişikliği geri almak
 
 Her yükleme bir sürümdür; hiçbir şey kaybolmaz.
@@ -172,11 +190,13 @@ bölümünden görebilirsiniz.
 İlçe/mahalle sınırlarını güncellediyseniz ya da QGIS'te yeni yol çizdiyseniz:
 
 ```
-python3 araclar/ana_katman.py
+python3 araclar/ana_katman.py --zip
 ```
 
 Düzenlemelerinize dokunmadan yalnızca otomatik alanları (ilçe, mahalle,
-uzunluk) yeniden hesaplar ve QGIS stilini tazeler.
+uzunluk) yeniden hesaplar, QGIS stilini tazeler ve `--zip` ile yüklemeye hazır
+`yollar_master.zip` üretir. Sıkıştırılmış ana katmanı da okur, ayrıca
+açmanız gerekmez.
 
 ### Eski KML yöntemi
 
@@ -566,9 +586,49 @@ tamamını kapatsanız bile bu katman görünmeye devam eder.
 
 ### Nasıl güncellenir
 
-`veri/` klasörüne Excel dosyasını (`.xlsx`) koymanız yeterli. Yeni sürüm
-geldiğinde eskisinin üzerine aynı adla yüklersiniz. Katmanı tamamen kaldırmak
-isterseniz Excel'i silin — site, katman olmadan yayınlanır.
+**Excel'i düzenleyip aynı adla yeniden yükleyin. Başka bir şey yapmanız
+gerekmez.** Liste her derlemede **sıfırdan** okunur; hiçbir şey birikmez,
+temizlenecek bir artık kalmaz.
+
+| Ne yaparsanız | Haritada ne olur |
+|---|---|
+| Yeni satır ekler, mavi boyarsınız | Yol katmana **girer** |
+| Bir satırın rengini kaldırırsınız | Yol katmandan **çıkar** |
+| Bir satırı kırmızı/turuncu yaparsınız | Yol katmandan **çıkar** (mavi olmayan renkler yok sayılır) |
+| Açık maviyi koyuya çevirirsiniz | Yol **diğer tona** geçer |
+| Satırı tamamen silersiniz | Yol katmandan **çıkar** |
+
+> Sorumluluğu değişen bir yolu (örneğin Karayolları'na geçen) listeden
+> çıkarmak için satırı silmeniz şart değil; **rengini kırmızı yapmanız**
+> yeterlidir. Böylece kaydı listede kalır, haritaya girmez.
+
+Katmanı tamamen kaldırmak isterseniz Excel'i silin — site, katman olmadan
+yayınlanır.
+
+### Listede ne değişti?
+
+Her yüklemeden sonra bir önceki Excel ile karşılaştırma yapılır. Sonuç hem
+**Actions** özetinde hem sitede **Geniş yollar** bölümünde çıkar:
+
+```
+Listede değişenler (10.11.2026 09:24 sürümüne göre):
+1 eklendi, 2 çıkarıldı, 1 ton değişti.
+  + Bergama · DURMUŞLAR CADDESİ
+  − Aliağa · KARAAĞAÇ SOKAK
+  − Aliağa · EMEK CADDESİ
+  ↕ Aliağa · KARŞIYAKA SOKAK      açık → koyu
+```
+
+Beklediğinizden farklı bir şey görürseniz yanlış dosya yüklenmiş ya da bir
+satırın rengi kazara değişmiş demektir — hemen fark edersiniz.
+
+### Ana projedeki sorumluluk değişiklikleri
+
+Bir yolun **asıl** sorumluluğu değiştiyse (örneğin Karayolları'na geçtiyse)
+yapılacak şey bu listede değil, ana katmandadır: QGIS'te o yolu seçip
+**Durum**'u değiştirirsiniz (bkz. [2. bölüm](#2-veriyi-güncelleme-her-değişiklikte)).
+Geniş yollar katmanı bundan etkilenmez; bilgi kartındaki
+**"Şu anki durum"** satırı her zaman ana katmandaki güncel durumu gösterir.
 
 ### Listeden ne okunuyor
 
