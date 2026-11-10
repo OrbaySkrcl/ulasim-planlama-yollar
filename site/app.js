@@ -1810,6 +1810,11 @@
 
   function genisBilgiAc(p, ton, latlng) {
     var g = D.ozet.genis_yollar;
+    // Aynı adı taşıyan başka bir yol yanlışlıkla eşleşmiş olabilir; kullanıcı
+    // buradan hangi mahallede olduğunu görür ve çıkarma satırını kopyalar.
+    var kural = p.mahalle
+      ? kacar(p.ilce || "") + " ; " + (p.liste_adi || "") + " ; hariç: " + p.mahalle
+      : "çıkar: " + (p.fid || "");
     var html = '<div class="pop-ad">' + kacar(p.ad || "İsimsiz yol") + "</div>" +
       '<div class="pop-kat"><i style="background:' + kacar(g.tonlar[ton].renk) +
       '"></i>' + kacar(g.tonlar[ton].ad) + "</div>" +
@@ -1818,10 +1823,17 @@
       (p.genislik ? "<tr><td>İmar genişliği</td><td>" + kacar(p.genislik) +
                     " m</td></tr>" : "") +
       "<tr><td>İlçe</td><td>" + kacar(p.ilce || "") + "</td></tr>" +
+      "<tr><td>Mahalle</td><td>" + kacar(p.mahalle || "—") + "</td></tr>" +
       "<tr><td>Uzunluk</td><td>" + uzunlukYazi(p.uzunluk_m) + "</td></tr>" +
+      "<tr><td>Kayıt no</td><td>#" + kacar(p.fid || "") + "</td></tr>" +
       "<tr><td>Şu anki durum</td><td>" + kacar(katAd(p.durum)) + "</td></tr>" +
-      "</table>";
-    L.popup({ maxWidth: 300 }).setLatLng(latlng).setContent(html).openOn(D.harita);
+      "</table>" +
+      '<div class="pop-eylem"><button data-genis-cikar="' + kacar(kural) +
+      '" title="Bu yol listeye yanlışlıkla girdiyse, çıkarma satırını ' +
+      'panoya kopyalar">Bu yolu listeden çıkar</button></div>' +
+      '<p class="kucuk" style="margin:6px 0 0">Kopyalanan satırı ' +
+      "<b>veri/genis_yollar_duzeltme.txt</b> dosyasının sonuna yapıştırın.</p>";
+    L.popup({ maxWidth: 320 }).setLatLng(latlng).setContent(html).openOn(D.harita);
   }
 
   function yardimCiz() {
@@ -2013,6 +2025,15 @@
     $("#btn-olcum").onclick = olcumAcKapat;
     $("#olcum-temizle").onclick = olcumTemizle;
     $("#olcum-bitir").onclick = olcumBitir;
+
+    // Geniş yollar bilgi kartındaki "listeden çıkar" düğmesi
+    document.addEventListener("click", function (e) {
+      var d = e.target && e.target.closest
+        ? e.target.closest("[data-genis-cikar]") : null;
+      if (!d) return;
+      panoyaKopyala(d.dataset.genisCikar);
+      bildir("Kopyalandı: " + d.dataset.genisCikar);
+    });
 
     $("#indir-suzgec").onclick = suzgecliIndir;
     $("#btn-indir").onclick = function (e) {

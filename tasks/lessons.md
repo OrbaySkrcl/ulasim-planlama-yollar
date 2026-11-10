@@ -310,3 +310,16 @@ Bu dosya, aynı hataların tekrarlanmaması için tutulur.
   Geniş yollar listesi her derlemede sıfırdan okunduğu için "nasıl çıkarırım,
   nasıl eklerim" diye bir mekanizmaya gerek kalmadı: Excel'i düzenle, yükle.
   Eksik olan tek şey "ne değişti" görünürlüğüydü, o da karşılaştırmayla geldi.
+- **Ad eşleştirmesinin kaçınılmaz hatası için düzeltme kapısı bırak.** Excel'de
+  geometri yoksa aynı adlı iki yol ayırt edilemez. Çözüm algoritmayı
+  zorlamak değil, insanın tek satırla müdahale edebileceği bir dosya açmak.
+  Mahalle doğal ayırt edicidir: ilçe aynı olsa da mahalle farklıdır.
+- **Düzeltme kapısını sorunun görüldüğü yere koy.** Kullanıcı yanlış yolu
+  haritada görüyor; düğme oradan hazır kural satırını kopyalıyor. "Dosyayı aç,
+  biçimi hatırla, elle yaz" demek yerine tıkla-yapıştır.
+- **Kuralların da denetimi olmalı.** Hiçbir satıra uymayan kural (ör. Excel'den
+  o satır çıkmış) ve yazım hatası günlüğe yazılıyor; yoksa kural ölü yatar ve
+  kimse fark etmez.
+- **Şüpheliyi otomatik silme, işaretle.** Parçaları uzak olan 39 satırın bir
+  kısmı gerçek uzun yol (ÇANAKKALE ASFALTI 16 km, 4 mahalle). Otomatik
+  temizlik bunları da silerdi. Rapor et, kararı insana bırak.

@@ -1555,6 +1555,18 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
             log("    %d satır ana ağda bulunamadı (ad farklı olabilir); "
                 "listesi sitede Veri kalitesi bölümünde."
                 % len(genis_bilgi["eslesmeyen"]))
+        dz = genis_bilgi.get("duzeltme") or {}
+        if dz.get("kural") or dz.get("fid"):
+            log("    Elle düzeltme: %d kural + %d kayıt no → %d yol çıkarıldı."
+                % (dz["kural"], dz["fid"], dz["cikarilan"]))
+            for ham in dz.get("kullanilmayan") or []:
+                log("      ! Hiçbir satıra uymayan kural: %s" % ham[:70])
+            for no, ham in dz.get("hatali") or []:
+                log("      ! Anlaşılmayan satır %d: %s" % (no, ham[:60]))
+        if genis_bilgi.get("belirsiz_adet"):
+            log("    %d liste satırının parçaları 1,5 km'den uzakta ve farklı "
+                "mahallelerde; sitede Veri kalitesi bölümünde listeli."
+                % genis_bilgi["belirsiz_adet"])
         ld = genis_bilgi.get("liste_degisimi")
         if ld:
             log("    Bir önceki listeye göre (%s): %d eklendi, %d çıkarıldı, "
@@ -1568,6 +1580,24 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
 
     # 5b) Veri kalitesi uyarıları (QGIS'te düzeltmek isteyebileceğiniz kayıtlar)
     uyarilar = []
+    if genis_bilgi and genis_bilgi.get("belirsiz"):
+        bl = genis_bilgi["belirsiz"]
+        ornek = "; ".join(
+            "%s: %s (%d parça, %.1f km ayrı — %s)"
+            % (x["ilce"], x["ad"][:28], x["adet"], x["mesafe_km"],
+               ", ".join(x["mahalleler"][:3]))
+            for x in bl[:6])
+        uyarilar.append({
+            "baslik": "Geniş yollar: aynı ada sahip uzak yollar",
+            "mesaj": "%d liste satırının eşleştiği yollar birbirinden uzakta ve "
+                     "farklı mahallelerde. Bir kısmı gerçekten uzun yoldur "
+                     "(ör. asfalt, çevre yolu), bir kısmı ise aynı adı taşıyan "
+                     "BAŞKA bir yol olabilir. Kontrol edip yanlış olanı "
+                     "veri/genis_yollar_duzeltme.txt dosyasından "
+                     "çıkarabilirsiniz. En uzaklar — %s%s"
+                     % (genis_bilgi["belirsiz_adet"], ornek,
+                        " …" if len(bl) > 6 else ""),
+            "adet": genis_bilgi["belirsiz_adet"], "ornek": []})
     if genis_bilgi and genis_bilgi.get("eslesmeyen"):
         eks = genis_bilgi["eslesmeyen"]
         ornekler = ", ".join("%s: %s" % (e["ilce"], e["ad"].replace("\n", " ")[:40])
@@ -1944,10 +1974,43 @@ def genis_yollar_eslestir(xlsx, ozellikler, ayar):
         if g:
             dizin.setdefault((ilce, g), []).append(oz)
 
+    # Elle duzeltmeler: ayni adi tasiyan yollardan yanlis olanlari ayikla
+    duzeltme = gy.duzeltmeleri_oku(xlsx.parent / "genis_yollar_duzeltme.txt")
+    kural_dizini = {}
+    for kural in duzeltme["kurallar"]:
+        kural_dizini.setdefault((kural["ilce"], kural["govde"]), []).append(kural)
+    kullanilan_kural = set()
+    cikarilan_sayisi = 0
+
+    def duzeltmeden_gecir(k, adaylar):
+        """Liste satirina uyan kurallari uygular."""
+        nonlocal cikarilan_sayisi
+        kalan = []
+        for oz in adaylar:
+            p = oz["properties"]
+            if str(p.get("fid")) in duzeltme["cikar_fid"]:
+                cikarilan_sayisi += 1
+                continue
+            mahalle = gy.sade(p.get("mahalle") or "")
+            dusur = False
+            for kural in kural_dizini.get((gy.sade(k["ilce"]), gy.govde(k["ad"])), []):
+                kullanilan_kural.add(kural["satir"])
+                if kural["yalniz"] is not None and mahalle not in kural["yalniz"]:
+                    dusur = True
+                if kural["haric"] is not None and mahalle in kural["haric"]:
+                    dusur = True
+            if dusur:
+                cikarilan_sayisi += 1
+                continue
+            kalan.append(oz)
+        return kalan
+
     secilen = {}
     eslesmeyen = []
     for k in kayitlar:
         adaylar = dizin.get((k["ilce"], gy.govde(k["ad"])), [])
+        if adaylar:
+            adaylar = duzeltmeden_gecir(k, adaylar)
         if not adaylar:
             eslesmeyen.append({"ilce": k["ilce"], "ad": k["ad"],
                                "satir": k["satir"]})
@@ -2009,9 +2072,53 @@ def genis_yollar_eslestir(xlsx, ozellikler, ayar):
     except Exception as e:
         log("  Uyarı: geniş yollar listesinin değişim günlüğü çıkarılamadı (%s)." % e)
 
+    # Belirsiz eslesmeler: parcalari birbirinden uzak olan liste satirlari.
+    # Gercek uzun yollar da bu listeye duser; amac silmek degil goz atmaktir.
+    import math as _m
+    kume = {}
+    for oz, ton, liste_adi, _gen in secilen.values():
+        p = oz["properties"]
+        # liste_adi ana ag kaydinda degil, Excel satirindan gelir
+        kume.setdefault((p.get("ilce"), gy.sade(liste_adi)),
+                        {"ad": liste_adi, "ozlikler": []})["ozlikler"].append(oz)
+    belirsiz = []
+    for (ilce, _a), paket in kume.items():
+        grup = paket["ozlikler"]
+        if len(grup) < 2:
+            continue
+        noktalar = []
+        mahalleler = set()
+        for oz in grup:
+            g = oz["geometry"]
+            dz = (g["coordinates"] if g["type"] == "MultiLineString"
+                  else [g["coordinates"]])
+            pts = [c for d in dz for c in d]
+            noktalar.append((sum(x[0] for x in pts) / len(pts),
+                             sum(x[1] for x in pts) / len(pts)))
+            mahalleler.add(oz["properties"].get("mahalle") or "?")
+        en = 0.0
+        for i, a in enumerate(noktalar):
+            for b in noktalar[i + 1:]:
+                en = max(en, _m.hypot((a[0] - b[0]) * 88.0, (a[1] - b[1]) * 111.0))
+        if en > 1.5 and len(mahalleler) > 1:
+            belirsiz.append({"ilce": ilce, "ad": paket["ad"] or "",
+                             "adet": len(grup), "mesafe_km": round(en, 1),
+                             "mahalleler": sorted(mahalleler)[:6]})
+    belirsiz.sort(key=lambda x: -x["mesafe_km"])
+
+    kullanilmayan = [k for k in duzeltme["kurallar"]
+                     if k["satir"] not in kullanilan_kural]
+
     g_ayar = (ayar.get("genis_yollar") or {})
     return ozlikler, {
         "liste_degisimi": liste_degisimi,
+        "belirsiz": belirsiz[:60],
+        "belirsiz_adet": len(belirsiz),
+        "duzeltme": {"kural": len(duzeltme["kurallar"]),
+                     "fid": len(duzeltme["cikar_fid"]),
+                     "cikarilan": cikarilan_sayisi,
+                     "hatali": duzeltme["hatali"][:10],
+                     "kullanilmayan": [k["ham"] for k in kullanilmayan][:10]},
         "dosya": "genis_yollar.geojson",
         "boyut_mb": 0,
         "kaynak": xlsx.name,

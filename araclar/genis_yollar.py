@@ -241,6 +241,53 @@ def govde(metin, sonek_at=True):
     return k
 
 
+def duzeltmeleri_oku(yol):
+    """veri/genis_yollar_duzeltme.txt dosyasini okur.
+
+    Excel'de geometri olmadigi icin ayni adi tasiyan birden fazla yol varsa
+    hepsi eslesir. Bu dosya o yanlis eslesmeleri elle duzeltmeye yarar.
+
+    Donus: {"cikar_fid": {...}, "kurallar": [{"ilce","govde","yalniz","haric"}]}
+    """
+    sonuc = {"cikar_fid": set(), "kurallar": [], "hatali": []}
+    if not yol or not yol.exists():
+        return sonuc
+    for no, satir in enumerate(yol.read_text(encoding="utf-8").splitlines(), 1):
+        ham = satir.strip()
+        if not ham or ham.startswith("#"):
+            continue
+        dusuk = sade(ham)
+        # "cikar: 53089"  /  "çıkar: 53089"
+        if dusuk.startswith("CIKAR "):
+            kimlik = ham.split(":", 1)[-1].strip() if ":" in ham else ""
+            kimlik = kimlik.strip()
+            if kimlik:
+                sonuc["cikar_fid"].add(kimlik)
+            else:
+                sonuc["hatali"].append((no, ham))
+            continue
+        # "Torbalı ; 502 SOKAK ; yalnız: Torbalı Organize Sanayi Bölgesi"
+        parcalar = [p.strip() for p in ham.split(";")]
+        if len(parcalar) < 3:
+            sonuc["hatali"].append((no, ham))
+            continue
+        ilce, yol_adi, kosul = parcalar[0], parcalar[1], ";".join(parcalar[2:])
+        if ":" not in kosul:
+            sonuc["hatali"].append((no, ham))
+            continue
+        tur_ham, deger = kosul.split(":", 1)
+        tur = sade(tur_ham)
+        mahalleler = [sade(m) for m in deger.split(",") if m.strip()]
+        if tur not in ("YALNIZ", "HARIC") or not mahalleler or not ilce or not yol_adi:
+            sonuc["hatali"].append((no, ham))
+            continue
+        sonuc["kurallar"].append({
+            "satir": no, "ham": ham, "ilce": sade(ilce), "govde": govde(yol_adi),
+            "yalniz": mahalleler if tur == "YALNIZ" else None,
+            "haric": mahalleler if tur == "HARIC" else None})
+    return sonuc
+
+
 def listeyi_coz(yol, ilce_adlari):
     """Excel'den mavi satırları çıkarır.
 

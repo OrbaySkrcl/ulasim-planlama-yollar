@@ -665,10 +665,64 @@ Genellikle adın listede farklı yazılmasından olur (`RASULZADE BULVARU`,
 yüklemek yeterlidir.
 
 > Bu bir **ad eşleşmesidir, kesin geometri eşlemesi değildir.** Aynı adı
-> taşıyan birden fazla yol varsa hepsi seçilir. Ölçüldü: satır başına ortanca
-> 0,80 km, en uzunları gerçek karayolları (ÇANAKKALE ASFALTI 46 km). Ad
-> çakışmasına rastlanmadı, ama liste büyüdükçe bilgi kartındaki
-> "Listedeki adı" satırından kontrol edebilirsiniz.
+> taşıyan birden fazla yol varsa hepsi seçilir. Aşağıdaki bölüm bunun nasıl
+> düzeltileceğini anlatıyor.
+
+### Yanlış eşleşen yolu çıkarma
+
+Aynı yol adı bir ilçede birden fazla yerde geçebilir. Örneğin Torbalı'da
+**502 SOKAK** hem Organize Sanayi Bölgesi'nde hem Kırbaş'ta var; Excel listesi
+OSB'dekini kastediyor ama ad eşleşmesi ikisini de haritaya koyuyor.
+
+Böyle durumlarda **`veri/genis_yollar_duzeltme.txt`** dosyasına bir satır
+eklersiniz. Dosya düz metindir, GitHub'da doğrudan düzenlenebilir.
+
+**En kolay yol:** Haritada yanlış yola tıklayın → bilgi kartındaki
+**"Bu yolu listeden çıkar"** düğmesine basın. Panoya şuna benzer bir satır
+kopyalanır:
+
+```
+Torbalı ; 502 SOKAK ; hariç: Kırbaş
+```
+
+Bunu `veri/genis_yollar_duzeltme.txt` dosyasının sonuna yapıştırıp kaydedin.
+Bir sonraki derlemede o yol katmandan çıkar.
+
+Üç yazım biçimi vardır:
+
+| Biçim | Ne yapar |
+|---|---|
+| `Torbalı ; 502 SOKAK ; yalnız: Torbalı Organize Sanayi Bölgesi` | O liste satırından **yalnızca** bu mahalledekiler kalır |
+| `Torbalı ; 502 SOKAK ; hariç: Kırbaş` | Bu mahalledekiler **çıkar**, gerisi kalır |
+| `çıkar: 53089` | Yalnızca o kayıt numaralı yol çıkar |
+
+Birden fazla mahalle yazacaksanız virgülle ayırın. Büyük/küçük harf ve Türkçe
+karakter farkı önemli değildir. `#` ile başlayan satırlar nottur.
+
+> `yalnız:` biçimi daha sağlamdır: listeye sonradan aynı adlı başka bir yol
+> daha eşleşirse o da kendiliğinden dışarıda kalır.
+
+Derleme, yazdıklarınızı denetler ve günlüğe yazar:
+
+```
+Elle düzeltme: 1 kural + 0 kayıt no → 1 yol çıkarıldı.
+  ! Hiçbir satıra uymayan kural: Torbalı ; 999 SOKAK ; hariç: Kırbaş
+  ! Anlaşılmayan satır 42: Torbalı 502 SOKAK Kırbaş
+```
+
+Yani yazım hatası yaptıysanız ya da kural artık gereksizse (Excel'den o satır
+çıkmışsa) sessizce kaybolmaz, size söylenir.
+
+### Şüpheli eşleşmeleri gözden geçirme
+
+Her derlemede, parçaları **1,5 km'den uzakta ve farklı mahallelerde** olan
+liste satırları işaretlenir ve sitedeki **Veri kalitesi uyarıları** bölümünde
+listelenir. Son ölçümde **39 satır**.
+
+Bunların hepsi hatalı değildir — ÇANAKKALE ASFALTI gerçekten 16 km boyunca
+4 mahalleden geçer. Ama Torbalı 502 SOKAK gibi gerçek karışıklıklar da bu
+listededir. Haritada açıp bakmanız, yanlış olanı yukarıdaki yöntemle
+çıkarmanız yeterlidir.
 
 ### Görünümü değiştirme
 

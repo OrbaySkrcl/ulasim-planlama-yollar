@@ -1,0 +1,38 @@
+# GENİŞ YOLLAR LİSTESİ — DÜZELTMELER
+#
+# Excel'de geometri yok, yalnızca ilçe + yol adı var. Bu yüzden aynı adı
+# taşıyan birden fazla yol varsa hepsi haritaya girer. Örneğin Torbalı'da
+# "502 SOKAK" hem Organize Sanayi Bölgesi'nde hem Kırbaş'ta geçiyor.
+#
+# Yanlış eşleşenleri buradan çıkarabilirsiniz. Her satır bir kuraldır.
+# "#" ile başlayan satırlar nottur, dikkate alınmaz. Büyük/küçük harf ve
+# Türkçe karakter farkı önemli değildir.
+#
+# ---------------------------------------------------------------------------
+# YÖNTEM 1 — Bir liste satırını belirli mahalleyle sınırla  (ÖNERİLEN)
+#
+#     Torbalı ; 502 SOKAK ; yalnız: Torbalı Organize Sanayi Bölgesi
+#
+#   Yalnızca o mahalledeki yollar kalır, diğerleri çıkar.
+#   Birden fazla mahalle yazacaksanız virgülle ayırın.
+#
+# ---------------------------------------------------------------------------
+# YÖNTEM 2 — Bir liste satırından belirli mahalleyi çıkar
+#
+#     Torbalı ; 502 SOKAK ; hariç: Kırbaş
+#
+#   O mahalledeki yollar çıkar, geri kalan kalır.
+#
+# ---------------------------------------------------------------------------
+# YÖNTEM 3 — Tek bir yolu kayıt numarasıyla çıkar
+#
+#     çıkar: 53089
+#
+#   Kayıt numarasını haritada yola tıklayıp bilgi kartından alırsınız.
+#   Bilgi kartındaki "Listeden çıkarma satırını kopyala" düğmesi, buraya
+#   yapıştıracağınız satırı hazır verir.
+#
+# ---------------------------------------------------------------------------
+# Düzeltmelerinizi aşağıya yazın:
+
+Torbalı ; 502 SOKAK ; yalnız: Torbalı Organize Sanayi Bölgesi

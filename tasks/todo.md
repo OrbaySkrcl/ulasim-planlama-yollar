@@ -820,3 +820,35 @@ Liste davranışı testle kanıtlandı: satır eklendi → katmana girdi; rengi
 kaldırıldı ve kırmızı yapıldı → çıktı; açık→koyu çevrildi → ton değişti.
 Beklenen 1/2/1, çıkan 1/2/1. Değişim günlüğü uçtan uca derlemede de doğru
 yazdı. Site testi 22/22, geniş yollar testi 8/8, konsol temiz.
+
+---
+
+# Tur 17 — Aynı adlı farklı yolları ayıklama
+
+İstek: "Torbalı'da 502 SOKAK iki yerde geçiyor (OSB ve Kırbaş). Excel OSB'yi
+kastediyor. Kırbaş'takinin silinmesi lazım. Nasıl müdahale edebilirim?"
+
+## Ölçüm
+| | |
+|---|---|
+| Eşleşen liste satırı | 755 |
+| Birden fazla mahalleye dağılan | 70 |
+| Parçaları 1,5 km'den uzak (gerçek şüphe) | **39** |
+
+502 SOKAK: Kırbaş 978 m (yanlış) + OSB 285 m + 347 m (doğru), 10,3 km ayrı.
+
+## Yapılanlar
+- [x] `veri/genis_yollar_duzeltme.txt` — düz metin düzeltme dosyası, üç biçim:
+      `yalnız:`, `hariç:`, `çıkar: <kayıt no>`.
+- [x] Bilgi kartına **Mahalle** ve **Kayıt no** satırları + "Bu yolu listeden
+      çıkar" düğmesi: tıklanan yoldan hazır kural satırını panoya kopyalar.
+- [x] Derleme kuralları denetliyor: hiçbir satıra uymayan kural ve
+      anlaşılmayan satır günlüğe yazılıyor (sessizce kaybolmuyor).
+- [x] **Belirsizlik raporu**: parçaları 1,5 km'den uzak ve farklı mahallelerde
+      olan satırlar veri kalitesi uyarısı olarak listeleniyor.
+
+## Doğrulama
+Kural uygulandı: Torbalı 502 SOKAK artık yalnızca OSB'deki 2 kayıt
+(Kırbaş gitti). Üçüncü bir kayıt "3502 SOKAK" çıktı — farklı yol, kural
+ona dokunmadı, yani eşleştirme fazla geniş davranmıyor.
+Geniş yollar testi 11/11, site testi 22/22, konsol temiz.
