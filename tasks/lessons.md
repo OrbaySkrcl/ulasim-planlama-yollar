@@ -323,3 +323,14 @@ Bu dosya, aynı hataların tekrarlanmaması için tutulur.
 - **Şüpheliyi otomatik silme, işaretle.** Parçaları uzak olan 39 satırın bir
   kısmı gerçek uzun yol (ÇANAKKALE ASFALTI 16 km, 4 mahalle). Otomatik
   temizlik bunları da silerdi. Rapor et, kararı insana bırak.
+- **Bulanık (fuzzy) eşleştirme sayılarda yalan söyler.** `243 SOKAK` ile `7243`
+  karakter olarak çok benzer ama bambaşka yollar. Öneriyi yalnızca harf içeren
+  adlar için ürettim; sayısal sokaklarda susuyor. Yanlış öneri, öneri
+  vermemekten kötüdür.
+- **"Güncellenmiş dosyayı indirebilir miyim?" sorusunun dürüst cevabı bazen
+  "hayır, ama şu var".** Excel değişmiyor; onun yerine listenin akıbetini
+  gösteren rapor üretmek hem doğru hem daha kullanışlı oldu.
+- **Türkçe Excel için CSV: noktalı virgül + UTF-8 BOM + ondalık virgül.**
+  Üçü birden olmazsa dosya çift tıklamayla düzgün açılmaz. Testte BOM'u
+  `fetch().text()` ile aradım, tarayıcı çözerken sildiği için "yok" sandım;
+  `arrayBuffer()` ile baytlara bakmak gerekti.

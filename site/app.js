@@ -1706,6 +1706,16 @@
     });
     genisNotuYaz();
     genisDegisimCiz();
+    var rapor = $("#genis-rapor");
+    if (rapor) {
+      rapor.hidden = !g.rapor_dosyasi;
+      if (g.rapor_dosyasi) {
+        rapor.href = "veri/" + g.rapor_dosyasi;
+        rapor.title = "Listedeki her satırın haritada ne olduğunu gösterir: " +
+          "eşleşti mi, kaç yol bulundu, kaç km, hangi mahallede. " +
+          "Excel'in kendisi değişmez.";
+      }
+    }
   }
 
   // Liste her derlemede sıfırdan okunur; "ne değişti" sorusunun cevabı

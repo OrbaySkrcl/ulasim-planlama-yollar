@@ -852,3 +852,41 @@ Kural uygulandı: Torbalı 502 SOKAK artık yalnızca OSB'deki 2 kayıt
 (Kırbaş gitti). Üçüncü bir kayıt "3502 SOKAK" çıktı — farklı yol, kural
 ona dokunmadı, yani eşleştirme fazla geniş davranmıyor.
 Geniş yollar testi 11/11, site testi 22/22, konsol temiz.
+
+---
+
+# Tur 18 — Yol ekleme, takma ad, durum raporu
+
+İstekler: (1) haritada çizgisi olmayan yolları nasıl eklerim? (2) düzeltme
+dosyası Excel'i de güncelliyor mu? (3) Excel'in güncel hâlini indirebilir miyim?
+
+## Eşleşmeyen 36 satırın sınıflandırması
+| Grup | Adet | Çözüm |
+|---|---|---|
+| Ağda çok benzer ad var (yazım farkı) | 19* | `eşle:` takma ad |
+| Ağda gerçekten yok | 17 | Önce QGIS'te çizilmeli |
+
+(*) Sayısal sokaklarda benzerlik yanıltıcı (`243 SOKAK` → `7243` başka yol).
+Gerçek yazım farkı 8 tane çıktı; hepsi kurala bağlandı.
+
+## Yapılanlar
+- [x] `eşle:` kuralı — Excel'e dokunmadan ağdaki farklı yazılmış adla eşleştirir.
+      8 kural eklendi: eşleşme **772 → 780**, eşleşmeyen **36 → 28**.
+- [x] Eşleşmeyenler sınıflandırılıyor: ağda benzer ad varsa site **kendisi
+      öneriyor** ("şunu deneyin"). Sayısal adlarda öneri verilmiyor (yanıltıcı).
+- [x] **Durum raporu CSV** (`genis_yollar_durum.csv`, 808 satır, 61,6 KB):
+      her liste satırının akıbeti. Noktalı virgül + BOM, Türkçe Excel açar.
+      Sitede indirme bağlantısı.
+- [x] README: yol ekleme üç durumu, Excel'in değişmediği, rapor indirme.
+
+## Cevaplar
+1. **Yol ağda yoksa** Excel'e satır eklemek yetmez — önce QGIS'te çizilmeli.
+   Ağda varsa Excel'e satır eklemek yeterli; adı farklıysa `eşle:` kuralı.
+2. **Hayır, entegre değil.** Excel hiç değiştirilmiyor; düzeltmeler derleme
+   sırasında üzerine uygulanıyor. Yeni Excel yüklenince kurallar yerinde kalır.
+3. Excel'in "güncel hâli" diye bir şey yok (değişmiyor); yerine listenin
+   haritadaki karşılığının CSV raporu indirilebiliyor.
+
+## Doğrulama
+Geniş yollar testi 13/13 (CSV'nin BOM'u ve noktalı virgülü dahil),
+site testi 22/22, konsol temiz.

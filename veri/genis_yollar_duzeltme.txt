@@ -29,10 +29,30 @@
 #     çıkar: 53089
 #
 #   Kayıt numarasını haritada yola tıklayıp bilgi kartından alırsınız.
-#   Bilgi kartındaki "Listeden çıkarma satırını kopyala" düğmesi, buraya
+#   Bilgi kartındaki "Bu yolu listeden çıkar" düğmesi, buraya
 #   yapıştıracağınız satırı hazır verir.
+#
+# ---------------------------------------------------------------------------
+# YÖNTEM 4 — Ağdaki ad listedekinden farklı yazılmışsa (takma ad)
+#
+#     Aliağa ; NENE HATUN CADDESİ ; eşle: NENEHATUN
+#
+#   Soldaki Excel'deki ad, sağdaki yol ağındaki ad. Excel'e dokunmadan
+#   eşleşmeyi sağlar. Hangi satırlar için gerekli olduğunu sitedeki
+#   "Veri kalitesi uyarıları" bölümü önerir.
 #
 # ---------------------------------------------------------------------------
 # Düzeltmelerinizi aşağıya yazın:
 
 Torbalı ; 502 SOKAK ; yalnız: Torbalı Organize Sanayi Bölgesi
+
+# --- Yazım farkları: ağdaki ad listedekinden farklı yazılmış ---
+# (Excel'e dokunmadan, ağdaki adla eşleştirir)
+Aliağa ; NENE HATUN CADDESİ ; eşle: NENEHATUN
+Bergama ; ÜÇKEMER CADDESİ ; eşle: ÜÇ KEMER
+Dikili ; AYYILDIZ 2 SOKAK ; eşle: AY YILDIZ 2
+Menderes ; AHMET NECDET SEZER CAD. ; eşle: AHMET NEJDET SEZER
+Bayındır ; ŞEHİT ASTSUBAY KIDEMLİ BAŞÇAVUŞ ERDAL CANBULAT CADDESİ ; eşle: ŞEHİT ASTSUBAY KID.BÇVŞ. ERDAL CANBULAT
+Tire ; KÜÇÜK SANAYİ SİTESİ SOKAK ; eşle: KÜÇÜK SANAYİİ SİTESİ
+Tire ; RASULZADE BULVARU ; eşle: RASULZADE
+Menderes ; İTOB DOKUZEYLÜL BULVARI ; eşle: İTOB

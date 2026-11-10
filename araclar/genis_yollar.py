@@ -278,13 +278,28 @@ def duzeltmeleri_oku(yol):
         tur_ham, deger = kosul.split(":", 1)
         tur = sade(tur_ham)
         mahalleler = [sade(m) for m in deger.split(",") if m.strip()]
-        if tur not in ("YALNIZ", "HARIC") or not mahalleler or not ilce or not yol_adi:
+        if tur not in ("YALNIZ", "HARIC", "ESLE") or not ilce or not yol_adi:
+            sonuc["hatali"].append((no, ham))
+            continue
+        if tur == "ESLE":
+            # Agdaki ad Excel'dekinden farkli yaziliyorsa: takma ad
+            hedef = deger.strip()
+            if not hedef:
+                sonuc["hatali"].append((no, ham))
+                continue
+            sonuc["kurallar"].append({
+                "satir": no, "ham": ham, "ilce": sade(ilce),
+                "govde": govde(yol_adi), "yalniz": None, "haric": None,
+                "esle": govde(hedef), "esle_ham": hedef})
+            continue
+        if not mahalleler:
             sonuc["hatali"].append((no, ham))
             continue
         sonuc["kurallar"].append({
             "satir": no, "ham": ham, "ilce": sade(ilce), "govde": govde(yol_adi),
             "yalniz": mahalleler if tur == "YALNIZ" else None,
-            "haric": mahalleler if tur == "HARIC" else None})
+            "haric": mahalleler if tur == "HARIC" else None,
+            "esle": None, "esle_ham": None})
     return sonuc
 
 

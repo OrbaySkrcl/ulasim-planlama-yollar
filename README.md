@@ -713,6 +713,67 @@ Elle düzeltme: 1 kural + 0 kayıt no → 1 yol çıkarıldı.
 Yani yazım hatası yaptıysanız ya da kural artık gereksizse (Excel'den o satır
 çıkmışsa) sessizce kaybolmaz, size söylenir.
 
+### Listeye yol ekleme
+
+Önce şunu ayırt edin: **yol ağda var mı?**
+
+| Durum | Ne yapmalı |
+|---|---|
+| Yol ağda **var**, listede yok | Excel'e satır ekleyip mavi boyayın, yükleyin |
+| Yol ağda **var ama adı farklı yazılmış** | `eşle:` satırı ekleyin — Excel'e dokunmanız gerekmez |
+| Yol ağda **hiç yok** (çizgisi yok) | Önce QGIS'te ana katmana çizin, sonra Excel'e ekleyin |
+
+Üçüncü durum önemli: Excel'e satır eklemek tek başına yetmez. Eşleşecek bir
+çizgi yoksa satır "eşleşmedi" listesine düşer, haritada hiçbir şey çıkmaz.
+
+**Adı farklı yazılmışsa** (üçüncü yöntem gerekmez):
+
+```
+Aliağa ; NENE HATUN CADDESİ ; eşle: NENEHATUN
+```
+
+Soldaki Excel'deki ad, sağdaki ağdaki ad. Site, hangi satırlar için bunun
+gerekli olduğunu **kendisi önerir**: Veri kalitesi uyarılarında
+"ağda çok benzer bir ad var — şunu deneyin" diye yazar.
+
+Bu yöntemle eşleşme 772'den **780'e** çıktı (örnekler: `ÜÇKEMER` → `ÜÇ KEMER`,
+`AHMET NECDET SEZER` → `AHMET NEJDET SEZER`, `AYYILDIZ 2` → `AY YILDIZ 2`).
+
+### Düzeltme dosyası Excel'i değiştirir mi?
+
+**Hayır.** İkisi ayrı çalışır:
+
+- **`veri/genis_yollar.xlsx`** — sizin yüklediğiniz liste. Hiçbir zaman
+  değiştirilmez; yüklediğiniz hâliyle durur.
+- **`veri/genis_yollar_duzeltme.txt`** — derleme sırasında listenin *üzerine*
+  uygulanan kurallar.
+
+Yeni bir Excel yüklediğinizde düzeltme kuralları **yerinde kalır** ve yeni
+listeye de uygulanır. Bir kural artık hiçbir satıra uymuyorsa (ör. o yol
+Excel'den çıkmışsa) derleme bunu günlüğe yazar, sessizce durmaz.
+
+### Listenin güncel durumunu indirme
+
+Excel'in kendisi güncellenmediği için "güncel Excel" diye bir dosya yok. Onun
+yerine **listenin haritadaki karşılığının raporu** indirilebilir: Geniş yollar
+bölümünün altındaki **⬇︎ Listenin güncel durumunu indir (CSV)**.
+
+Her liste satırı için şunlar vardır:
+
+| Sütun | İçerik |
+|---|---|
+| Satır | Excel'deki satır numarası |
+| İlçe, Yol adı, Renk, İmar genişliği | Listeden geldiği gibi |
+| **Durum** | `haritada` ya da `eşleşmedi` |
+| **Bulunan yol / Uzunluk (km)** | Haritada kaç kayda, kaç kilometreye denk geldi |
+| **Düzeltmeyle çıkarılan** | Düzeltme kuralınız kaç kaydı eledi |
+| **Mahalle(ler)** | Eşleşen yolların mahallesi |
+
+Dosya noktalı virgülle ayrılmış ve BOM'lu UTF-8'dir; **Türkçe Excel çift
+tıklayınca doğru açar.** Hangi satırların eşleşmediğini, hangilerinin birden
+fazla mahalleye dağıldığını buradan toplu görebilir, meslektaşlarınızla
+paylaşabilirsiniz.
+
 ### Şüpheli eşleşmeleri gözden geçirme
 
 Her derlemede, parçaları **1,5 km'den uzakta ve farklı mahallelerde** olan

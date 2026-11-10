@@ -1600,8 +1600,19 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
             "adet": genis_bilgi["belirsiz_adet"], "ornek": []})
     if genis_bilgi and genis_bilgi.get("eslesmeyen"):
         eks = genis_bilgi["eslesmeyen"]
+        onerili = [e for e in eks if e.get("oneri")]
         ornekler = ", ".join("%s: %s" % (e["ilce"], e["ad"].replace("\n", " ")[:40])
                              for e in eks[:8])
+        oneri_metni = ""
+        if onerili:
+            oneri_metni = (" Şunlar için ağda çok benzer bir ad var, "
+                           "veri/genis_yollar_duzeltme.txt dosyasına "
+                           "\u201ceşle:\u201d satırı ekleyerek çözebilirsiniz — "
+                           + "; ".join(
+                               "%s: %s → %s" % (e["ilce"],
+                                                e["ad"].replace("\n", " ")[:28],
+                                                e["oneri"])
+                               for e in onerili[:6]) + ".")
         uyarilar.append({
             "baslik": "Geniş yollar listesinde eşleşmeyen satırlar",
             "mesaj": "\u201c%s\u201d listesindeki %d satır yol ağında "
@@ -1610,7 +1621,7 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
                      "yoktur. Örnekler — %s%s. Bu AYRI bir çalışmadır; ana "
                      "kategorileri etkilemez."
                      % (genis_bilgi.get("baslik") or "Geniş yollar", len(eks),
-                        ornekler, " …" if len(eks) > 8 else ""),
+                        ornekler, (" …" if len(eks) > 8 else "") + oneri_metni),
             "adet": len(eks),
             "ornek": []})
     if ortusme_raporu:
@@ -1711,6 +1722,32 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
                       ensure_ascii=False, separators=(",", ":"))
         # genis_bilgi ozet sozlugune asagida konuyor; burada yalnizca boyutu doldur
         genis_bilgi["boyut_mb"] = round(_hedef.stat().st_size / 1048576, 2)
+
+        # Listenin guncel akibeti: her satir haritada ne oldu? Excel'in
+        # kendisi degismez; bu, o listenin su anki durumunun raporudur.
+        # Noktali virgul + BOM: Turkce Excel dogrudan acar.
+        _rapor = veri_cikti / genis_bilgi["rapor_dosyasi"]
+        _basliklar = ["Satır", "İlçe", "Yol adı (listede)", "Renk",
+                      "İmar genişliği", "Durum", "Bulunan yol",
+                      "Uzunluk (km)", "Düzeltmeyle çıkarılan", "Mahalle(ler)"]
+
+        def _h(x):
+            m = "" if x is None else str(x)
+            return '"%s"' % m.replace('"', '""') if (";" in m or '"' in m
+                                                     or "\n" in m) else m
+
+        with _rapor.open("w", encoding="utf-8-sig", newline="") as f:
+            f.write(";".join(_basliklar) + "\r\n")
+            for r in genis_bilgi.get("satir_raporu") or []:
+                f.write(";".join(_h(x) for x in [
+                    r["satir"], r["ilce"], r["ad"].replace("\n", " "),
+                    "açık mavi" if r["renk"] == "acik" else "koyu mavi",
+                    r["genislik"],
+                    "haritada" if r["bulunan"] else "eşleşmedi",
+                    r["bulunan"], ("%.2f" % r["km"]).replace(".", ","),
+                    r["duzeltmeyle_cikan"], ", ".join(r["mahalleler"])]) + "\r\n")
+        genis_bilgi["rapor_boyut_kb"] = round(_rapor.stat().st_size / 1024, 1)
+        genis_bilgi.pop("satir_raporu", None)   # ozet.json sismesin
         log("  genis_yollar.geojson : %.2f MB (ayri katman)"
             % genis_bilgi["boyut_mb"])
 
@@ -1994,6 +2031,8 @@ def genis_yollar_eslestir(xlsx, ozellikler, ayar):
             mahalle = gy.sade(p.get("mahalle") or "")
             dusur = False
             for kural in kural_dizini.get((gy.sade(k["ilce"]), gy.govde(k["ad"])), []):
+                if kural.get("esle"):
+                    continue          # takma ad kurali mahalle suzmez
                 kullanilan_kural.add(kural["satir"])
                 if kural["yalniz"] is not None and mahalle not in kural["yalniz"]:
                     dusur = True
@@ -2005,12 +2044,29 @@ def genis_yollar_eslestir(xlsx, ozellikler, ayar):
             kalan.append(oz)
         return kalan
 
+    def arama_govdesi(k):
+        """Takma ad kurali varsa agdaki adi kullan."""
+        for kural in kural_dizini.get((gy.sade(k["ilce"]), gy.govde(k["ad"])), []):
+            if kural.get("esle"):
+                kullanilan_kural.add(kural["satir"])
+                return kural["esle"]
+        return gy.govde(k["ad"])
+
     secilen = {}
     eslesmeyen = []
+    satir_raporu = []
     for k in kayitlar:
-        adaylar = dizin.get((k["ilce"], gy.govde(k["ad"])), [])
-        if adaylar:
-            adaylar = duzeltmeden_gecir(k, adaylar)
+        ham_adaylar = dizin.get((k["ilce"], arama_govdesi(k)), [])
+        adaylar = duzeltmeden_gecir(k, ham_adaylar) if ham_adaylar else []
+        satir_raporu.append({
+            "satir": k["satir"], "ilce": k["ilce"], "ad": k["ad"],
+            "renk": k["renk"], "genislik": k["genislik"],
+            "bulunan": len(adaylar),
+            "duzeltmeyle_cikan": len(ham_adaylar) - len(adaylar),
+            "km": round(sum((o["properties"].get("uzunluk_m") or 0)
+                            for o in adaylar) / 1000.0, 2),
+            "mahalleler": sorted({(o["properties"].get("mahalle") or "")
+                                  for o in adaylar} - {""})})
         if not adaylar:
             eslesmeyen.append({"ilce": k["ilce"], "ad": k["ad"],
                                "satir": k["satir"]})
@@ -2072,6 +2128,25 @@ def genis_yollar_eslestir(xlsx, ozellikler, ayar):
     except Exception as e:
         log("  Uyarı: geniş yollar listesinin değişim günlüğü çıkarılamadı (%s)." % e)
 
+    # Eslesmeyenleri siniflandir: agda cok benzer bir ad varsa takma adla
+    # cozulebilir; yoksa yol once QGIS'te cizilmelidir. Sayisal sokak
+    # adlarinda benzerlik yaniltici oldugu icin yalnizca harfli adlara bakilir.
+    import difflib as _dl
+    ilce_govdeleri = {}
+    for (ilce, g) in dizin:
+        ilce_govdeleri.setdefault(ilce, []).append(g)
+    for e in eslesmeyen:
+        e["oneri"] = None
+        hedef = gy.govde(e["ad"])
+        if not hedef or not any(c.isalpha() for c in hedef):
+            continue
+        adaylar = [g for g in ilce_govdeleri.get(e["ilce"], [])
+                   if any(c.isalpha() for c in g)]
+        yakin = _dl.get_close_matches(hedef, adaylar, n=1, cutoff=0.84)
+        if yakin:
+            ornek = dizin[(e["ilce"], yakin[0])][0]["properties"].get("ad")
+            e["oneri"] = ornek
+
     # Belirsiz eslesmeler: parcalari birbirinden uzak olan liste satirlari.
     # Gercek uzun yollar da bu listeye duser; amac silmek degil goz atmaktir.
     import math as _m
@@ -2112,6 +2187,8 @@ def genis_yollar_eslestir(xlsx, ozellikler, ayar):
     g_ayar = (ayar.get("genis_yollar") or {})
     return ozlikler, {
         "liste_degisimi": liste_degisimi,
+        "satir_raporu": satir_raporu,
+        "rapor_dosyasi": "genis_yollar_durum.csv",
         "belirsiz": belirsiz[:60],
         "belirsiz_adet": len(belirsiz),
         "duzeltme": {"kural": len(duzeltme["kurallar"]),
