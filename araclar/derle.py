@@ -1865,13 +1865,17 @@ def onceki_surumu_al(kaynak, gecici_dizin):
 def degisiklikleri_karsilastir(eski_kayitlar, yeni_kayitlar):
     """İki sürüm arasında DURUM değişimlerini çıkarır (kimlik: fid)."""
     def tablo(kayitlar):
+        # Kopuk parcalari olan bir kayit birden fazla satir olarak gelebilir;
+        # ayni fid'in uzunluklari toplanir ki gunlukteki km dogru ciksin.
         d = {}
         for k in kayitlar:
             fid = (k["ozellik"].get("fid") or "").strip()
             if not fid:
                 continue
-            d[fid] = ((k["ozellik"].get("DURUM") or "").strip() or "0",
-                      sum(cizgi_uzunlugu(p) for p in k["parcalar"]))
+            durum = (k["ozellik"].get("DURUM") or "").strip() or "0"
+            uzunluk = sum(cizgi_uzunlugu(p) for p in k["parcalar"])
+            onceki = d.get(fid)
+            d[fid] = (durum, uzunluk + (onceki[1] if onceki else 0.0))
         return d
 
     eski, yeni = tablo(eski_kayitlar), tablo(yeni_kayitlar)

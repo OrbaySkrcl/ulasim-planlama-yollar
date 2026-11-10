@@ -290,3 +290,11 @@ Bu dosya, aynı hataların tekrarlanmaması için tutulur.
   bölüme "ayrı çalışma" rozeti ve kenar çizgisi koymak, kullanıcının iki
   çalışmayı karıştırmasını önlüyor. Testte de bunu bir değişmez olarak
   doğruladım: ana kategoriler kapalıyken katman durmaya devam ediyor.
+- **Kimlik "fid" değil, "(fid, parca_no)" ikilisi.** Kullanıcı ana katmanda
+  kopuk parçası olan bir yol oluşturunca bölücü onu iki kayda ayırdı ve ikisi
+  de aynı fid'i taşıdı; test "fid tekil" diye bakıyordu ve patladı. Hata
+  veride değil testin varsayımındaydı — README zaten ikiliyi tekil anahtar
+  olarak yazıyordu. Bir değişmezi koda yazarken belgede ne dediğine bak.
+- **Kullanıcı veriyi değiştirdikten sonra mutlaka onun dosyasıyla derle.**
+  Kendi ürettiğim ana katmanla her şey yeşildi; kullanıcının yüklediği zip ile
+  derleyince ortaya çıkan tek fark bu oldu ve gerçek bir ayrıntıyı gösterdi.

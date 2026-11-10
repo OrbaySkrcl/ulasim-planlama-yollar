@@ -91,14 +91,18 @@ denetle("hiçbir yol il geneline yayılmıyor", await ev(`(function(){
   r => r.genis25km <= 8 && r.enGenis_km < 80);
 
 denetle("her yolun kalıcı ve tekil kimliği var", await ev(`(function(){
-  var D=window.IZMIR_HARITA, gorulen={}, cift=0, bos=0;
+  // Kimlik fid DEGIL, (fid, parca_no) ikilisidir: kopuk parcalari olan bir
+  // kayit bagli yollara bolundugunde parcalar ayni fid'i tasir.
+  var D=window.IZMIR_HARITA, gorulen={}, cift=0, bos=0, bolunmus=0;
   D.ozellikler.forEach(function(f){
-    var k=f.properties.fid;
-    if(k===undefined||k===null||k==='') { bos++; return; }
+    var p=f.properties;
+    if(p.fid===undefined||p.fid===null||p.fid===''){ bos++; return; }
+    if(p.parca_no) bolunmus++;
+    var k=p.fid+'/'+(p.parca_no||0);
     if(gorulen[k]) cift++; else gorulen[k]=1;
   });
   return {yol:D.ozellikler.length, tekil:Object.keys(gorulen).length,
-          cift:cift, kimliksiz:bos};})()`),
+          cift:cift, kimliksiz:bos, bolunmusParca:bolunmus};})()`),
   r => r.yol > 1000 && r.cift === 0 && r.kimliksiz === 0 && r.tekil === r.yol);
 
 console.log("\n— Düzenleme düğmeleri (dokunmatik ekranda da görünmeli) —");
