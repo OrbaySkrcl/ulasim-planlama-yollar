@@ -56,4 +56,3 @@ Bayındır ; ŞEHİT ASTSUBAY KIDEMLİ BAŞÇAVUŞ ERDAL CANBULAT CADDESİ ; eş
 Tire ; KÜÇÜK SANAYİ SİTESİ SOKAK ; eşle: KÜÇÜK SANAYİİ SİTESİ
 Tire ; RASULZADE BULVARU ; eşle: RASULZADE
 Menderes ; İTOB DOKUZEYLÜL BULVARI ; eşle: İTOB
-Torbalı ; EKOTEN CADDESİ ; hariç: Yedi Eylül
