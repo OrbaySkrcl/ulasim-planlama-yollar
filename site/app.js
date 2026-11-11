@@ -2301,6 +2301,10 @@
     if (indir) indir.hidden = !acik;
     var yardim = $("#satir-yardim");
     if (yardim) yardim.hidden = !acik;
+    // Yardım penceresi kategori açıklamalarını, indirme adımlarını ve
+    // QGIS → GitHub iş akışını anlatıyor; ziyaretçiye kapalı.
+    var yardimDugme = $("#btn-yardim");
+    if (yardimDugme) yardimDugme.hidden = !acik;
     var kaynak = $("#satir-kaynak");
     if (kaynak) kaynak.hidden = !(acik && D.ozet.kaynak_dosya);
   }

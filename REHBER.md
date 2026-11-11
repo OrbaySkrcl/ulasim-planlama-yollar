@@ -207,6 +207,7 @@ Sağ üstte **🔑 Yönetici** rozeti görünür. Çıkmak için rozete tıklay�
 | Veri kalitesi uyarıları | ❌ | ✅ |
 | Son değişiklikler | ❌ | ✅ |
 | Kaynak dosya adı, depo bağlantıları | ❌ | ✅ |
+| **?** yardım penceresi (kategori açıklamaları, QGIS → GitHub adımları) | ❌ | ✅ |
 | Kategori açıklamaları | ❌ | ✅ |
 
 ### Anahtarı belirlemek / değiştirmek

@@ -871,6 +871,11 @@ yüzden gizlenen şey ekranda değil, **yayınlanan dosyalarda** gizli:
 `<hash>` = anahtarın SHA-256 özetinin ilk 16 hanesi. GitHub Pages klasör
 listesi vermediği için bu adres tahmin edilemez.
 
+Arayüzde de yalnızca yöneticiye açık olanlar var: **Veriyi indir** menüsü,
+sağ üstteki **?** yardım penceresi (kategori açıklamalarını, indirme
+adımlarını ve QGIS → GitHub iş akışını anlatıyor), veri kalitesi uyarıları,
+son değişiklikler, alt bilgideki kaynak satırı ve depo bağlantıları.
+
 `ozet.json` ikiye bölünür: ziyaretçinin tarayıcısına yalnızca haritayı
 çizmeye yarayan kısım iner. Veri kalitesi uyarıları, değişiklik dökümü,
 kaynak dosya adı, depo adresi ve kategori açıklamaları **o dosyada hiç

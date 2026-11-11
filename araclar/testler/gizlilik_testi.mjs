@@ -117,6 +117,7 @@ denetle("veri kalitesi bölümü yok", await z.ev(`${gorunur}('#bolum-kalite')`)
 denetle("son değişiklikler bölümü yok", await z.ev(`${gorunur}('#bolum-degisiklik')`), r => r === false);
 denetle("kaynak dosya satırı yok", await z.ev(`${gorunur}('#satir-kaynak')`), r => r === false);
 denetle("nasıl güncelleniyor bağlantısı yok", await z.ev(`${gorunur}('#satir-yardim')`), r => r === false);
+denetle("yardım (?) düğmesi yok", await z.ev(`${gorunur}('#btn-yardim')`), r => r === false);
 denetle("rehber bağlantısı yok", await z.ev(`${gorunur}('#link-rehber')`), r => r === false);
 denetle("CSV rapor bağlantısı yok", await z.ev(`${gorunur}('#genis-rapor')`), r => r === false);
 denetle("kategori açıklamaları boş", await z.ev(`(function(){
@@ -156,6 +157,7 @@ denetle("yönetici modu açıldı", await y.ev(`(function(){
   r => r.acik && r.klasor === klasor && r.adres === "");
 denetle("indirme düğmesi görünüyor", await y.ev(`${gorunur}('#btn-indir')`), r => r === true);
 denetle("rozet görünüyor", await y.ev(`${gorunur}('#yonetici-rozet')`), r => r === true);
+denetle("yardım (?) düğmesi geldi", await y.ev(`${gorunur}('#btn-yardim')`), r => r === true);
 denetle("veri kalitesi bölümü geldi", await y.ev(`${gorunur}('#bolum-kalite')`), r => r === true);
 denetle("kaynak satırı geldi", await y.ev(`(function(){
   return {gorunur:!document.getElementById('satir-kaynak').hidden,
