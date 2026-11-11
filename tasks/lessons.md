@@ -412,3 +412,17 @@ sonuç yanlıştı. İki ders: (1) görünürlük denetimi her zaman
 `getComputedStyle` + `getBoundingClientRect` ile yapılmalı; (2) `hidden`
 kullanan bir projede `[hidden]{display:none !important}` kuralı şart.
 Ve asıl ders: yeşil testten sonra bir kez de gözle bakmak.
+
+**Gizli adı loglayan tek bir satır her şeyi bitirir — ve o satır benim
+kodumda değildi.** Kendi günlük çıktımdan klasör adını özenle çıkarmıştım,
+ama `actions/upload-pages-artifact` yayınlarken `tar -cv` ile tüm dosya
+listesini döküyor; gizli klasörün adı herkese açık Actions günlüğüne
+böyle düştü. Kendi çıktımı denetlemek yetmiyormuş: **işin tamamının**
+nereye ne yazdığına bakmak gerekiyor. Çözüm `::add-mask::` — adı derlemeden
+önce kaydedince GitHub işin kalan tüm çıktısında `***` yapıyor.
+
+**Sessiz başarısızlık, kullanıcıyı yalnız bırakır.** Anahtar yanlış
+olduğunda site hiçbir şey söylemiyordu; kullanıcı "giremiyorum" dedi ve
+sebebi anlamanın yolu yoktu. Artık üç durumu ayırt eden bir mesaj çıkıyor:
+anahtar yanlış / site anahtarsız derlenmiş / önbellek. Bir kapıyı kilitlerken
+"açılmadı" demenin yolunu da bırakmak gerekiyor.

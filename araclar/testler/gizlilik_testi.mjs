@@ -198,6 +198,13 @@ denetle("yanlış anahtar modu açmıyor", await k.ev(`(function(){
   return {acik:!!D.yonetici, indir:!document.getElementById('btn-indir').hidden};})()`),
   r => r.acik === false && r.indir === false);
 
+denetle("yanlış anahtar sessizce geçmiyor, uyarı veriyor", await k.ev(`(async function(){
+  await new Promise(function(r){setTimeout(r,600);});
+  var b=document.getElementById('bildirim');
+  return {metin:b.textContent, gorunur:b.classList.contains('gorunur'),
+          saklandiMi:localStorage.getItem('yoneticiAnahtari')};})()`),
+  r => r.gorunur && /anahtar|derlenme/i.test(r.metin) && r.saklandiMi === null);
+
 const konsol = olaylar.map((m, i) => ({ m, sonrasi: i >= konsolSiniri }))
   .filter(x => !(x.sonrasi && /404|Failed to load resource/i.test(
     x.m.params.entry?.text || "")))

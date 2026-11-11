@@ -893,6 +893,17 @@ iç raporlar yayınlanmaz. Yani güvenli taraf varsayılandır.
 Derleme günlüğü klasör adını **yazmaz** — bu depo herkese açık ve günlük
 Actions özetine düşüyor; adı yazmak gizli klasörü ifşa etmek olurdu.
 
+Yayınlama adımı (`upload-pages-artifact`) dosya listesini `tar -cv` ile
+günlüğe döküyor ve klasör adı oradan sızıyordu. Bu yüzden iş akışının ilk
+adımı adı hesaplayıp `::add-mask::` ile kaydediyor; GitHub o işin kalan tüm
+çıktısında adı `***` ile değiştiriyor.
+
+> **Actions yapıtı (artifact) ayrı bir konu.** Yayınlanan site bir `.zip`
+> olarak Actions sayfasında duruyor ve herkese açık bir depoda bunu indiren
+> herkes gizli klasörü de alır. Saklama süresi 1 gün. Bunu kapatmanın yolu
+> depoyu private yapmaktır; gizli klasör, **siteyi** gezen birine karşı
+> koruma sağlar, deponun Actions geçmişini kurcalayan birine karşı değil.
+
 ### Siteyi yönetici olarak açmak
 
 Adrese `?y=ANAHTAR` eklenir. Tarayıcı anahtarı saklar, adres çubuğundan
@@ -900,7 +911,14 @@ hemen silinir. Sağ üstte 🔑 rozeti görünür; tıklayınca çıkılır.
 
 Doğrulama, sitede saklanan bir parolayla karşılaştırma değildir: tarayıcı
 anahtardan klasör adını hesaplar ve dosyayı ister. Anahtar yanlışsa dosya
-yoktur (404) ve mod açılmaz.
+yoktur (404) ve mod açılmaz; ekranda "Yönetici anahtarı geçersiz" yazar.
+Site hiç anahtarla derlenmemişse mesaj bunu söyler.
+
+**Çalışmadığında nereye bakılır:** `veri/ozet.json` dosyasını açın.
+`"yonetici_modu":true` yazıyorsa site bir anahtarla derlenmiş demektir,
+sorun yazdığınız anahtardadır. `false` ise gizli değişken derlemeye
+ulaşmamıştır — anahtarı tanımladıktan sonra siteyi bir kez daha
+derlemeniz gerekir.
 
 ### Sınırları
 

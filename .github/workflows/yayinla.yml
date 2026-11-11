@@ -38,6 +38,24 @@ jobs:
         with:
           python-version: "3.11"
 
+      # Yayınlama adımı (upload-pages-artifact) dosya listesini "tar -cv" ile
+      # günlüğe döküyor; gizli klasörün adı böylece herkese açık Actions
+      # günlüğüne düşüyordu. add-mask, adı bu işin kalan TÜM çıktısında
+      # *** ile değiştirir. Derlemeden önce çalışmalı.
+      - name: Gizli klasör adını günlükte maskele
+        env:
+          YONETICI_ANAHTARI: ${{ secrets.YONETICI_ANAHTARI }}
+        run: |
+          anahtar=$(printf '%s' "$YONETICI_ANAHTARI" \
+            | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+          if [ -n "$anahtar" ]; then
+            ad="y-$(printf '%s' "$anahtar" | sha256sum | cut -c1-16)"
+            echo "::add-mask::$ad"
+            echo "Gizli klasör adı maskelendi."
+          else
+            echo "Anahtar tanımsız; maskelenecek bir şey yok."
+          fi
+
       - name: KML'i siteye dönüştür
         env:
           # Yönetici anahtarı. Depoda durmaz; Settings → Secrets and

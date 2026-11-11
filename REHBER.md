@@ -226,6 +226,22 @@ anahtar o an geçersiz olur.
 > **Anahtar tanımlı değilse** indirme dosyaları hiç üretilmez. Yani
 > "kimse indiremez" varsayılan durumdur; anahtar sizin için bir kapı açar.
 
+### Açılmıyorsa
+
+Anahtarla girdiğinizde ekranın altında kısa bir mesaj çıkar:
+
+| Mesaj | Anlamı | Ne yapmalı |
+|---|---|---|
+| *Yönetici anahtarı geçersiz* | Site bir anahtarla derlenmiş ama yazdığınız o değil | Gizli değişkendeki değeri birebir kopyalayın |
+| *Site bu anahtarla derlenmemiş…* | Derleme anahtarı görmemiş | Gizli değişkeni tanımlayıp **bir dosyayı yeniden yükleyerek** siteyi tekrar derletin |
+| Hiç mesaj yok, rozet de yok | Sayfa eski sürümden önbellekte kalmış olabilir | **Ctrl+F5** ile sayfayı zorla yenileyin |
+
+Adresin tam olarak şu biçimde olması gerekir — sondaki `/` dahil:
+
+```
+https://orbayskrcl.github.io/ulasim-planlama-yollar/?y=ANAHTAR
+```
+
 ### Bu ne kadar güvenli?
 
 Dürüst cevap: **iyi ama mükemmel değil.**

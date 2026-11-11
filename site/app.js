@@ -2239,10 +2239,11 @@
       p.delete("y");
       var yeni = location.pathname + (p.toString() ? "?" + p : "") + location.hash;
       history.replaceState(null, "", yeni);
-      return a.trim();
+      return { anahtar: a.trim(), adresten: true };
     }
-    try { return localStorage.getItem("yoneticiAnahtari") || ""; }
-    catch (e) { return ""; }
+    try { return { anahtar: localStorage.getItem("yoneticiAnahtari") || "",
+                   adresten: false }; }
+    catch (e) { return { anahtar: "", adresten: false }; }
   }
 
   function yoneticiKlasoru(anahtar) {
@@ -2286,6 +2287,18 @@
         })
         .catch(function () { return false; });
     });
+  }
+
+  // Anahtar yanlışsa ya da site o anahtarla derlenmediyse kullanıcı
+  // sessizce başarısız olmasın: ne olduğunu söyle.
+  function yoneticiDenemeSonucu(istek, oldu) {
+    if (!istek.anahtar || oldu) return;
+    try { localStorage.removeItem("yoneticiAnahtari"); } catch (e) {}
+    if (!istek.adresten) return;        // eski saklı anahtar: sessizce unut
+    bildir(D.ozet.yonetici_modu
+      ? "Yönetici anahtarı geçersiz."
+      : "Site bu anahtarla derlenmemiş. GitHub'da YONETICI_ANAHTARI gizli "
+        + "değişkenini tanımlayıp siteyi yeniden derleyin.");
   }
 
   function yoneticiKapat() {
@@ -2381,7 +2394,11 @@
         D.ozet = ozet;
         // Yönetici özeti varsa arayüz çizilmeden önce gelsin; gizli bölümler
         // önce görünüp sonra kaybolmasın.
-        return yoneticiAc(yoneticiAnahtariOku()).then(function () { return ozet; });
+        var istek = yoneticiAnahtariOku();
+        return yoneticiAc(istek.anahtar).then(function (oldu) {
+          D.yoneticiDenemesi = { istek: istek, oldu: oldu };
+          return ozet;
+        });
       })
       .then(function (ozet) {
         basligiYaz(ozet);
@@ -2443,6 +2460,8 @@
         if (window.innerWidth <= 860) $("#panel").classList.add("kapali");
         window.IZMIR_HARITA = D;                 // ileri düzey kullanım / hata ayıklama
         document.body.dataset.hazir = "1";
+        var yd = D.yoneticiDenemesi;
+        if (yd) yoneticiDenemeSonucu(yd.istek, yd.oldu);
       })
       .catch(function (e) {
         $("#yukleniyor").innerHTML =
