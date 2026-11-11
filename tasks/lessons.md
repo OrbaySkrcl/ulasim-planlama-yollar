@@ -403,3 +403,12 @@ başarısızdı, sonra sahte biçimde başarılı olurdu. Çözüm:
 denetliyor, bu yüzden artık siteyi anahtarla açıyor; "ziyaretçi ne
 göremiyor" sorusu ayrı bir suite'in işi. İkisini tek dosyada tutmak her
 denetime "hangi moddayız?" sorusunu bulaştırıyordu.
+
+**Ekran görüntüsü, geçen testin yakalamadığını yakaladı.** Gizlilik testi
+"indirme düğmesi görünmüyor" diyordu ama düğme ekranda duruyordu. Sebep:
+test `e.hidden` özniteliğine bakıyordu, oysa `.dbtn { display: inline-flex }`
+tarayıcının `[hidden]{display:none}` kuralını eziyordu. Öznitelik doğruydu,
+sonuç yanlıştı. İki ders: (1) görünürlük denetimi her zaman
+`getComputedStyle` + `getBoundingClientRect` ile yapılmalı; (2) `hidden`
+kullanan bir projede `[hidden]{display:none !important}` kuralı şart.
+Ve asıl ders: yeşil testten sonra bir kez de gözle bakmak.

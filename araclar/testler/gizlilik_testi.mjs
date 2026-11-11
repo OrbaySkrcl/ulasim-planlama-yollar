@@ -99,11 +99,15 @@ async function sayfa(url, temizle) {
   return { s, ev };
 }
 
+// ÖNEMLİ: "hidden" özniteliğine değil, HESAPLANAN STİLE bakar. Bir CSS
+// kuralı display verdiğinde [hidden] ezilebiliyor; öznitelige güvenen bir
+// denetim "gizli" der ama düğme ekranda durur. (Bir kez başımıza geldi.)
 const gorunur = `(function(g){var e=document.querySelector(g);
   if(!e) return 'yok';
-  if(e.hidden) return false;
   var st=getComputedStyle(e);
-  return st.display!=='none' && st.visibility!=='hidden';})`;
+  if(st.display==='none' || st.visibility==='hidden' || +st.opacity===0) return false;
+  var k=e.getBoundingClientRect();
+  return k.width>0 && k.height>0;})`;
 
 console.log("\n— Sıradan ziyaretçi —");
 const z = await sayfa(SITE + "/", true);

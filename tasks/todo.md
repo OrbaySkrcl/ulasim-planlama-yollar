@@ -1023,12 +1023,18 @@ Böylece gizlenen şey ekranda değil, **yayınlanan dosyalarda** gizlenmiş olu
 - [x] `araclar/testler/gizlilik_testi.mjs` — 31 denetim.
 - [x] Belgeler: README 5e, REHBER 7. bölüm.
 
-## Yol boyunca yakalanan iki sorun
+## Yol boyunca yakalanan üç sorun
 1. **Derleme günlüğü gizli klasörün adını yazıyordu.** Bu depo herkese açık
    ve günlük Actions özetine düşüyor — adı yazmak mekanizmayı tümden boşa
    çıkarırdı. Günlük artık yalnızca "üretildi" diyor.
 2. **`ayar_ham` tüm kategoriler.json'u taşıyordu.** Anahtar oraya yazılmış
    olsaydı yönetici özetine sızardı. `gizlilik` bloğu artık çıkarılıyor.
+3. **`hidden` işe yaramıyordu.** `.dbtn { display: inline-flex }` tarayıcının
+   `[hidden]{display:none}` kuralını eziyordu; "Veriyi indir" ve "Yönetici"
+   düğmeleri ziyaretçide de görünüyordu. Test bunu kaçırmıştı çünkü
+   özniteliğe bakıyordu — ekran görüntüsü yakaladı. CSS'e
+   `[hidden]{display:none !important}` eklendi, test hesaplanan stile
+   bakacak şekilde düzeltildi.
 
 ## Sonuç
 
