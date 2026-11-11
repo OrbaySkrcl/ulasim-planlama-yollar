@@ -6,7 +6,7 @@
 #
 # Bu yollar MECLİS KARARIYLA alınmıştır, yani zaten Büyükşehir'dedir.
 # genis_yollar.xlsx'teki mavi satırlar ise "onaylanırsa geçecek" yollardır.
-# İkisi aynı çalışmanın parçasıdır ama haritada ayrı renkte gösterilir.
+# İkisi aynı çalışmanın parçasıdır ama haritada ayrı renkte gösterilir..
 #
 # ---------------------------------------------------------------------------
 # BİÇİM:  İlçe ; Yol adı ; imar genişliği (metre)
