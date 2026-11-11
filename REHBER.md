@@ -242,6 +242,15 @@ Adresin tam olarak şu biçimde olması gerekir — sondaki `/` dahil:
 https://orbayskrcl.github.io/ulasim-planlama-yollar/?y=ANAHTAR
 ```
 
+Sondaki eğik çizgiyi unutursanız GitHub adresi yönlendirir ve `?y=...`
+kısmı kaybolabilir. Bundan etkilenmeyen ikinci biçim:
+
+```
+https://orbayskrcl.github.io/ulasim-planlama-yollar#y=ANAHTAR
+```
+
+İkisi de aynı işi yapar; ikincisi her durumda çalışır.
+
 ### Bu ne kadar güvenli?
 
 Dürüst cevap: **iyi ama mükemmel değil.**

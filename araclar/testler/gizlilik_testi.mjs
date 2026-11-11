@@ -189,6 +189,15 @@ denetle("CSV raporu gizli klasörden iniyor", await y.ev(`(async function(){
 denetle("anahtar tarayıcıda saklandı", await y.ev(
   `localStorage.getItem('yoneticiAnahtari')`), r => r === ANAHTAR);
 
+denetle("#y= biçimi de çalışıyor (sondaki eğik çizgi unutulursa)", await (async () => {
+  const h = await sayfa(SITE + "/#y=" + encodeURIComponent(ANAHTAR), true);
+  return await h.ev(`(function(){
+    var D=window.IZMIR_HARITA;
+    return {acik:!!D.yonetici, hash:location.hash, arama:location.search};})()`);
+// Harita kendi durumunu hash'e yazar (#h=…&k=…); önemli olan anahtarın
+// orada KALMAMASI.
+})(), r => r.acik === true && !/(^|[#&])y=/.test(r.hash) && r.arama === "");
+
 console.log("\n— Yanlış anahtar —");
 // Buradan sonraki 404, anahtarın yanlış olduğunu anlamanın yolu: beklenen.
 const konsolSiniri = olaylar.length;

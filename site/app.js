@@ -2241,6 +2241,18 @@
       history.replaceState(null, "", yeni);
       return { anahtar: a.trim(), adresten: true };
     }
+    // "#y=..." biçimi de kabul edilir. Sondaki eğik çizgi unutulduğunda
+    // GitHub Pages adresi yönlendiriyor ve "?y=..." kısmı kaybolabiliyor;
+    // kare işaretli bölüm tarayıcıda kaldığı için yönlendirmeden etkilenmez.
+    var h = new URLSearchParams(location.hash.replace(/^#/, ""));
+    var b = h.get("y");
+    if (b) {
+      h.delete("y");
+      var kalan = h.toString();
+      history.replaceState(null, "", location.pathname + location.search +
+        (kalan ? "#" + kalan : ""));
+      return { anahtar: b.trim(), adresten: true };
+    }
     try { return { anahtar: localStorage.getItem("yoneticiAnahtari") || "",
                    adresten: false }; }
     catch (e) { return { anahtar: "", adresten: false }; }

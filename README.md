@@ -906,8 +906,10 @@ adımı adı hesaplayıp `::add-mask::` ile kaydediyor; GitHub o işin kalan tü
 
 ### Siteyi yönetici olarak açmak
 
-Adrese `?y=ANAHTAR` eklenir. Tarayıcı anahtarı saklar, adres çubuğundan
-hemen silinir. Sağ üstte 🔑 rozeti görünür; tıklayınca çıkılır.
+Adrese `?y=ANAHTAR` ya da `#y=ANAHTAR` eklenir. Tarayıcı anahtarı saklar,
+adres çubuğundan hemen silinir. Sağ üstte 🔑 rozeti görünür; tıklayınca
+çıkılır. İkinci biçim, sondaki eğik çizgi unutulduğunda GitHub Pages'in
+yönlendirmesinden etkilenmediği için daha sağlamdır.
 
 Doğrulama, sitede saklanan bir parolayla karşılaştırma değildir: tarayıcı
 anahtardan klasör adını hesaplar ve dosyayı ister. Anahtar yanlışsa dosya
