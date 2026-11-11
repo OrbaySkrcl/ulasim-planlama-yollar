@@ -577,16 +577,61 @@ Bunlar veriyi değil, QGIS'in çizim ayarlarını değiştirir:
 
 ## 5d. Geniş yollar (17 m+) — ayrı bir çalışma
 
-Bu, ana devir çalışmasından **bağımsız** bir projedir. "Yol Sorumluluğu
-Tespiti" Excel listesindeki **mavi** satırlar — ileride onaylanırsa Büyükşehir
-sorumluluğuna geçecek 17 metre ve üzeri genişlikteki yollar — haritada ayrı bir
-katman olarak gösterilir.
+Bu, ana devir çalışmasından **bağımsız** bir projedir: 17 metre ve üzeri
+genişlikteki yollar. İki kaynaktan beslenir ve haritada **üç tonda** gösterilir.
+
+| Ton | Kaynak dosya | Anlamı |
+|---|---|---|
+| 🟠 **EK-1 listesi** | `veri/ek1_listesi.txt` | Meclis kararıyla **zaten Büyükşehir'de** olan yollar |
+| 🔵 **Koyu mavi liste** | `veri/genis_yollar.xlsx` | Onaylanırsa geçecek — koyu mavi satırlar |
+| 🔵 **Açık mavi liste** | `veri/genis_yollar.xlsx` | Onaylanırsa geçecek — açık mavi satırlar |
+
+Bir yol hem EK-1'de hem Excel'de geçiyorsa haritada **EK-1 rengini** alır:
+gerçekleşmiş karar, aday listesini ezer. Aynı mantıkla koyu mavi, açık maviyi
+ezer.
 
 **Ana çalışmayla karışmaz:** DURUM kategorilerine girmez, toplam kilometreye
-eklenmez, lejantta yer almaz, indirme dosyalarını değiştirmez. Kategorilerin
-tamamını kapatsanız bile bu katman görünmeye devam eder.
+eklenmez, indirme dosyalarını değiştirmez. Kategorilerin tamamını kapatsanız
+bile bu katman görünmeye devam eder. (Haritada açtığınızda lejantta ayrı bir
+başlık altında görünür, böylece turuncu/mavi çizgilerin ne olduğu haritadan
+anlaşılır.)
 
-### Nasıl güncellenir
+### EK-1 listesi nedir, nasıl düzenlenir
+
+`veri/ek1_listesi.txt`, İzmir Büyükşehir Belediye Meclisi'nin **10.03.2021
+tarih ve 05.251 sayılı kararı** ekindeki "Büyükşehir Belediyesi Sorumluluğunda
+Kalan Yollar ve Meydanlar Listesi"dir. Karar taranmış bir PDF olduğu için liste
+metne çevrilip (OCR) bu dosyaya yazılmıştır.
+
+Biçim, satır başına bir yol:
+
+```
+Konak ; ŞEHİT FETHİ BEY CADDESİ ; 20
+Konak ; HAVRA SOKAĞI
+```
+
+İlk alan ilçe, ikincisi yol adı, üçüncüsü (isteğe bağlı) imar genişliği.
+Üçüncü alan yalnızca bilgi içindir, eşleştirmeyi etkilemez. `#` ile başlayan
+satırlar nottur.
+
+| Ne yapmak istiyorsunuz | Nasıl |
+|---|---|
+| Listeye yol eklemek | İlgili ilçenin altına bir satır yazın |
+| Listeden yol çıkarmak | Satırın başına `#` koyun (geçmiş kaybolmaz) |
+| Yazım düzeltmek | Satırı düzeltin |
+| Haritada yanlış çizgi çıkıyor | `veri/genis_yollar_duzeltme.txt` — kurallar bu listeye de uygulanır |
+
+**Meydanlar ve bölgeler** (`... MEYDANI`, `TARİHİ KEMERALTI BÖLGESİ`) listede
+durur ama eşleştirmeye girmez: yol ağında karşılık gelen bir çizgi yoktur.
+Derleme günlüğü kaçının bu durumda olduğunu yazar.
+
+> **Kararın kendisiyle ek listesi arasındaki fark.** Karar metni, Konak
+> Tarihi Kemeraltı Bölgesi'ndeki Havra Sokağı, 920, 926 ve 937 Sokak'ı listeye
+> **ekliyor**; Ödemiş Emmioğlu Mahallesi Fatih Caddesi'ni **çıkarıyor**. Ekteki
+> tabloda Fatih Caddesi zaten yok, ama eklenen dört sokak da yok. Bu dördü
+> dosyanın sonuna, nereden geldiklerini açıklayan bir notla elle yazıldı.
+
+### Excel listesi nasıl güncellenir
 
 **Excel'i düzenleyip aynı adla yeniden yükleyin. Başka bir şey yapmanız
 gerekmez.** Liste her derlemede **sıfırdan** okunur; hiçbir şey birikmez,
@@ -604,8 +649,9 @@ temizlenecek bir artık kalmaz.
 > çıkarmak için satırı silmeniz şart değil; **rengini kırmızı yapmanız**
 > yeterlidir. Böylece kaydı listede kalır, haritaya girmez.
 
-Katmanı tamamen kaldırmak isterseniz Excel'i silin — site, katman olmadan
-yayınlanır.
+Katmanı tamamen kaldırmak isterseniz Excel'i **ve** `ek1_listesi.txt`
+dosyasını silin — site, katman olmadan yayınlanır. Yalnızca birini silerseniz
+katman diğer kaynakla çalışmaya devam eder.
 
 ### Listede ne değişti?
 

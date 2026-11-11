@@ -20,8 +20,12 @@ Site 2–3 dakika içinde kendiliğinden güncellenir.
 
 | Dosya | Ne işe yarar |
 |-------|--------------|
-| `ibb_yollar.kml` | QGIS'ten çıkan yol katmanı. **Üzerine yazın.** Dosya 25 MB'ı geçiyorsa sıkıştırıp `ibb_yollar.zip` olarak yükleyin ve eskisini silin. |
+| `yollar_master.zip` | **Asıl yol katmanı.** İçindeki `.gpkg` QGIS'te düzenlenir, zip'lenip buraya yüklenir. Diğer yol dosyaları varsa bu öncelikli okunur. |
+| `ibb_yollar.kml` | Eski yöntem. Ana katman yoksa kullanılır. Dosya 25 MB'ı geçiyorsa sıkıştırıp `.zip` olarak yükleyin. |
 | `kategoriler.json` | Kategori adları, renkleri, sırası, ilçe sınır çizgisinin görünümü ve site başlıkları. |
+| `genis_yollar.xlsx` | Geniş yollar (17 m+) listesi. Mavi satırlar haritaya girer: onaylanırsa Büyükşehir'e geçecek yollar. |
+| `ek1_listesi.txt` | EK-1 listesi: Meclis kararıyla **zaten** Büyükşehir'e geçmiş 17 m+ yollar. Haritada turuncu. Düz metin, doğrudan burada düzenlenir. |
+| `genis_yollar_duzeltme.txt` | Yukarıdaki iki liste ile harita arasındaki eşleştirme düzeltmeleri (yanlış çizgiyi çıkarma, takma ad). |
 | `ilce_sinirlari.geojson` | *(isteğe bağlı)* Eklerseniz haritaya ilçe sınırları, adları ve ilçe filtresi gelir. |
 | `mahalle_sinirlari.geojson` | *(isteğe bağlı)* Aynısının mahalle karşılığı. Mahalle sınırları z11, adları z12 yakınlıktan itibaren çizilir. |
 

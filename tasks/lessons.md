@@ -342,3 +342,36 @@ Bu dosya, aynı hataların tekrarlanmaması için tutulur.
   yanlışlığı değil, "listeden çıkarmak"ın iki ayrı anlama gelmesiydi
   (haritadaki yanlış çizgi vs. gerçek karar değişikliği). Rehbere bu ayrımı
   ayrı bir başlık olarak koydum.
+
+## Tur 21 — Taranmış PDF'ten tablo okuma
+
+**Tesseract tabloda satır atlıyor.** Temiz, 300 dpi bir tabloda tek satırı tek
+başına verdiğinizde kusursuz okuyor; aynı satır tablonun içindeyken sayfa
+çözümleyicisi onu tamamen atlıyordu (bir sayfada 38 satırın 5'i okundu).
+Çözüm: sayfa çözümleyicisine güvenmeyip tablo çizgilerini piksel profilinden
+kendimiz bulmak, her hücreyi ayrı bir görüntü olarak `--psm 7` ile okumak.
+
+**Yatay çizgiyi "koyu piksel sayısı" ile aramak yanlış.** Uzun bir metin
+satırı da satırın %40'ını koyu yapıyor; "TARİHİ KEMERALTI BÖLGESİ (…)" gibi
+uzun bir hücre ikiye bölündü. Ayırt edici olan **süreklilik**: en uzun
+kesintisiz koyu dizi. Daha da iyisi, çizgiyi **sağ sütunda** aramak — orada
+yalnızca "17", "20-25" gibi kısa sayılar var, bu yüzden uzun bir dizi ancak
+tablo çizgisi olabilir.
+
+**Taramanın 0,4 derecelik eğikliği her şeyi bozuyor.** 2000 piksel genişlikte
+0,4° ≈ 14 piksel kayma; dikey çizgi hiçbir x sütununda tam görünmüyor, sayfa
+"boş" sanılıyor (16 sayfanın 2'si sıfır satır verdi). Eğriliği sol dikey
+çizginin üst/alt kaymasından ölçüp düzeltmek gerekti. Dönme yönünü tahmin
+etmek yerine iki yönü de deneyip daha çok çizgi bulanı seçmek daha sağlam.
+
+**Alfabetik sıra denetimi işe yaramadı.** OCR hatalarını yakalamak için
+listenin kendi sıralamasını kullanmayı denedim; 82 "sıra dışı" satırın hemen
+hepsi yanlış alarmdı (PDF'in kendi sıralaması Türkçe alfabetik değil, ayrıca
+mahalle ekli satırlar blok sonuna konmuş). Asıl işe yarayan denetim: her
+kaydın **yol türü anahtar kelimesi** içermesi şartı (SOKAK/CADDE/BULVAR/…).
+649 satırın yalnızca 4'ü bu şartı geçemedi ve dördü de gerçekten çöptü.
+
+**Kararın metni ile eki aynı şey değil.** Karar, listeye 4 sokak ekleyip 1
+cadde çıkarıyor; ekteki tabloda çıkarılan zaten yok ama eklenenler de yok.
+Eki olduğu gibi almak eksik veri demekti. Tabloyu kararın kendisiyle
+karşılaştırmak gerekti.

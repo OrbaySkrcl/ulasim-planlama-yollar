@@ -920,3 +920,68 @@ Sonda "sık karışan iki şey": düzeltme dosyası Excel'i değiştirmez; ve
 ## Doğrulama
 Site testi 22/22, geniş yollar testi 13/13, konsol temiz.
 Rehber bağlantısı sitede görünüyor ve doğru adrese gidiyor.
+
+---
+
+# Tur 21 — EK-1 listesi (10.03.2021 / 05.251 sayılı Meclis kararı)
+
+## Anladığım iş
+Meclis kararı ekindeki "Büyükşehir Sorumluluğunda Kalan Yollar ve Meydanlar
+Listesi" (EK-1) haritaya işlenecek. Bu yollar **zaten Büyükşehir'de** —
+karar çok önce alındığı için Excel listesinde yer almıyorlar. Excel'deki
+mavi yollarla **aynı proje** ama haritada **EK-1 oldukları belli olmalı**.
+
+## Plan
+- [x] PDF'i oku; EK-1 tablosunu bul (sayfa 5–20, 16 sayfa).
+- [x] PDF taranmış: metin katmanı yok → OCR gerekli.
+- [x] Tesseract (tur) kur; tablo satırlarını çizgilerden ayırıp hücre hücre oku.
+- [x] 606 satır çıkar; 30 ilçenin tamamı var.
+- [x] Karar metniyle tabloyu karşılaştır (ne eklenmiş, ne çıkarılmış).
+- [x] `veri/ek1_listesi.txt` — 607 satırlık, elle düzenlenebilir liste dosyası.
+- [x] `araclar/ek1_pdf_oku.py` — PDF'ten listeyi yeniden üretme aracı
+      (derlemenin parçası değil; denetim ve yeni karar için).
+- [x] `araclar/genis_yollar.py` — `ek1_oku()`, `ek1_turu()`.
+- [x] `araclar/derle.py` — EK-1 üçüncü ton; öncelik EK-1 > koyu > açık.
+- [x] Ön yüz: ton listesi özetten geliyor (`ton_sirasi`).
+- [x] Lejanta geniş yollar bölümü eklendi (açık olan tonlar görünüyor).
+- [x] `veri/kategoriler.json` — EK-1 adı, rengi, açıklaması.
+- [x] CSV raporuna "Liste" sütunu; değişim günlüğü EK-1'i de kapsıyor.
+- [x] Belgeler: README 5d yeniden yazıldı, REHBER'e 6. bölüm, BENIOKU tablosu.
+- [x] Testler: genis_test.mjs 15/15 (iki yeni EK-1 testi), site_testi 22/22.
+
+## Tasarım kararları
+- **Ayrı katman değil, aynı bölümde üçüncü ton.** Kullanıcı "aynı kategoride
+  ama belli olsun" dedi; ayrı bir bölüm, aynı işin iki yere bölünmesi olurdu.
+- **Renk: turuncu (#f59e0b).** Mavi ailesi "onaylanırsa geçecek" anlamında
+  kullanılıyor; EK-1 "zaten bizde" demek, bu yüzden ayrı bir renk.
+- **Öncelik EK-1 > koyu mavi > açık mavi.** Bir yol hem Excel'de hem EK-1'de
+  ise gerçek durumu EK-1'dir.
+- **Meydanlar ve bölgeler eşleştirmeye girmez** (haritada çizgileri yok),
+  listede dururlar ve ayrıca sayılır.
+
+
+## Sonuç
+
+| | Önce | Sonra |
+|---|---|---|
+| Geniş yollar listesi | 808 satır | 1.356 satır |
+| Eşleşen | 780 (%96,5) | 1.278 (%94,2) |
+| Haritadaki yol | 1.232 | 1.887 |
+| Katmandaki toplam | 1.189,8 km | 2.293,3 km |
+
+EK-1'in kendi oranı: 548 yol satırının 498'i eşleşti (%90,9). Eşleşmeyen 50
+satırın çoğu ağda gerçekten yok (Bayraklı Girne Bulvarı, Konak Fatih Caddesi
+gibi merkez arterleri bu veri setinde hiç çizilmemiş) — site bunları Veri
+kalitesi bölümünde listeliyor.
+
+Ana çalışma dokunulmadan kaldı: 75.671 yol, 29.680,7 km; Devredilen 2.944 /
+2.129,9 km.
+
+## Doğrulama
+- `araclar/testler/genis_test.mjs` 15/15, konsol temiz.
+- `araclar/testler/site_testi.mjs` 22/22, konsol temiz.
+- `araclar/testler/ortusme_denetimi.py` — birebir örtüşme 0,00 km.
+- `araclar/ek1_pdf_oku.py` PDF'ten yeniden çalıştırıldı: depodaki dosyayı
+  birebir üretiyor (tek fark, OCR hatası olduğu için elle düzeltilen 12 satır).
+- Haritada Konak z15'te turuncu EK-1 çizgileri mavi kategorilerden ayırt
+  edilebiliyor; lejantta ayrı başlık altında görünüyor.

@@ -337,3 +337,52 @@ def listeyi_coz(yol, ilce_adlari):
                          "genislik": ikinci, "satir": no})
     return kayitlar, {"renkler": renk_sayaci, "ilcesiz": ilcesiz,
                       "satir": len(satirlar)}
+
+
+# EK-1 listesi: Meclis kararıyla Büyükşehir sorumluluğuna alınmış yollar.
+# Excel'den farkı, bunların "olacak" değil "olmuş" olmasıdır; bu yüzden
+# haritada ayrı bir tonda gösterilir. Biçim:  İlçe ; Yol adı ; genişlik
+EK1_CIZGISIZ = ("MEYDAN", "BÖLGES", "BOLGES")
+
+
+def ek1_turu(ad):
+    """Haritada çizgisi olmayan kayıtları ayırır (meydan, bölge)."""
+    govdesi = sade(ad).upper().replace("İ", "I")
+    if "BOLGES" in govdesi:
+        return "bolge"
+    if "MEYDAN" in govdesi:
+        return "meydan"
+    return "yol"
+
+
+def ek1_oku(yol, ilce_adlari=None):
+    """EK-1 liste dosyasını okur.
+
+    Döndürür: (kayitlar, istatistik)
+    kayitlar: [{"ilce", "ad", "renk": "ek1", "genislik", "satir", "tur",
+                "kaynak"}]
+    """
+    import io
+    import os
+    if not yol or not os.path.exists(str(yol)):
+        return [], {"satir": 0, "bilinmeyen_ilce": [], "hatali": []}
+    tanidik = {sade(i): i for i in (ilce_adlari or [])}
+    kayitlar, bilinmeyen, hatali = [], [], []
+    with io.open(str(yol), encoding="utf-8") as f:
+        for no, ham in enumerate(f, 1):
+            metin = ham.split("#", 1)[0].strip()
+            if not metin:
+                continue
+            parca = [p.strip() for p in metin.split(";")]
+            if len(parca) < 2 or not parca[0] or not parca[1]:
+                hatali.append({"satir": no, "ham": ham.strip()[:90]})
+                continue
+            ilce = tanidik.get(sade(parca[0]), parca[0])
+            if tanidik and sade(parca[0]) not in tanidik:
+                bilinmeyen.append({"satir": no, "ilce": parca[0]})
+            kayitlar.append({
+                "ilce": ilce, "ad": parca[1], "renk": "ek1",
+                "genislik": parca[2] if len(parca) > 2 else "",
+                "satir": no, "tur": ek1_turu(parca[1]), "kaynak": "EK-1"})
+    return kayitlar, {"satir": len(kayitlar),
+                      "bilinmeyen_ilce": bilinmeyen[:20], "hatali": hatali[:20]}

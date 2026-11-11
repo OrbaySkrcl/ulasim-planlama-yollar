@@ -1535,22 +1535,33 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
     genis_ozlikler = None
     genis_xlsx = next((x for x in sorted(veri_dizini.glob("*.xlsx"))
                        if not x.name.startswith("~$")), None)
-    if genis_xlsx:
+    genis_ek1 = veri_dizini / "ek1_listesi.txt"
+    if genis_xlsx or genis_ek1.exists():
         try:
             genis_ozlikler, genis_bilgi = genis_yollar_eslestir(
-                genis_xlsx, ozellikler, ayar)
+                genis_xlsx, ozellikler, ayar, veri_dizini)
         except Exception as e:
             log("  Uyarı: geniş yollar listesi işlenemedi (%s). "
                 "Site bu katman olmadan yayınlanacak." % e)
             genis_bilgi = genis_ozlikler = None
     if genis_bilgi:
         t = genis_bilgi["tonlar"]
-        log("  Geniş yollar katmanı (%s): %d/%d satır eşleşti · "
-            "açık mavi %d yol / %.1f km · koyu mavi %d yol / %.1f km"
-            % (genis_bilgi["kaynak"], genis_bilgi["eslesen_satir"],
-               genis_bilgi["liste_satiri"], t["acik"]["adet"],
-               t["acik"]["uzunluk_km"], t["koyu"]["adet"],
-               t["koyu"]["uzunluk_km"]))
+        log("  Geniş yollar katmanı: %d/%d satır eşleşti"
+            % (genis_bilgi["eslesen_satir"], genis_bilgi["liste_satiri"]))
+        for _ton in genis_bilgi.get("ton_sirasi") or ("acik", "koyu"):
+            log("    %-28s %5d yol / %8.1f km"
+                % (t[_ton]["ad"], t[_ton]["adet"], t[_ton]["uzunluk_km"]))
+        _e = genis_bilgi.get("ek1") or {}
+        if _e.get("satir"):
+            log("    EK-1 (%s): %d satır — %d yol, %d meydan/bölge "
+                "(çizgisi yok, eşleştirmeye girmez)."
+                % (_e["dosya"], _e["satir"], _e["yol"], _e["cizgisiz"]))
+            for h in _e.get("hatali") or []:
+                log("      ! Anlaşılmayan satır %d: %s" % (h["satir"], h["ham"]))
+            _bi = _e.get("bilinmeyen_ilce") or []
+            if _bi:
+                log("      ! Ağda olmayan ilçe adı (%d satır): %s"
+                    % (len(_bi), ", ".join(sorted({x["ilce"] for x in _bi}))))
         if genis_bilgi["eslesmeyen"]:
             log("    %d satır ana ağda bulunamadı (ad farklı olabilir); "
                 "listesi sitede Veri kalitesi bölümünde."
@@ -1727,9 +1738,11 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
         # kendisi degismez; bu, o listenin su anki durumunun raporudur.
         # Noktali virgul + BOM: Turkce Excel dogrudan acar.
         _rapor = veri_cikti / genis_bilgi["rapor_dosyasi"]
-        _basliklar = ["Satır", "İlçe", "Yol adı (listede)", "Renk",
+        _basliklar = ["Liste", "Satır", "İlçe", "Yol adı (listede)", "Renk",
                       "İmar genişliği", "Durum", "Bulunan yol",
                       "Uzunluk (km)", "Düzeltmeyle çıkarılan", "Mahalle(ler)"]
+        _renk_adi = {t: genis_bilgi["tonlar"][t]["ad"]
+                     for t in genis_bilgi["tonlar"]}
 
         def _h(x):
             m = "" if x is None else str(x)
@@ -1740,8 +1753,9 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
             f.write(";".join(_basliklar) + "\r\n")
             for r in genis_bilgi.get("satir_raporu") or []:
                 f.write(";".join(_h(x) for x in [
+                    "EK-1" if r["renk"] == "ek1" else "Excel",
                     r["satir"], r["ilce"], r["ad"].replace("\n", " "),
-                    "açık mavi" if r["renk"] == "acik" else "koyu mavi",
+                    _renk_adi.get(r["renk"], r["renk"]),
                     r["genislik"],
                     "haritada" if r["bulunan"] else "eşleşmedi",
                     r["bulunan"], ("%.2f" % r["km"]).replace(".", ","),
@@ -1977,12 +1991,21 @@ def degisiklikleri_karsilastir(eski_kayitlar, yeni_kayitlar):
     }
 
 
-def genis_yollar_eslestir(xlsx, ozellikler, ayar):
+# Bir yol birden fazla listede geçebilir. Haritada hangi rengi alacağını
+# bu sıra belirler: EK-1 gerçekleşmiş karardır, mavi tonlar adaydır.
+ONCELIK = {"acik": 1, "koyu": 2, "ek1": 3}
+
+
+def genis_yollar_eslestir(xlsx, ozellikler, ayar, veri_dizini=None):
     """Geniş yollar listesini (17 m+) ayrı bir katman olarak üretir.
 
     Bu AYRI BİR PROJEDİR: ana yol ağının DURUM kategorileriyle, toplam
-    kilometresiyle ya da indirme dosyalarıyla karışmaz. Yalnızca Excel'de
-    mavi işaretli satırların haritadaki karşılığını gösterir.
+    kilometresiyle ya da indirme dosyalarıyla karışmaz.
+
+    İki kaynak birleşir:
+      * genis_yollar.xlsx  — açık/koyu mavi satırlar, "onaylanırsa geçecek".
+      * ek1_listesi.txt    — Meclis kararıyla alınmış, "zaten Büyükşehir'de".
+    Aynı yol ikisinde de varsa EK-1 kazanır: o, gerçekleşmiş durumdur.
 
     Eşleştirme ad üzerindendir (ilçe + sadeleştirilmiş yol adı); kesin
     geometri eşlemesi değildir, bu yüzden eşleşmeyen satırlar raporlanır.
@@ -1996,7 +2019,20 @@ def genis_yollar_eslestir(xlsx, ozellikler, ayar):
     ilceler = {oz["properties"].get("ilce") for oz in ozellikler}
     ilceler.discard(None)
     ilceler.discard("Belirlenemedi")
-    kayitlar, ist = gy.listeyi_coz(xlsx, ilceler)
+
+    dizin_yolu = Path(veri_dizini) if veri_dizini else xlsx.parent
+    kayitlar = []
+    if xlsx:
+        kayitlar, ist = gy.listeyi_coz(xlsx, ilceler)
+
+    # EK-1: Meclis kararı eki. Meydan ve bölgelerin haritada çizgisi yok,
+    # bu yüzden eşleştirmeye girmez; listede durur ve ayrıca sayılır.
+    ek1_yolu = dizin_yolu / "ek1_listesi.txt"
+    ek1_kayitlari, ek1_ist = gy.ek1_oku(ek1_yolu, ilceler)
+    ek1_cizgisiz = [k for k in ek1_kayitlari if k["tur"] != "yol"]
+    kayitlar = kayitlar + [k for k in ek1_kayitlari if k["tur"] == "yol"]
+    for k in kayitlar:
+        k.setdefault("kaynak", xlsx.name if xlsx else "liste")
     if not kayitlar:
         return None, None
 
@@ -2012,7 +2048,7 @@ def genis_yollar_eslestir(xlsx, ozellikler, ayar):
             dizin.setdefault((ilce, g), []).append(oz)
 
     # Elle duzeltmeler: ayni adi tasiyan yollardan yanlis olanlari ayikla
-    duzeltme = gy.duzeltmeleri_oku(xlsx.parent / "genis_yollar_duzeltme.txt")
+    duzeltme = gy.duzeltmeleri_oku(dizin_yolu / "genis_yollar_duzeltme.txt")
     kural_dizini = {}
     for kural in duzeltme["kurallar"]:
         kural_dizini.setdefault((kural["ilce"], kural["govde"]), []).append(kural)
@@ -2061,6 +2097,7 @@ def genis_yollar_eslestir(xlsx, ozellikler, ayar):
         satir_raporu.append({
             "satir": k["satir"], "ilce": k["ilce"], "ad": k["ad"],
             "renk": k["renk"], "genislik": k["genislik"],
+            "kaynak": k.get("kaynak", ""),
             "bulunan": len(adaylar),
             "duzeltmeyle_cikan": len(ham_adaylar) - len(adaylar),
             "km": round(sum((o["properties"].get("uzunluk_m") or 0)
@@ -2069,17 +2106,20 @@ def genis_yollar_eslestir(xlsx, ozellikler, ayar):
                                   for o in adaylar} - {""})})
         if not adaylar:
             eslesmeyen.append({"ilce": k["ilce"], "ad": k["ad"],
-                               "satir": k["satir"]})
+                               "satir": k["satir"],
+                               "kaynak": k.get("kaynak", ""),
+                               "renk": k["renk"]})
             continue
         for oz in adaylar:
             anahtar = id(oz)
             onceki = secilen.get(anahtar)
-            # Koyu mavi, açık maviyi ezer (daha kesin bilgi sayılır)
-            if onceki is None or (k["renk"] == "koyu" and onceki[1] == "acik"):
+            # EK-1 > koyu mavi > açık mavi: aşağıdaki sıra "ne kadar kesin"
+            # demektir. EK-1 gerçekleşmiş karardır, diğerleri adaydır.
+            if onceki is None or ONCELIK[k["renk"]] > ONCELIK[onceki[1]]:
                 secilen[anahtar] = (oz, k["renk"], k["ad"], k["genislik"])
 
     ozlikler = []
-    say = {"acik": [0, 0.0], "koyu": [0, 0.0]}
+    say = {t: [0, 0.0] for t in ONCELIK}
     for oz, ton, liste_adi, genislik in secilen.values():
         p = oz["properties"]
         uz = p.get("uzunluk_m") or 0.0
@@ -2105,6 +2145,12 @@ def genis_yollar_eslestir(xlsx, ozellikler, ayar):
             if onceki:
                 onceki_yol, _commit, onceki_tarih = onceki
                 eski_kayitlar, _ = gy.listeyi_coz(onceki_yol, ilceler)
+                eski_ek1 = onceki_surumu_al(ek1_yolu, Path(td))
+                if eski_ek1:
+                    e1, _c1, _t1 = eski_ek1
+                    ek, _ = gy.ek1_oku(e1, ilceler)
+                    eski_kayitlar = eski_kayitlar + [k for k in ek
+                                                     if k["tur"] == "yol"]
                 anahtar = lambda k: (k["ilce"], gy.sade(k["ad"]))
                 eskisi = {anahtar(k): k for k in eski_kayitlar}
                 yenisi = {anahtar(k): k for k in kayitlar}
@@ -2198,7 +2244,17 @@ def genis_yollar_eslestir(xlsx, ozellikler, ayar):
                      "kullanilmayan": [k["ham"] for k in kullanilmayan][:10]},
         "dosya": "genis_yollar.geojson",
         "boyut_mb": 0,
-        "kaynak": xlsx.name,
+        "kaynak": xlsx.name if xlsx else "ek1_listesi.txt",
+        "ek1": {"dosya": "ek1_listesi.txt",
+                "satir": ek1_ist["satir"],
+                "yol": len([k for k in ek1_kayitlari if k["tur"] == "yol"]),
+                "cizgisiz": len(ek1_cizgisiz),
+                "hatali": ek1_ist["hatali"],
+                "bilinmeyen_ilce": ek1_ist["bilinmeyen_ilce"]},
+        # Panelde gösterim sırası: en kesin bilgi en üstte. EK-1 dosyası
+        # yoksa satırı hiç gösterme; mavi tonlar listenin omurgası, boş
+        # olsalar da panelin biçimi değişmesin diye hep görünür.
+        "ton_sirasi": (["ek1"] if ek1_kayitlari else []) + ["koyu", "acik"],
         "baslik": g_ayar.get("baslik") or "Geniş yollar (17 m+)",
         "aciklama": g_ayar.get("aciklama") or
                     "Onaylanırsa Büyükşehir sorumluluğuna geçecek yollar. "
@@ -2206,12 +2262,21 @@ def genis_yollar_eslestir(xlsx, ozellikler, ayar):
         "tonlar": {
             "acik": {"ad": g_ayar.get("acik_ad") or "Açık mavi liste",
                      "renk": g_ayar.get("acik_renk") or "#60a5fa",
+                     "not": g_ayar.get("acik_not") or "",
                      "adet": say["acik"][0],
                      "uzunluk_km": round(say["acik"][1] / 1000.0, 1)},
             "koyu": {"ad": g_ayar.get("koyu_ad") or "Koyu mavi liste",
                      "renk": g_ayar.get("koyu_renk") or "#1d4ed8",
+                     "not": g_ayar.get("koyu_not") or "",
                      "adet": say["koyu"][0],
                      "uzunluk_km": round(say["koyu"][1] / 1000.0, 1)},
+            "ek1": {"ad": g_ayar.get("ek1_ad") or "EK-1 listesi",
+                    "renk": g_ayar.get("ek1_renk") or "#f59e0b",
+                    "not": g_ayar.get("ek1_not") or
+                           "Meclis kararıyla Büyükşehir sorumluluğuna "
+                           "alınmış yollar.",
+                    "adet": say["ek1"][0],
+                    "uzunluk_km": round(say["ek1"][1] / 1000.0, 1)},
         },
         "liste_satiri": len(kayitlar),
         "eslesen_satir": len(kayitlar) - len(eslesmeyen),

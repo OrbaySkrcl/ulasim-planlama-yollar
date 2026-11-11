@@ -56,3 +56,12 @@ Bayındır ; ŞEHİT ASTSUBAY KIDEMLİ BAŞÇAVUŞ ERDAL CANBULAT CADDESİ ; eş
 Tire ; KÜÇÜK SANAYİ SİTESİ SOKAK ; eşle: KÜÇÜK SANAYİİ SİTESİ
 Tire ; RASULZADE BULVARU ; eşle: RASULZADE
 Menderes ; İTOB DOKUZEYLÜL BULVARI ; eşle: İTOB
+
+# --- EK-1 listesi: ağdaki ad kısaltmalı yazılmış ---
+# (Meclis kararı eki tam adı yazıyor, yol ağı kısaltıyor)
+Balçova ; VALİ HÜSEYİN ÖĞÜTÇEN CADDESİ ; eşle: V. HÜSEYİN ÖĞÜTÇEN
+Bayraklı ; NUR SULTAN NAZARBAYEV CADDESİ ; eşle: NUR SULTAN NAZAR BAYEV
+Bergama ; KAYMAKAM KEMAL BEY CADDESİ ; eşle: KAYMAKAM KEMALBEY
+Beydağ ; MAREŞAL FEVZİ ÇAKMAK CADDESİ ; eşle: MAREŞAL F.ÇAKMAK
+Konak ; ŞEHİT FETHİ BEY CADDESİ ; eşle: ŞEHİT FETHİBEY
+Tire ; ŞEHİT YÜZBAŞI GÜLTEKİN BAŞARGAN CADDESİ ; eşle: ŞHT. YZB. GÜLTEKİN BAŞARGAN

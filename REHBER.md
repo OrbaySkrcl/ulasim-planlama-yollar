@@ -4,16 +4,21 @@ Bir şeyi değiştirmek istediğinizde **hangi dosyaya dokunacağınızı** bulm
 
 ---
 
-## Önce şunu bilin: üç dosya, üç ayrı iş
+## Önce şunu bilin: dört dosya, dört ayrı iş
 
 | Dosya | İçinde ne var | Nerede düzenlenir |
 |---|---|---|
 | **`veri/yollar_master.zip`** | Yolların kendisi: çizgiler ve her yolun durumu | **QGIS** |
-| **`veri/genis_yollar.xlsx`** | Geniş yollar listesi (17 m+) — kararlarınız | **Excel** |
+| **`veri/genis_yollar.xlsx`** | Geniş yollar listesi (17 m+) — **onaylanırsa** geçecekler | **Excel** |
+| **`veri/ek1_listesi.txt`** | EK-1 listesi — Meclis kararıyla **zaten geçmiş** olanlar | **GitHub'da doğrudan** |
 | **`veri/genis_yollar_duzeltme.txt`** | Liste ile harita arasındaki eşleştirme düzeltmeleri | **GitHub'da doğrudan** |
 
-Bu üçü **birbirini değiştirmez.** Düzeltme dosyasına yazdığınız hiçbir şey
+Bu dördü **birbirini değiştirmez.** Düzeltme dosyasına yazdığınız hiçbir şey
 Excel'i, Excel'de yaptığınız hiçbir şey ana katmanı değiştirmez.
+
+> **İki geniş yol listesi var, karıştırmayın.** Haritada turuncu olanlar EK-1
+> (Meclis kararıyla alınmış, zaten bizde), mavi olanlar Excel listesi
+> (onaylanırsa geçecek). Bir yol ikisinde de varsa turuncu çizilir.
 
 ---
 
@@ -26,7 +31,8 @@ Excel'i, Excel'de yaptığınız hiçbir şey ana katmanı değiştirmez.
 | Listedeki bir yol **haritada hiç çıkmıyor** | duruma göre | [3](#3-listedeki-yol-haritada-çıkmıyorsa) |
 | Bir yol **artık listede olmamalı** | Excel | [4](#4-bir-yolu-listeden-çıkarmak) |
 | Listeye **yeni yol eklemek** istiyorum | Excel | [5](#5-listeye-yeni-yol-eklemek) |
-| **Yanlışlıkla** bir şey bozdum | — | [6](#6-geri-almak) |
+| **EK-1 listesine** yol eklemek / çıkarmak | ek1_listesi.txt | [6](#6-ek-1-listesini-düzenlemek) |
+| **Yanlışlıkla** bir şey bozdum | — | [7](#7-geri-almak) |
 
 ---
 
@@ -141,7 +147,38 @@ Bu gerçek bir karar değişikliğidir, **Excel'de** yapılır:
 
 ---
 
-## 6. Geri almak
+## 6. EK-1 listesini düzenlemek
+
+> EK-1, Meclis kararıyla Büyükşehir'e alınmış yolların listesidir
+> (10.03.2021 / 05.251). Haritada **turuncu** çizilir.
+
+Bu bir metin dosyasıdır, doğrudan GitHub'da düzenlenir — Excel gerekmez.
+
+1. GitHub'da `veri/ek1_listesi.txt` dosyasını açın →
+   sağ üstteki **kalem** simgesine tıklayın.
+2. Satırlar şu biçimdedir:
+   ```
+   Konak ; ŞEHİT FETHİ BEY CADDESİ ; 20
+   ```
+   İlçe ; yol adı ; (varsa) imar genişliği. Genişlik yalnızca bilgi içindir.
+3. **Commit changes**.
+
+| İstediğiniz | Nasıl |
+|---|---|
+| Yeni yol eklemek | İlgili ilçenin altına bir satır yazın |
+| Yolu listeden çıkarmak | Satırın başına `#` koyun — satır kalır, haritaya girmez |
+| Yazımı düzeltmek | Satırı düzeltin |
+| Haritada yanlış çizgi çıkıyor | [2. bölüm](#2-haritadaki-yanlış-çizgiyi-çıkarmak) — düzeltme kuralları bu listeye de işler |
+
+✅ Sonuç: 2–3 dakikada site yenilenir.
+
+> **Meydanlar.** Listede `... MEYDANI` satırları da var. Meydanların haritada
+> çizgisi olmadığı için bunlar eşleştirmeye girmez; listede dururlar ama
+> haritada görünmezler. Bu bir hata değildir.
+
+---
+
+## 7. Geri almak
 
 Her yükleme bir sürümdür, hiçbir şey kaybolmaz.
 
@@ -164,7 +201,7 @@ Her yüklemeden sonra:
   olduğunu gösteren tablo. Türkçe Excel çift tıklamayla açar.
 
 Beklediğinizden farklı bir sayı görürseniz yanlış dosya yüklenmiş demektir —
-[6. bölümden](#6-geri-almak) geri alabilirsiniz.
+[7. bölümden](#7-geri-almak) geri alabilirsiniz.
 
 ---
 
@@ -179,7 +216,12 @@ Excel yüklediğiniz hâliyle durur. Kural yalnızca haritayı çizerken uygulan
 | Demek istediğiniz | Nereye |
 |---|---|
 | "Yol listede kalsın, ama haritada **yanlış çizgi** gösteriliyor" | duzeltme.txt |
-| "Yol **artık listede olmasın**" | Excel (rengi değiştir) |
+| "Yol **artık listede olmasın**" | Excel (rengi değiştir) ya da EK-1 (satırı `#`le) |
+
+**3. Hangi listedeki yolu değiştiriyorsunuz?**
+
+Haritada yola tıklayın: bilgi kartının üstünde hangi listede olduğu yazar.
+Turuncuysa `ek1_listesi.txt`, maviyse `genis_yollar.xlsx`.
 
 ---
 

@@ -582,16 +582,12 @@
   function lejantCiz(zoomGizli) {
     var govde = $("#lejant-govde");
     if (!govde || !D.ozet) return;
+    D.sonZoomGizli = zoomGizli || D.sonZoomGizli || [];
     var gizliKume = {};
-    (zoomGizli || []).forEach(function (g) { gizliKume[g.durum] = g.esik; });
+    D.sonZoomGizli.forEach(function (g) { gizliKume[g.durum] = g.esik; });
     var satirlar = kategoriSiralari().filter(function (d) {
       return D.seciliKategori.has(d);
-    });
-    if (!satirlar.length) {
-      govde.innerHTML = '<div class="lejant-bos">Hiçbir kategori seçili değil.</div>';
-      return;
-    }
-    govde.innerHTML = satirlar.map(function (d) {
+    }).map(function (d) {
       var k = D.ozet.kategoriler[d];
       var gizli = gizliKume[d];
       return '<div class="lejant-satir"' + (gizli ? ' title="z' + gizli +
@@ -600,7 +596,26 @@
         '<span class="ad"' + (gizli ? ' style="opacity:.55"' : "") + ">" + kacar(katAd(d)) +
         (gizli ? " 🔍" : "") + "</span>" +
         '<span class="km">' + sayi(k.uzunluk_km, 0) + " km</span></div>";
-    }).join("");
+    });
+
+    // Geniş yollar ayrı bir çalışma; haritada açıksa lejantta da görünmeli,
+    // yoksa turuncu/mavi çizgilerin ne olduğu haritadan anlaşılmıyor.
+    var g = D.ozet.genis_yollar;
+    if (g && D.genis && D.genis.secili && D.genis.secili.size) {
+      satirlar.push('<div class="lejant-ayrac">' +
+        kacar(g.baslik || "Geniş yollar") + "</div>");
+      genisTonlari().forEach(function (ton) {
+        if (!D.genis.secili.has(ton)) return;
+        var t = g.tonlar[ton];
+        satirlar.push('<div class="lejant-satir">' +
+          '<i style="background:' + kacar(t.renk) + '"></i>' +
+          '<span class="ad">' + kacar(t.ad) + "</span>" +
+          '<span class="km">' + sayi(t.uzunluk_km, 0) + " km</span></div>");
+      });
+    }
+
+    govde.innerHTML = satirlar.length ? satirlar.join("")
+      : '<div class="lejant-bos">Hiçbir kategori seçili değil.</div>';
   }
 
   // Kalabalık kategoriler uzaktan çizilmez; kullanıcı bunu bilsin
@@ -1675,6 +1690,14 @@
      Bu katman ana çalışmadan bağımsızdır: kendi dosyasından yüklenir, kendi
      düzleminde çizilir, kategori süzgeçlerinden ve toplam kilometreden
      etkilenmez ve onları etkilemez. */
+  // Hangi tonlar gösterilecek? Özet söyler; eski özetlerde alan yoksa
+  // iki mavi tona düşülür.
+  function genisTonlari() {
+    var g = D.ozet.genis_yollar;
+    var s = (g && g.ton_sirasi) || ["koyu", "acik"];
+    return s.filter(function (t) { return g && g.tonlar && g.tonlar[t]; });
+  }
+
   function genisCiz() {
     var g = D.ozet.genis_yollar;
     if (!g) return;
@@ -1685,9 +1708,10 @@
     if (b && g.baslik) b.firstChild.nodeValue = g.baslik + " ";
     $("#genis-aciklama").textContent = g.aciklama || "";
 
-    $("#genis-liste").innerHTML = ["acik", "koyu"].map(function (ton) {
+    $("#genis-liste").innerHTML = genisTonlari().map(function (ton) {
       var t = g.tonlar[ton];
-      return '<label class="genis-satir">' +
+      return '<label class="genis-satir"' +
+        (t["not"] ? ' title="' + kacar(t["not"]) + '"' : "") + ">" +
         '<input type="checkbox" data-genis="' + ton + '"' +
         (D.genis.secili.has(ton) ? " checked" : "") + ">" +
         '<i style="background:' + kacar(t.renk) + '"></i>' +
@@ -1702,6 +1726,7 @@
         if (kutu.checked) D.genis.secili.add(ton);
         else D.genis.secili.delete(ton);
         genisYukleVeCiz();
+        lejantCiz();
       };
     });
     genisNotuYaz();
@@ -1731,9 +1756,8 @@
       return '<div class="degisiklik-satir">' +
         '<span class="ok">' + isaret + "</span>" +
         '<span class="ad">' + kacar(k.ilce) + " · " + kacar(k.ad) + "</span>" +
-        (k.eski ? '<span class="bilgi">' +
-          kacar(k.eski === "acik" ? "açık" : "koyu") + " → " +
-          kacar(k.yeni === "acik" ? "açık" : "koyu") + "</span>" : "") +
+        (k.eski ? '<span class="bilgi">' + kacar(tonAdi(k.eski)) + " → " +
+          kacar(tonAdi(k.yeni)) + "</span>" : "") +
         "</div>";
     };
     var parcalar = [];
@@ -1748,6 +1772,12 @@
       " ton değişti.</p>" + parcalar.join("") +
       (fazla > 0 ? '<p class="kucuk" style="margin:6px 0 0">… ve ' +
         sayi(fazla) + " tane daha</p>" : "");
+  }
+
+  function tonAdi(ton) {
+    var g = D.ozet.genis_yollar;
+    var t = g && g.tonlar && g.tonlar[ton];
+    return t ? t.ad : ton;
   }
 
   function genisNotuYaz(mesaj) {
@@ -1791,7 +1821,7 @@
   function genisGuncelle() {
     var g = D.ozet.genis_yollar;
     if (!g || !D.genis || !D.genis.veri) return;
-    ["acik", "koyu"].forEach(function (ton) {
+    genisTonlari().forEach(function (ton) {
       var acikMi = D.genis.secili.has(ton);
       var katman = D.genis.katman[ton];
       if (!acikMi) {

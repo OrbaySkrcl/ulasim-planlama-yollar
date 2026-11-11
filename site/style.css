@@ -508,3 +508,14 @@ html[data-tema="koyu"] a { color: var(--vurgu); }
   .lejant-yazi { display: inline; }
   #koordinat { display: none; }
 }
+
+/* Lejantta geniş yollar bölümünün başlığı: ayrı bir çalışma olduğu belli olsun */
+.lejant-ayrac {
+  margin: 7px 0 3px;
+  padding-top: 6px;
+  border-top: 1px solid var(--cizgi);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  color: var(--yazi-soluk);
+}

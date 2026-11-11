@@ -68,11 +68,14 @@
   "_genis_yollar_aciklama": "AYRI BIR PROJE: 'Yol Sorumlulugu Tespiti' Excel listesindeki mavi satirlar. veri/ klasorundeki .xlsx dosyasindan okunur; ana yol agindaki DURUM kategorileriyle ve toplam kilometreyle karismaz. Excel'i kaldirirsaniz katman da kaybolur.",
   "genis_yollar": {
     "baslik": "Geniş yollar (17 m+)",
-    "aciklama": "Onaylanırsa Büyükşehir sorumluluğuna geçecek yollar. Ayrı bir çalışmadır; yukarıdaki kategorilerle ilgisi yoktur.",
+    "aciklama": "17 metre ve üzeri yollar. Turuncu olanlar Meclis kararıyla zaten Büyükşehir'e geçmiştir (EK-1 listesi); mavi olanlar onaylanırsa geçecek adaylardır. Ayrı bir çalışmadır; yukarıdaki kategorilerle ilgisi yoktur.",
     "acik_ad": "Açık mavi liste",
     "acik_renk": "#60a5fa",
     "koyu_ad": "Koyu mavi liste",
-    "koyu_renk": "#1e3a8a"
+    "koyu_renk": "#1e3a8a",
+    "ek1_ad": "EK-1 listesi",
+    "ek1_not": "İzmir Büyükşehir Belediye Meclisi'nin 10.03.2021 tarih ve 05.251 sayılı kararı eki. Bu yollar zaten Büyükşehir sorumluluğundadır.",
+    "ek1_renk": "#f59e0b"
   },
   "ilce_sinir": {
     "_aciklama": "Ilce sinir cizgisinin gorunumu. renk_koyu, koyu altlik haritalarda (Koyu/Uydu) kullanilir. etiket_min_zoom: ilce adlarinin gorunmeye basladigi yakinlastirma seviyesi. Site uzerinden de degistirilebilir.",

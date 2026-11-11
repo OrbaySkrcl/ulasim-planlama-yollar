@@ -1,0 +1,701 @@
+# EK-1 LİSTESİ — Büyükşehir sorumluluğundaki yollar ve meydanlar (17 m+)
+#
+# Kaynak: İzmir Büyükşehir Belediye Meclisi'nin 10.03.2021 tarih ve 05.251
+# sayılı kararı eki "İzmir Büyükşehir Belediyesi Sorumluluğunda Kalan Yollar
+# ve Meydanlar Listesi".
+#
+# Bu yollar MECLİS KARARIYLA alınmıştır, yani zaten Büyükşehir'dedir.
+# genis_yollar.xlsx'teki mavi satırlar ise "onaylanırsa geçecek" yollardır.
+# İkisi aynı çalışmanın parçasıdır ama haritada ayrı renkte gösterilir.
+#
+# ---------------------------------------------------------------------------
+# BİÇİM:  İlçe ; Yol adı ; imar genişliği (metre)
+#
+#   Üçüncü alan yalnızca bilgi içindir, eşleştirmeyi etkilemez.
+#   "#" ile başlayan satırlar nottur.
+#
+# YENİ YOL EKLEMEK:  Uygun ilçenin altına bir satır yazın.
+# YOLU ÇIKARMAK:     Satırın başına "#" koyun (geçmişi kaybetmezsiniz).
+# YANLIŞ ÇİZGİ:      veri/genis_yollar_duzeltme.txt dosyasını kullanın;
+#                    kurallar bu listeye de uygulanır.
+#
+# Meydanların ve bölgelerin haritada çizgisi yoktur; listede dururlar ama
+# eşleştirmeye girmezler.
+#
+# NASIL ÜRETİLDİ: Karar taranmış bir PDF; metni OCR ile okundu
+# (araclar/ek1_pdf_oku.py). Çıktı gözden geçirildi, 12 satırdaki okuma
+# hataları elle düzeltildi. Yanlış bir ad görürseniz doğrudan burada
+# düzeltebilirsiniz.
+# ---------------------------------------------------------------------------
+
+# --- Aliağa ---
+Aliağa ; ABDİ İPEKÇİ CADDESİ ; 14,5 - 17
+Aliağa ; ANADOLU CADDESİ ; 14,5 -17
+Aliağa ; ATATÜRK CADDESİ ; 24,5
+Aliağa ; AYGAZ CADDESİ (GEMİ SÖKÜM TESİSLERİ YOLU) ; 24,5-30
+Aliağa ; BEYAZIT CADDESİ ; 17
+Aliağa ; CENGİZ TOPEL CADDESİ ; 22
+Aliağa ; FATİH CADDESİ ; 20-22
+Aliağa ; FEVZİ PAŞA CADDESİ ; 19,5 - 24,5
+Aliağa ; GÜZELHİSAR CADDESİ ; 25
+Aliağa ; İNÖNÜ BULVARI ; 30
+Aliağa ; İSTİKLAL CADDESİ ; 20
+Aliağa ; LOZAN CADDESİ ; 17
+Aliağa ; NECMETTİN GİRİTLİOĞLU CADDESİ ; 20-30
+Aliağa ; DEMOKRASİ MEYDANI ; -
+
+# --- Balçova ---
+Balçova ; 6000 SOKAK (TOKİ YOLU) ; 20
+Balçova ; ATA CADDESİ ; 1
+Balçova ; BAŞAK SOKAK ; 20
+Balçova ; ÇAĞDAŞ CADDESİ ; 17-20-22
+Balçova ; FUAT KÖPRÜLÜ SOKAK ; 12-14,5-17
+Balçova ; HAYDAR ALİYEV BULVARI ; 30
+Balçova ; IHLAMUR SOKAK ; 17
+Balçova ; İNCİRALTI CADDESİ (10 SOKAK) ; 20
+Balçova ; MİTHATPAŞA CADDESİ ; 24,5
+Balçova ; MUSTAFA KEMAL SAHİL BULVARI ; 35
+Balçova ; ÖĞRETMEN RASİME ŞEYHOĞLU SOKAK ; 20
+Balçova ; SAKARYA CADDESİ ; 17
+Balçova ; VALİ HÜSEYİN ÖĞÜTÇEN CADDESİ ; 20
+Balçova ; BALÇOVA MEYDANI ; -
+
+# --- Bayındır ---
+Bayındır ; ATATÜRK CADDESİ ; 12-17-20
+Bayındır ; FABRİKA ÖNÜ CADDESİ ; 15-20
+Bayındır ; HÜKÜMET ÖNÜ CADDESİ ; 12-15-17
+Bayındır ; MEHMET AKİF CADDESİ ; 22
+Bayındır ; MENDERES BULVARI ; 20
+Bayındır ; CUMHURİYET MEYDANI ; -
+
+# --- Bayraklı ---
+Bayraklı ; 1847/13 SOKAK ; 17
+Bayraklı ; 1847/16 SOKAK ; 17
+Bayraklı ; 1912 SOKAK ; 20
+Bayraklı ; 286 SOKAK ; 15-30
+Bayraklı ; 288/2 SOKAK ; 30
+Bayraklı ; 569/1 SOKAK ; 25
+Bayraklı ; 7000 SOKAK ; 14.50 - 17
+Bayraklı ; 7020 SOKAK ; 17
+Bayraklı ; AKIN KIVANÇ SOKAK (1844 SOKAK) ; 12-17
+Bayraklı ; ALİJA İZETBEGOVİC CADDESİ (252 SOKAK) ; 39
+Bayraklı ; ALTINYOL CADDESİ ; 24,5
+Bayraklı ; ANADOLU CADDESİ ; 10-17
+Bayraklı ; ANKARA CADDESİ YAN YOLU
+Bayraklı ; DUMLUPINAR CADDESİ (MANAVKUYU VE OSMANGAZİ MAHALLELERİ) ; 20-25
+Bayraklı ; FATİH SULTAN MEHMET CADDESİ ; 15-25
+Bayraklı ; GİRNE BULVARI ; 24,5 -30
+Bayraklı ; HAYDAR ALİYEV CADDESİ ; 30
+Bayraklı ; İBRAHİM ETHEM CADDESİ ; 17
+Bayraklı ; İBRAHİM GALİP CADDESİ ; 10-12-17
+Bayraklı ; İSLAM KERİMOV CADDESİ ; 30
+Bayraklı ; MANAS BULVARI ; 35
+Bayraklı ; MUSTAFA KEMAL CADDESİ ; 35-40
+Bayraklı ; NUR SULTAN NAZARBAYEV CADDESİ ; 30
+Bayraklı ; ORD. PROF. DR. EKREM AKURGAL SOKAK (1643 SOKAK) (Yaya Yolu)
+Bayraklı ; ORD. PROF. DR. EKREM AKURGAL SOKAĞA BAĞLANAN YAYA YOLLARI (1641, 1640, 1639, 1638, 1915, 1916, 1917 SOKAKLAR)
+Bayraklı ; OSMANGAZİ CADDESİ ; 22-25
+Bayraklı ; OZAN ABAY CADDESİ ; 17-24
+Bayraklı ; SAKARYA CADDESİ ; 35
+Bayraklı ; SMYRNA MEYDANI ; -
+Bayraklı ; YAVUZ CADDESİ ; 25
+Bayraklı ; YÜZBAŞI İBRAHİM HAKKI CADDESİ ; 25-35-40
+
+# --- Bergama ---
+Bergama ; 2 CADDE ; 20
+Bergama ; ADNAN SAYGUN CADDESİ ; 17
+Bergama ; ANAFARTALAR CADDESİ ; 17
+Bergama ; ATATÜRK BULVARI (ADNAN MENDERES BULVARI İLE CUMHURİYET CADDESİ ARASINDA KALAN KISMI) ; 35
+Bergama ; BARBAROS CADDESİ
+Bergama ; BÖBLİNGEN CADDESİ
+Bergama ; CUMHURİYET CADDESİ ; 21
+Bergama ; DUMLUPINAR CADDESİ ; 17
+Bergama ; DÜBEK CADDESİ ; 17
+Bergama ; FABRİKA CADDESİ ; 17
+Bergama ; FATİH CADDESİ ; 17
+Bergama ; FEVZİPAŞA CADDESİ ; 17
+Bergama ; GAZİOSMANPAŞA CADDESİ ; 17
+Bergama ; KAYMAKAM KEMAL BEY CADDESİ ; 20
+Bergama ; KIZILIRMAK CADDESİ
+Bergama ; MUSTAFA YAZICI CADDESİ ; 17
+Bergama ; ŞEHİT BÜLENT AVŞAR CADDESİ ; 17
+Bergama ; YENİ CADDE ; 17
+Bergama ; CUMHURİYET MEYDANI ; -
+
+# --- Beydağ ---
+Beydağ ; CUMHURİYET KÜLTÜR CADDESİ (ÖDEMİŞ CADDESİ İLE İNÖNÜ CADDESİ ARASINDA KALAN KISMI) ; 20
+Beydağ ; MAREŞAL FEVZİ ÇAKMAK CADDESİ ; 32
+Beydağ ; LOZAN MEYDANI ; -
+Beydağ ; ULUS MEYDANI
+
+# --- Bornova ---
+Bornova ; 113 SOKAK ; 15-25
+Bornova ; 1701/7 SOKAK ; 20
+Bornova ; 282/1 SOKAK (ANKARA CAD. YAN YOL)
+Bornova ; 364/1 SOKAK ; 12-18-22
+Bornova ; 367/4 SOKAK ; 15 - 25
+Bornova ; 5003/2 SOKAK ; 30
+Bornova ; 6108 SOKAK ; 24,5
+Bornova ; 6108/1 SOKAK ; 35
+Bornova ; ABDİ İPEKÇİ CADDESİ ; 10 - 15 - 25
+Bornova ; AHMET ARVASİ CADDESİ ; 20
+Bornova ; ANKARA CADDESİ YAN YOLU
+Bornova ; AYDINLAR CADDESİ ; 15 -27
+Bornova ; BARBAROS CADDESİ ; 20
+Bornova ; BORNOVA CADDESİ ; 15-20
+Bornova ; BURAK REİS CADDESİ ; 12 - 15 - 25
+Bornova ; CENGİZ HAN CADDESİ ; 18 - 25
+Bornova ; CANAKKALE CADDESİ ; 25
+Bornova ; ERSOY CADDESİ ; 25
+Bornova ; FATİH CADDESİ ; 30
+Bornova ; FATİH SULTAN MEHMET CADDESİ ; 15 - 25
+Bornova ; FEHMİ YİĞİN CADDESİ ; 17 -25
+Bornova ; FEVZİ ÇAKMAK CADDESİ ; 15-20
+Bornova ; FEVZİ PAŞA CADDESİ ; 44166
+Bornova ; GEDİZ CADDESİ ; 20
+Bornova ; HACILARKIRI CADDESİ ; 15-25
+Bornova ; HASAN ALİ YÜCEL CADDESİ (119 SOKAK) ; 25
+Bornova ; HÜRRİYET CADDESİ ; 20-25
+Bornova ; İSTANBUL CADDESİ YAN YOLLARI
+Bornova ; İSTİKLAL CADDESİ ; 25
+Bornova ; KAMİL TUNCA CADDESİ ; 35
+Bornova ; KAZIM KARABEKİR CADDESİ ; 20
+Bornova ; KEMALPAŞA CADDESİ ; 35-25
+Bornova ; KIVANÇ CADDESİ ; 15-17-17,5-20
+Bornova ; MUSTAFA KEMAL CADDESİ ; 25-35-40
+Bornova ; OKUL SOKAK ; 25
+Bornova ; OSMANGAZİ CADDESİ ; 22-25
+Bornova ; OTOGAR YOLU ; 30
+Bornova ; PINAR CADDESİ ; 32-25-20
+Bornova ; REFİK TULGA CADDESİ
+Bornova ; SAKARYA CADDESİ ; 35
+Bornova ; SATUK BUĞRA HAN CADDESİ ; 20
+Bornova ; SANAYİ CADDESİ ; 15-25
+Bornova ; ŞEHİT TAHA CARIM CADDESİ ; 25
+Bornova ; TURGUT REİS CADDESİ ; 20
+Bornova ; ÜNİVERSİTE CADDESİ ; 20
+Bornova ; YAVUZ CADDESİ ; 25
+Bornova ; YENER CADDESİ ; 6-10-12-17
+Bornova ; YÜZBAŞI İBRAHİM HAKKI CADDESİ ; 25-35-40
+Bornova ; CUMHURİYET MEYDANI
+Bornova ; MİRALAY FETHİBEY MEYDANI ; -
+
+# --- Buca ---
+Buca ; 132 SOKAK ; 20
+Buca ; 146 SOKAK ; 25
+Buca ; 149 SOKAK ; 25
+Buca ; 154 SOKAK ; 25
+Buca ; 194 SOKAK ; 25
+Buca ; 206/5 SOKAK ; 10-15-20
+Buca ; 220 SOKAK ; 10-12-17
+Buca ; 272 SOKAK ; 15-17-20-25
+Buca ; 419/2 SOKAK ; 35
+Buca ; 61 SOKAK ; 17
+Buca ; 63 SOKAK ; 17
+Buca ; 677/19 SOKAK ; 10-24
+Buca ; 677/25 SOKAK ; 20
+Buca ; ADNAN KAHVECİ CADDESİ ; 25-30
+Buca ; AHMET PİRİŞTİNA BULVARI ; 20
+Buca ; ATATÜRK CADDESİ ; 25
+Buca ; AYDIN HATBOYU CADDESİ ; 10 - 15-17
+Buca ; DEDE KORKUT CADDESİ ; 29
+Buca ; DOĞUŞ CADDESİ ; 20-35
+Buca ; ERDEM CADDESİ ; 12-17
+Buca ; FORBES SOKAK (Koşuyolu Cd ile 325 SK arası Yaya Yolu) ; 14,5 - 15
+Buca ; GAZETECİ YAZAR İSMAİL SİVRİ BULVARI ; 12-15-20
+Buca ; GAZİ OSMAN PAŞA CADDESİ ; 20
+Buca ; GÜRÇEŞME CADDESİ ; 27
+Buca ; HOMEROS BULVARI ; 35
+Buca ; KAYNAK CADDESİ ; 25
+Buca ; KIBRIS CADDESİ ; 17
+Buca ; KOŞU YOLU CADDESİ ; 12-17
+Buca ; MEHMETÇİK CADDESİ ; 20
+Buca ; MENDERES CADDESİ
+Buca ; ONAT CADDESİ ; 20
+Buca ; OSMAN YÜKSEL SERDENGEÇTİ CADDESİ ; 20
+Buca ; ÖZBEKİSTAN CADDESİ ; 20
+Buca ; ÖZMEN CADDESİ ; 17
+Buca ; SEYFİ DEMİRSOY CADDESİ ; 74
+Buca ; TURGUT ÖZAL CADDESİ ; 25
+Buca ; UĞUR MUMCU CADDESİ ; 114
+Buca ; YAHYA KEMAL BEYATLI CADDESİ ; 20-25
+Buca ; YEŞİLDERE CADDESİ ; 50
+Buca ; CUMHUR ASPARUK MEYDANI ; -
+Buca ; MUAMMER AKSOY (HEYKEL) MEYDANI ; -
+Buca ; ORG. ÇEVİK BİR MEYDANI ; -
+Buca ; ÜCKUYULAR MEYDANI
+
+# --- Çeşme ---
+Çeşme ; 11500 SOKAK ; 30
+Çeşme ; 16000 SOKAK ; 20
+Çeşme ; 16032 SOKAK ; 25
+Çeşme ; 18000 SOKAK ; 30
+Çeşme ; 2122 SOKAK ; 27
+Çeşme ; 27000 SOKAK ; 20
+Çeşme ; 3011 SOKAK ; 22
+Çeşme ; 3118 SOKAK ; 26
+Çeşme ; 4202 SOKAK ; 22
+Çeşme ; 5193 SOKAK ; 20
+Çeşme ; 6000 SOKAK ; 30
+Çeşme ; 6471 SOKAK ; 19,5
+Çeşme ; İNÖNÜ CADDESİ ; 20
+Çeşme ; CUMHURİYET MEYDANI ; -
+
+# --- Çiğli ---
+Çiğli ; 6525 SOKAK ; 20 - 25
+Çiğli ; 6779 SOKAK ; 20
+Çiğli ; 6796/3 SOKAK ; 12-20
+Çiğli ; 6845 SOKAK ; 17
+Çiğli ; 8019/11 SOKAK ; 17-24,5
+Çiğli ; 8022/1 SOKAK ; 20
+Çiğli ; 8050 SOKAK ; 25
+Çiğli ; 8229/1 SOKAK ; 24,5
+Çiğli ; 8291 SOKAK ; 20
+Çiğli ; 8780/1 SOKAK ; 30
+Çiğli ; 8790/5 SOKAK ; 35
+Çiğli ; 8809 SOKAK ; 30
+Çiğli ; 8831 SOKAK ; 25
+Çiğli ; 8927 SOKAK ; 25
+Çiğli ; 8929 SOKAK ; 29
+Çiğli ; 9 EYLÜL CADDESİ ; 35-50
+Çiğli ; 9600 SOKAK (HARMANDALI ÇÖP ALANI YOLU) ; 15-25
+Çiğli ; AHMET PİRİŞTİNA CADDESİ ; 20
+Çiğli ; AHMET YESEVİ BULVARI ; 25-30
+Çiğli ; ANADOLU CADDESİ ; 35
+Çiğli ; ATATÜRK BULVARI ; 17
+Çiğli ; CAHER DUDAYEV BULVARI ; 35
+Çiğli ; CEMİL MERİÇ CADDESİ ; 20
+Çiğli ; ESKİ HAVAALANI CADDESİ ; 24,5-35
+Çiğli ; HAVAALANI ŞOSESİ CADDESİ ; 35 - 50
+Çiğli ; MUSTAFA KEMAL ATATÜRK BULVARI ; 25
+Çiğli ; MİMAR SİNAN CADDESİ ; 20
+Çiğli ; SEMRA AKSU CADDESİ ; 17
+Çiğli ; KASAPLAR MEYDANI
+
+# --- Dikili ---
+Dikili ; BANKACILAR 44 SOKAK ; 20
+Dikili ; BAHRİYE UÇOK CADDESİ ; 17
+Dikili ; SALİHLER ALTI CADDESİ ; 12-15-20
+Dikili ; UĞUR MUMCU CADDESİ ; 17
+Dikili ; ATATURK MEYDANI ; -
+Dikili ; BÜLENT ECEVİT MEYDANI ; -
+
+# --- Foça ---
+Foça ; DEĞİRMENLİK CADDESİ ; 20
+Foça ; ALİ STAİR CADDESİ (YENİ FOÇA) ; 17
+Foça ; İSMET İNÖNÜ BULVARI (YENİ FOÇA) ; 17
+Foça ; FOÇA BELEDİYE MEYDANI (DEMOKRASİ MEYDANI)
+
+# --- Gaziemir ---
+Gaziemir ; 1191 SOKAK ; 18
+Gaziemir ; 371 SOKAK ; 25
+Gaziemir ; 38 SOKAK ; 20
+Gaziemir ; 38/2 SOKAK ; 20
+Gaziemir ; 39 SOKAK ; 20
+Gaziemir ; 544 SOKAK ; 20
+Gaziemir ; 56 SOKAK ; 20
+Gaziemir ; 651 SOKAK ; 20
+Gaziemir ; 655 SOKAK ; 20
+Gaziemir ; 700 SOKAK ; 20
+Gaziemir ; 702 SOKAK ; 20
+Gaziemir ; 73 SOKAK ; 20
+Gaziemir ; 80 SOKAK ; 24
+Gaziemir ; 800 SOKAK ; 20
+Gaziemir ; ABDÜLHAMİT YAVUZ CADDESİ ; 15-20-24
+Gaziemir ; AKÇAY CADDESİ ; 35
+Gaziemir ; ALTAN AYDIN CADDESİ ; 20
+Gaziemir ; GAZİ ATATÜRK BULVARI ; 24
+Gaziemir ; ATATÜRK CADDESİ (SARNIÇ) ; 18-20-30
+Gaziemir ; ÇAMLIK CADDESİ ; 12-18-25
+Gaziemir ; EGE CADDESİ ; 18
+Gaziemir ; EVKA7 YOLU SOKAK ; 20
+Gaziemir ; HASAN GÜVEN CADDESİ ; 20
+Gaziemir ; KAHRAMANLAR CADDESİ ; 20
+Gaziemir ; KEMAL REİS CADDESİ ; 20
+Gaziemir ; MEHMET EMİN GÜRKAN CADDESİ ; 20
+Gaziemir ; ONDER CADDESİ ; 20
+Gaziemir ; PROF. DR. TURKAN SAYLAN CADDESİ ; 20
+Gaziemir ; SANAYİ CADDESİ ; 18
+Gaziemir ; SARNIÇ YOLU SOKAK ; 20-30
+Gaziemir ; ŞEHİT SÜLEYMAN ERGİN CADDESİ ; 20
+Gaziemir ; ABDULLAH ARDA MEYDANI ; -
+
+# --- Güzelbahçe ---
+Güzelbahçe ; ATA CADDESİ ; 20
+Güzelbahçe ; MİTHAT UNAL CADDESİ (ESKİ YELKİ YOLU)
+Güzelbahçe ; MİTHATPAŞA CADDESİ ; 17-20-24
+Güzelbahçe ; ADNAN KAHVECİ MEYDANI ; -
+Güzelbahçe ; Ş. TEĞMEN KUBİLAY MEYDANI ; -
+Güzelbahçe ; TANER KIŞLALI MEYDANI ; -
+Güzelbahçe ; UĞUR MUMCU MEYDANI ; -
+
+# --- Karabağlar ---
+Karabağlar ; 108/2 SOKAK ; 20
+Karabağlar ; 172 SOKAK ; 20
+Karabağlar ; 175/3 SOKAK ; 20
+Karabağlar ; 250 SOKAK ; 20
+Karabağlar ; 3962/30 SOKAK ; 25
+Karabağlar ; 4047/1 SOKAK ; 25
+Karabağlar ; 4240 SOKAK ; 20-22
+Karabağlar ; 4551 SOKAK ; 24,5
+Karabağlar ; 4586 SOKAK ; 20
+Karabağlar ; 4951 SOKAK ; 20
+Karabağlar ; 6000 SOKAK(TOKİ YOLU) ; 20-25
+Karabağlar ; 9125/6 SOKAK ; 14,5-17
+Karabağlar ; 9301 SOKAK ; 20
+Karabağlar ; 9306/2 SOKAK ; 20
+Karabağlar ; 9601 SOKAK ; 30
+Karabağlar ; 9638 SOKAK ; 20
+Karabağlar ; ALİ RIZA AVNİ BULVARI ; 20
+Karabağlar ; COŞKUN KALE SOKAK ; 17
+Karabağlar ; DOSTLUK BULVARI ; 24,5
+Karabağlar ; ERDAL YAKLAV CADDESİ ; 24,5
+Karabağlar ; ESKİİZMİR CADDESİ ; 14,5-17-20-30
+Karabağlar ; FARUK AKAR KARASU CADDESİ ; 14,5 -17
+Karabağlar ; FİLİZ CADDESİ ; 17
+Karabağlar ; GAZETECİ HASAN TAHSİN CADDESİ ; 20
+Karabağlar ; GÖKDERE CADDESİ
+Karabağlar ; GÜRSEL AKSEL BULVARI ; 24,5
+Karabağlar ; HALİDE EDİP ADIVAR CADDESİ ; 30 - 55
+Karabağlar ; İHSAN ALYANAK BULVARI ; 30
+Karabağlar ; İNONU CADDESİ ; 24-30
+Karabağlar ; MEHMETÇİK BULVARI ; 20-24,5
+Karabağlar ; MİTHATPAŞA CADDESİ ; 20
+Karabağlar ; ORDU CADDESİ ; 10-12-17
+Karabağlar ; OGRETMEN RASİME ŞEYHOĞLU SOKAK ; 20-30
+Karabağlar ; SAİM ÇIKRIKÇI CADDESİ ; 17
+Karabağlar ; SIRRI ATALAY SOKAK ; 20
+Karabağlar ; ŞEHİT PİLOT VOLKAN KOÇYİĞİT BULVARI ; 25-27
+Karabağlar ; YEŞİLDERE CADDESİ ; 50
+Karabağlar ; YEŞİLLİK CADDESİ ; 50
+Karabağlar ; FAHRETTİN ALTAY MEYDANI ; -
+Karabağlar ; KAZIM KARABEKİR MEYDANI (ÜÇYOL) ; -
+Karabağlar ; METİN OKTAY MEYDANI ; -
+
+# --- Karaburun ---
+Karaburun ; NAMIK KEMAL CADDESİ (MORDOĞAN) ; 20
+Karaburun ; KAZIM KARABEKİR CADDESİ (MORDOĞAN) ; 20
+Karaburun ; FATİH CADDESİ (MORDOĞAN) ; 12 - 15-25
+Karaburun ; İNÖNÜ CADDESİ (MORDOĞAN) ; 15-20
+Karaburun ; 530 SOKAK (MORDOĞAN) ; 15-20
+Karaburun ; CUMHURİYET MEYDANI (KARABURUN MERKEZ) ; -
+Karaburun ; CUMHURİYET MEYDANI (MORDOĞAN) ; -
+
+# --- Karşıyaka ---
+Karşıyaka ; 1675 SOKAK ; 10-12-32
+Karşıyaka ; 2018 SOKAK ; 25
+Karşıyaka ; 2038 SOKAK ; 40
+Karşıyaka ; 2040 SOKAK
+Karşıyaka ; 2040/3 SOKAK ; 17
+Karşıyaka ; 2040/4 SOKAK ; 17
+Karşıyaka ; 2041/3 SOKAK ; 35
+Karşıyaka ; 6323 SOKAK ; 24,50
+Karşıyaka ; 6522 SOKAK ; 20
+Karşıyaka ; 6523 SOKAK ; 20
+Karşıyaka ; 6524 SOKAK ; 20
+Karşıyaka ; 7449 SOKAK
+Karşıyaka ; 7532 SOKAK ; 20
+Karşıyaka ; ANADOLU CADDESİ ; 35
+Karşıyaka ; ATATÜRK BULVARI ; 30
+Karşıyaka ; AZİZ NESİN BULVARI ; 22
+Karşıyaka ; DOÇ.DR. BAHRİYE ÜÇOK BULVARI ; 95
+Karşıyaka ; BAŞ PEHLİVAN KARAALİ CADDESİ ; 17-30
+Karşıyaka ; BESTEKAR YUSUF NALKESEN SOKAK (ORDU CADDESİ İLE 6371 SOKAK VE CAHER DUDAYEV BULVARI'NI BAĞLAYAN KUZEY KISMI) ; 24
+Karşıyaka ; BÜLENT ECEVİT CADDESİ ; 17-20
+Karşıyaka ; CAHER DUDAYEV BULVARI ; 24,5-35
+Karşıyaka ; CEMAL GÜRSEL CADDESİ (HASAN ALİ YÜCEL BULVARI İLE 1675 SOKAK ARASI) ; 20 - 25
+Karşıyaka ; CENGİZ TOPEL CADDESİ ; 20
+Karşıyaka ; CEVDET BİLSAY CADDESİ ; 20
+Karşıyaka ; GİRNE BULVARI ; 24,5 -30
+Karşıyaka ; GÜN SAZAK BULVARI ; 25
+Karşıyaka ; HASAN ALİ YÜCEL BULVARI ; 40
+Karşıyaka ; HİDAYET ERZEYBEK SOKAK ; 20
+Karşıyaka ; İSMAİL SİVRİ SOKAK ; 25
+Karşıyaka ; LATİFE HANIM SOKAK ; 17
+Karşıyaka ; NAZIM HİKMET BULVARI ; 35,00
+Karşıyaka ; ORDU BULVARI ; 24,50
+Karşıyaka ; ORHAN ŞAİK GÖKYAY CADDESİ ; 20
+Karşıyaka ; RÜŞTÜ ŞARDAĞ CADDESİ ; 20
+Karşıyaka ; SELÇUK YAŞAR CADDESİ ; 20
+Karşıyaka ; ŞEHİTLER BULVARI ; 20
+Karşıyaka ; TARIK DURSUN K. SOKAK ; 24,5
+Karşıyaka ; ZÜBEYDE HANIM CADDESİ (CEVDET BİLSAY CADDESİ VE ANADOLU CADDESİ'Nİ BAĞLAYAN 80 M.'LİK KISMI) ; 20
+Karşıyaka ; ŞEHİT DİPLOMAT ERDOĞAN ÖZEN MEYDANI ; -
+
+# --- Kemalpaşa ---
+Kemalpaşa ; ATATÜRK BULVARI ; 30
+Kemalpaşa ; İNÖNÜ CADDESİ ; 17
+Kemalpaşa ; İZMİR CADDESİ ; 17
+Kemalpaşa ; KEMALPAŞA STADI CADDESİ ; 15-20
+Kemalpaşa ; KİRAZLI CADDESİ ; 17
+Kemalpaşa ; ATATÜRK ANIT MEYDANI ; -
+
+# --- Kınık ---
+Kınık ; ATATÜRK CADDESİ
+Kınık ; BERGAMA CADDESİ ; 20
+Kınık ; FATİH CADDESİ ; 25
+Kınık ; MEHMET AKİF ERSOY CADDESİ ; 29
+Kınık ; SOMA CADDESİ ; 25
+Kınık ; CUMHURİYET MEYDANI ; -
+
+# --- Kiraz ---
+Kiraz ; GÜMÜŞSUYU CADDESİ ; 18
+Kiraz ; CUMHURİYET MEYDANI ; -
+
+# --- Konak ---
+Konak ; 16 SOKAK ; 35
+Konak ; 2824 SOKAK ; 20
+Konak ; 2844 SOKAK ; 27
+Konak ; 853 SOKAK
+Konak ; AKDENİZ CADDESİ ; 20
+Konak ; AKINCILAR CADDESİ ; 17-20
+Konak ; ALİ ÇETİNKAYA BULVARI ; 20
+Konak ; ALİ ÇETİNKAYA BULVARI (Yaya Yolu) ; 20
+Konak ; ALTINYOL CADDESİ ; 24,5
+Konak ; ANADOLU CADDESİ
+Konak ; ANAFARTALAR CADDESİ (Yaya Yolu) ; 7-8-10-17-25
+Konak ; ANKARA CADDESİ YAN YOLU
+Konak ; ATATÜRK CADDESİ ; 24
+Konak ; BİRLEŞMİŞ MİLLETLER CADDESİ ; 23
+Konak ; BOĞAZİÇİ CADDESİ ; 20
+Konak ; BOZKURT CADDESİ ; 10-20
+Konak ; CUMHURİYET BULVARI ; 30
+Konak ; CUMHURİYET BULVARI (Yaya Yolu) ; -
+Konak ; DR. MUSTAFA ENVER BEY CADDESİ ; 20
+Konak ; DR. REFİK SAYDAM BULVARI ; 17
+Konak ; ESKİİZMİR CADDESİ ; 17-20-35
+Konak ; EŞREFPAŞA CADDESİ ; 30
+Konak ; FATİH CADDESİ ; 30 -35
+Konak ; FEVZİPAŞA BULVARI ; 30
+Konak ; GAZİBULVARI ; 35
+Konak ; GAZİ OSMAN PAŞA BULVARI ; 25
+Konak ; GAZİLER CADDESİ ; 30
+Konak ; GÜRÇEŞME CADDESİ ; 20
+Konak ; GÜRSEL AKSEL BULVARI ; 20-245
+Konak ; HALİDE EDİP ADIVAR CADDESİ ; 30-55
+Konak ; HALİT ZİYA BULVARI ; 20
+Konak ; HÜRRİYET BULVARI ; 20
+Konak ; İNÖNÜ CADDESİ ; 24-30
+Konak ; İSLAM KERİMOV CADDESİ ; 30
+Konak ; İSCİLER CADDESİ ; 12-17-20
+Konak ; KIBRIS SEHİTLERİ CADDESİ (Yaya Yolu) ; 14,5 - 20
+Konak ; LİMAN CADDESİ ; 50
+Konak ; MANAS BULVARI ; 35
+Konak ; MİLLİ KÜTÜPHANE CADDESİ (Yaya Yolu) ; 15
+Konak ; MİMAR KEMALETTİN CADDESİ (Yaya Yolu) ; 30
+Konak ; MİTHATPAŞA CADDESİ ; 20
+Konak ; MUSTAFA KEMAL SAHİL BULVARI ; 39
+Konak ; MÜRSELPAŞA BULVARI ; 30
+Konak ; NECATİBEY BULVARI ; 20
+Konak ; PLEVNE BULVARI ; 20
+Konak ; OZAN ABAY CADDESİ ; 17-20
+Konak ; ŞEHİT FETHİ BEY CADDESİ ; 17
+Konak ; ŞEHİT NEVRES BULVARI ; 20
+Konak ; ŞAİR EŞREF BULVARI ; 35
+Konak ; ŞAPAR MURAT TÜRKMENBAŞI CADDESİ ; 20
+Konak ; ŞEHİT BİNBAŞI ALİ RESMİ TUFAN CADDESİ ; 15-30
+Konak ; ŞEHİTLER CADDESİ ; 20
+Konak ; TALATPAŞA BULVARI ; 20
+Konak ; TARİHİ KEMERALTI BÖLGESİ (Fevzipaşa Caddesi, Eşrefpaşa Caddesi, Kestelli Caddesi, 834, 442, 438, 845, 450, 427 Sokaklar, Halil Rıfat Paşa Caddesi ve Konak Meydanı arasında kalan bölge)
+Konak ; VALİ KAZIM DİRİK CADDESİ ; 20
+Konak ; VASIF ÇINAR BULVARI ; 20
+Konak ; YEŞİLDERE CADDESİ ; 50
+Konak ; YEŞİLLİK CADDESİ ; 30 - 50
+Konak ; ZİYA GÖKALP BULVARI ; 25
+Konak ; ALTAY MEYDANI (ALSANCAK DEVLET HST ÖNÜ) ; -
+Konak ; ATATÜRK MEYDANI (KONAK) ; -
+Konak ; CUMHURİYET MEYDANI ; -
+Konak ; DOKUZ EYLÜL MEYDANI ; -
+Konak ; FAHRETTİN ALTAY MEYDANI ; -
+Konak ; GÜNDOĞDU MEYDANI ; -
+Konak ; KAZIM KARABEKİR MEYDANI (ÜÇYOL) ; -
+Konak ; LOZAN MEYDANI ; -
+Konak ; METİN OKTAY MEYDANI ; -
+Konak ; MİRALAY FETHİBEY MEYDANI ; -
+Konak ; MONTRÖ MEYDANI ; -
+Konak ; SAİT ALTINORDU MEYDANI
+Konak ; VAHAP ÖZALTAY MEYDANI ; -
+
+# --- Menderes ---
+Menderes ; İBRAHİM TURAN CADDESİ ; 15-20
+Menderes ; NAZAR BONCUĞU CADDESİ (GÖRECE) ; 12-17
+Menderes ; YAZAR NAMIK KEMAL CADDESİ (GÖRECE) ; 17
+Menderes ; ZİYA GÖKALP CADDESİ (GÖRECE) ; 17
+Menderes ; ATATÜRK MEYDANI ; -
+
+# --- Menemen ---
+Menemen ; 1274 SOKAK ; 20
+Menemen ; BÜLENT ECEVİT BULVARI ; 17
+Menemen ; GAFFAR OKKAN SOKAK (1258 SK.)
+Menemen ; İZMİR CADDESİ ; 12-18
+Menemen ; MUSTAFA YÜCEL ÖZBİLGİN BULVARI ; 20
+Menemen ; ŞEHİT ALİ İHSAN KALMAZ CADDESİ ; 20
+Menemen ; ZİYA GÖKALP CADDESİ ; 15-17
+Menemen ; 4. CADDE (ULUKENT) ; 30
+Menemen ; 5. CADDE (ULUKENT) ; 25
+Menemen ; 6. CADDE (ULUKENT) ; 15-20
+Menemen ; 7112 SOKAK (ULUKENT) ; 17
+Menemen ; 7117 SOKAK (ULUKENT) ; 17
+Menemen ; 7119 SOKAK (ULUKENT)
+Menemen ; 7124 SOKAK (ULUKENT) ; 7-17
+Menemen ; 7207 SOKAK (ULUKENT)
+Menemen ; 7208 SOKAK (ULUKENT)
+Menemen ; 7401 SOKAK (ULUKENT) ; 17
+Menemen ; 7418 SOKAK (ULUKENT) ; 17
+Menemen ; 7421 SOKAK (ULUKENT)
+Menemen ; 29 EKİM CADDESİ (KOYUNDERE)
+Menemen ; HÜKÜMET MEYDANI ; -
+
+# --- Narlıdere ---
+Narlıdere ; 27 MAYIS CADDESİ ; 12 - 17,5
+Narlıdere ; AÇELYA SOKAK ; 20-24,5
+Narlıdere ; AHMET TANER KIŞLALI CADDESİ ; 14,5 -20
+Narlıdere ; ALTINVADİ CADDESİ ; 17,5
+Narlıdere ; ERDAL İNÖNÜ CADDESİ ; 17,5
+Narlıdere ; MİTHATPAŞA CADDESİ ; 24,5
+Narlıdere ; MUSA ANTER SOKAK ; 17,5
+Narlıdere ; ÖZKARAKAYA CADDESİ (NARBEL) ; 17,5
+Narlıdere ; PROF. DR. TÜRKAN SAYLAN CADDESİ ; 17
+Narlıdere ; YAVUZ BİNGÖL SANAT SOKAK ; 17
+Narlıdere ; AHMET PİRİŞTİNA DEMOKRASİ MEYDANI
+
+# --- Ödemiş ---
+Ödemiş ; 112 SOKAK ; 25
+Ödemiş ; 1011 SOKAK ; 25
+Ödemiş ; 1013 SOKAK ; 25
+Ödemiş ; 1081 SOKAK ; 25
+Ödemiş ; 1088 SOKAK ; 17
+Ödemiş ; 1127 SOKAK ; 17
+Ödemiş ; 1342 SOKAK ; 17
+Ödemiş ; 1363 SOKAK ; 17
+Ödemiş ; 1366 SOKAK ; 17 - 25
+Ödemiş ; 2035 SOKAK ; 25
+Ödemiş ; 416 SOKAK ; 25
+Ödemiş ; 454 SOKAK ; 25
+Ödemiş ; 503 SOKAK
+Ödemiş ; 520 SOKAK ; 17
+Ödemiş ; 523 SOKAK ; 25
+Ödemiş ; 754 SOKAK ; 1
+Ödemiş ; 757 SOKAK
+Ödemiş ; 763 SOKAK
+Ödemiş ; ANADOLU CADDESİ ; 17.5
+Ödemiş ; EMMİOĞLU CADDESİ ; 17
+Ödemiş ; EMNİYET SOKAK ; 25
+Ödemiş ; FAKÜLTE CADDESİ ; 25
+Ödemiş ; İSTASYON CADDESİ ; 17
+Ödemiş ; KENT SOKAK ; 25
+Ödemiş ; KIBRIS CADDESİ ; 19
+Ödemiş ; KURTULUŞ CADDESİ ; 17
+Ödemiş ; MENDERES CADDESİ ; 30
+Ödemiş ; ORTAÇ SOKAK ; 17-22
+Ödemiş ; PROF.DR. MUZAFFER ŞERİF CADDESİ ; 19
+Ödemiş ; SANAYİ CADDESİ ; 17
+Ödemiş ; SARAÇOĞLU CADDESİ ; 17-25
+Ödemiş ; STAD SOKAK ; 17
+Ödemiş ; ŞEHİT ADNAN MENDERES BULVARI ; 17 - 25
+Ödemiş ; ŞEHİT İSMAİL HAKKI BULUR SOKAK ; 17
+Ödemiş ; ŞEHİT ÖZPOLAT CADDESİ
+Ödemiş ; ŞEHİT TURAN EMEKSİZ CADDESİ ; 25
+Ödemiş ; SANAYİ SİTESİ ŞEREF USTA CADDESİ ; 20
+Ödemiş ; TAKSİM SOKAK
+Ödemiş ; TAVASLI SOKAK ; 17
+Ödemiş ; TÜRBE CADDESİ ; 19,5
+Ödemiş ; ZEYTİNLİK ANAYOLU ; 17-25
+Ödemiş ; ZİLE SOKAK ; 17
+Ödemiş ; BİLGİN SOKAK (ÇAYLI) ; 20
+Ödemiş ; KOŞUYOLU CADDESİ (ÇAYLI) ; 23
+Ödemiş ; MEDENİYET CADDESİ (ÇAYLI) ; 12-15-20
+Ödemiş ; ATATÜRK CADDESİ (GÖLCÜK) ; 20
+Ödemiş ; ZEYTİNLİK CADDESİ (GÖLCÜK) ; 25
+Ödemiş ; ULUS MEYDANI (ATATÜRK MAHALLESİ) ; -
+Ödemiş ; ÖDEMİŞ HÜRRİYET MEYDANI ; -
+
+# --- Seferihisar ---
+Seferihisar ; ŞEHİT GENERAL TEMEL CİNGÖZ CADDESİ ; 17
+Seferihisar ; 80. YIL CUMHURİYET MEYDANI ; -
+
+# --- Selçuk ---
+Selçuk ; PROF. ANTON KALLİNGER CADDESİ ; 10 - 20
+Selçuk ; ARGENTA CADDESİ ; 17
+Selçuk ; KUBİLAY CADDESİ ; 14
+Selçuk ; ŞEHABETTİN DEDE CADDESİ ; 17
+Selçuk ; ŞEHİT PİLOT ÜSTEĞMEN DENİZ TAYLAN CADDESİ ; 17
+Selçuk ; GAZİ ATATÜRK MEYDANI ; -
+
+# --- Tire ---
+Tire ; 19 MAYIS CADDESİ ; 17
+Tire ; ADNAN MENDERES BULVARI
+Tire ; AKDENİZ SOKAK ; 20
+Tire ; ALBAYRAK SOKAK ; 20
+Tire ; BİLGE SOKAK ; 20
+Tire ; CELAL BAYAR BULVARI ; 25
+Tire ; CUMHURİYET CADDESİ ; 17
+Tire ; ÇAKABEY SOKAK ; 20
+Tire ; DENİZ CADDESİ ; 22
+Tire ; FAİK TOKLUOĞLU BULVARI ; 17 - 26
+Tire ; FATİH CADDESİ ; 17
+Tire ; GENÇLİK CADDESİ ; 20
+Tire ; GONCA SOKAK
+Tire ; HALİL ÇULHAOĞLU CADDESİ ; 17
+Tire ; İSTASYON CADDESİ ; 20-22-25-30
+Tire ; KARACAALİ CADDESİ ; 20
+Tire ; KAZANOĞLU CAMİİ SOKAK ; 20
+Tire ; KIBRIS CADDESİ ; 24
+Tire ; MAHMUT AŞIK CADDESİ ; 17
+Tire ; MALTEPE CADDESİ ; 24
+Tire ; MEHMET GÜVENSAY CADDESİ ; 20
+Tire ; METE SOKAK ; 20
+Tire ; NECİPPAŞA CADDESİ
+Tire ; ÖZGÜRLÜK CADDESİ ; 24
+Tire ; PİRİ REİS CADDESİ ; 20
+Tire ; RAFET SAYGILI CADDESİ ; 17
+Tire ; SADIK GİZ CADDESİ ; 17
+Tire ; SAMİM ÜZER CADDESİ ; 17
+Tire ; SEHA GİDEL SOKAK ; 20
+Tire ; ŞEHİT MEHMET ÇOBAN BULVARI ; 20
+Tire ; ŞEHİT SELAHATTİN ÇAKIR BULVARI ; 24
+Tire ; ŞEHİT YÜZBAŞI GÜLTEKİN BAŞARGAN CADDESİ ; 17
+Tire ; TANJU OKAN SOKAK ; 20
+Tire ; TOROS CADDESİ ; 20
+Tire ; ULUS CADDESİ ; 23
+Tire ; VEFA SOKAK ; 20
+Tire ; YENİTABAKHANE CADDESİ ; 20
+Tire ; TİRE CUMHURİYET MEYDANI
+Tire ; ALAY MEYDANI
+Tire ; ADLİYE MEYDANI (GÖKÇEN EFE MEYDANI) ; -
+Tire ; YILDIZ MEYDANI (GÜMÜŞPALA CADDESİ İLE İSMAİL SOKAK ARASINDA KALAN ÜCGEN ALAN)
+
+# --- Torbalı ---
+Torbalı ; CEMALİ TUNCER BULVARI ; 20
+Torbalı ; DOĞAN BURSALIOĞLU CADDESİ ; 15-20
+Torbalı ; FEVZİ PAŞA CADDESİ ; 20
+Torbalı ; HÜKÜMET CADDESİ ; 10-17
+Torbalı ; İSMETPAŞA CADDESİ ; 15517
+Torbalı ; METROPOLİS BULVARI ; 17-25
+Torbalı ; MİTHATPAŞA CADDESİ ; 15-20
+Torbalı ; SADIK İLERİ BULVARI ; 20
+Torbalı ; TORBALI CADDESİ ; 20
+Torbalı ; UĞUR MUMCU BULVARI ; 17
+Torbalı ; 187/1 SOKAK (AYRANCILAR) (Yaya Yolu) ; 1
+Torbalı ; 189 SOKAK (AYRANCILAR) ; 10-15-20
+Torbalı ; AHMET ÖZKAN BULVARI (AYRANCILAR) ; 30
+Torbalı ; TEPEKÖY ATATÜRK MEYDANI ; -
+
+# --- Urla ---
+Urla ; 75. YIL CUMHURİYET CADDESİ ; 22
+Urla ; AHMET BESİM UYAL CADDESİ ; 30-35
+Urla ; BÜLENT BARATALI BULVARI ; 22
+Urla ; HÜSEYİN ZEREN CADDESİ ; 20
+Urla ; NEYZEN TEVFİK CADDESİ ; 17-23-35
+Urla ; MİTHATPAŞA CADDESİ ; 27
+Urla ; NUR DİKMEN CADDESİ ; 22-25
+Urla ; URLA MEYDANI ; -
+
+# --- Karar metniyle EK-1'e eklenenler ---
+# 10.03.2021 / 05.251 sayılı karar, Konak Tarihi Kemeraltı
+# Bölgesi'ndeki şu yolları listeye ekliyor; ekteki tabloda
+# henüz görünmedikleri için buraya elle yazıldılar.
+Konak ; HAVRA SOKAĞI
+Konak ; 920 SOKAK
+Konak ; 926 SOKAK
+Konak ; 937 SOKAK
