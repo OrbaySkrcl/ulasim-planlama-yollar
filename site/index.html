@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
 <title>İzmir Köy Yolları Devir Haritası</title>
-<meta name="description" content="İzmir'de İl Özel İdaresi'nden Büyükşehir Belediyesi'ne geçen mahalle ve köy yollarının güncel haritası. Kategorilere göre filtreleyin, yol arayın, mesafe ölçün, veriyi indirin.">
+<meta name="description" content="İzmir yol sorumluluk haritası — çalışma amaçlı.">
+<meta name="robots" content="noindex, nofollow">
 <meta property="og:title" content="İzmir Köy Yolları Devir Haritası">
 <meta property="og:description" content="İl Özel İdaresi'nden Büyükşehir Belediyesi'ne geçen mahalle ve köy yolları — açık, güncellenen harita.">
 <meta property="og:type" content="website">
@@ -29,7 +30,8 @@
       <button class="dbtn ikon" id="btn-konum" title="Konumuma git">📍<span class="etiket-gizle" style="margin-left:5px">Konumum</span></button>
       <button class="dbtn ikon" id="btn-tema" title="Açık / koyu tema">🌙</button>
       <div class="menu-sarma">
-        <button class="dbtn" id="btn-indir">⬇︎ <span class="etiket-gizle">Veriyi indir</span></button>
+        <button class="dbtn" id="btn-indir" hidden>⬇︎ <span class="etiket-gizle">Veriyi indir</span></button>
+        <button class="dbtn" id="yonetici-rozet" hidden title="Yönetici modundasınız. Çıkmak için tıklayın.">🔑 <span class="etiket-gizle">Yönetici</span></button>
         <div class="menu" id="menu-indir">
           <div class="baslik">Veriyi indir</div>
           <a href="veri/yollar.gpkg" download class="onerilen">GeoPackage — QGIS için (<span id="boyut-gpkg">–</span>)
@@ -167,8 +169,8 @@
         <div class="not-kutu" id="site-not"></div>
         <p class="kucuk" style="margin:10px 0 0">
           Son güncelleme: <strong id="guncelleme">–</strong><br>
-          Kaynak: <span id="kaynak">–</span><br>
-          <a href="#" id="link-yardim">Bu harita nasıl güncelleniyor?</a><br>
+          <span id="satir-kaynak" hidden>Kaynak: <span id="kaynak">–</span><br></span>
+          <span id="satir-yardim" hidden><a href="#" id="link-yardim">Bu harita nasıl güncelleniyor?</a><br></span>
           <a id="link-rehber" href="#" target="_blank" rel="noopener" hidden>📖 Düzeltme rehberi</a>
         </p>
       </section>

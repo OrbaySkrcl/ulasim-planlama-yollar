@@ -15,7 +15,11 @@ const s = (await send("Target.attachToTarget", { targetId: t.result.targetId, fl
 await send("Runtime.enable", {}, s); await send("Page.enable", {}, s); await send("Log.enable", {}, s);
 await send("Network.enable", {}, s); await send("Network.setCacheDisabled", { cacheDisabled: true }, s);
 await send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false }, s);
-await send("Page.navigate", { url: "http://127.0.0.1:8000/" }, s);
+// Liste raporu (CSV) yönetici dosyasıdır; suite siteyi anahtarla açar.
+// Ziyaretçinin ne görüp göremediği gizlilik_testi.mjs'in işi.
+const ANAHTAR = process.argv[3] || process.env.YONETICI_ANAHTARI || "deneme-anahtar-123";
+await send("Page.navigate",
+  { url: "http://127.0.0.1:8000/?y=" + encodeURIComponent(ANAHTAR) }, s);
 async function ev(e) {
   const r = await send("Runtime.evaluate", { expression: e, returnByValue: true, awaitPromise: true }, s);
   if (!r.result) return null;
@@ -184,17 +188,18 @@ denetle("takma ad kuralları eşleşmeyi artırdı", await ev(`(function(){
 denetle("durum raporu (CSV) indirilebiliyor", await ev(`(async function(){
   var g=window.IZMIR_HARITA.ozet.genis_yollar;
   var a=document.getElementById('genis-rapor');
-  var y=await fetch('veri/'+g.rapor_dosyasi);
+  var y=await fetch(a.getAttribute('href'));
   var ham=new Uint8Array(await y.arrayBuffer());
   var metin=new TextDecoder('utf-8').decode(ham);
   var satir=metin.trim().split('\\n');
   // BOM baytlarina bak: TextDecoder metinde silebiliyor
-  return {baglantiGorunur: a && !a.hidden, http:y.status,
+  return {baglantiGorunur: a && !a.hidden, adres:a.getAttribute('href'),
+          http:y.status,
           satir:satir.length, baslik:satir[0].replace(/^\\uFEFF/,'').slice(0,40),
           bom: ham[0]===0xEF && ham[1]===0xBB && ham[2]===0xBF,
           noktaliVirgul: satir[0].indexOf(';')>0};})()`),
   r => r.baglantiGorunur && r.http === 200 && r.satir > 1300 && r.bom &&
-       r.noktaliVirgul);
+       r.noktaliVirgul && /^veri\/y-[0-9a-f]{16}\//.test(r.adres));
 
 const konsol = olaylar.map(m => { const p = m.params; return p.entry ? p.entry.level + ": " + p.entry.text : p.type + ": " + (p.args || []).map(a => a.value ?? a.description ?? "").join(" "); })
   .filter(x => !/tile|openstreetmap|arcgisonline|favicon|ERR_TUNNEL|ERR_NAME|ERR_PROXY|ERR_INTERNET/i.test(x))
@@ -202,6 +207,8 @@ const konsol = olaylar.map(m => { const p = m.params; return p.entry ? p.entry.l
 if (konsol.length) basarisiz++;
 console.log("KONSOL:", konsol.length ? konsol.slice(0, 8) : "(temiz)");
 console.log("\nBASARISIZ: " + basarisiz);
-const ss = await send("Page.captureScreenshot", { format: "png" }, s);
-fs.writeFileSync(process.argv[2], Buffer.from(ss.result.data, "base64"));
+if (process.argv[2]) {
+  const ss = await send("Page.captureScreenshot", { format: "png" }, s);
+  fs.writeFileSync(process.argv[2], Buffer.from(ss.result.data, "base64"));
+}
 process.exit(basarisiz ? 1 : 0);

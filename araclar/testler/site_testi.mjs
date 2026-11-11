@@ -7,13 +7,19 @@
  *   1) python3 araclar/derle.py
  *   2) python3 -m http.server 8000 --directory _site &
  *   3) chrome --headless=new --remote-debugging-port=9333 --user-data-dir=/tmp/chr &
- *   4) node araclar/testler/site_testi.mjs
+ *   4) node araclar/testler/site_testi.mjs <ekran.png> [yönetici anahtarı]
+ *
+ * İndirme menüsü artık yalnızca yönetici modunda açık. Bu suite tüm
+ * özellikleri denetlediği için siteyi anahtarla açar; ziyaretçinin ne
+ * görüp göremediği ayrı bir suite'in işi: gizlilik_testi.mjs
  *
  * Her satır bir denetim sonucudur. Sonda "BASARISIZ: 0" ve "KONSOL: (temiz)"
  * görüyorsanız site sağlamdır.
  */
 const PORT = +(process.env.CDP_PORT || 9333);
-const ADRES = process.env.SITE_ADRES || "http://127.0.0.1:8000/";
+const KOK = process.env.SITE_ADRES || "http://127.0.0.1:8000/";
+const ANAHTAR = process.argv[3] || process.env.YONETICI_ANAHTARI || "";
+const ADRES = KOK + (ANAHTAR ? "?y=" + encodeURIComponent(ANAHTAR) : "");
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const json = async p => (await fetch("http://127.0.0.1:" + PORT + p)).json();
 
@@ -295,10 +301,12 @@ denetle("GeoPackage bağlantısı ve boyutu var", await ev(`(async function(){
   var b=document.querySelector('#boyut-gpkg');
   var y=await fetch(a.getAttribute('href'),{method:'HEAD'});
   return {varMi:!!a, onerilen:a.classList.contains('onerilen'),
+          adres:a.getAttribute('href'),
           boyut:b.textContent, http:y.status,
           tur:y.headers.get('content-type'),
           bayt:+y.headers.get('content-length')};})()`),
-  r => r.varMi && r.onerilen && r.http === 200 && r.bayt > 1000000 && /MB/.test(r.boyut));
+  r => r.varMi && r.onerilen && r.http === 200 && r.bayt > 1000000 &&
+       /MB/.test(r.boyut) && /^veri\/y-[0-9a-f]{16}\//.test(r.adres));
 
 denetle("süzgeçli indirme doğru sayıyı veriyor", await ev(`(async function(){
   var D=window.IZMIR_HARITA;

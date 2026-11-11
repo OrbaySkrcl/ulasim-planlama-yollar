@@ -18,6 +18,7 @@ Harici kütüphane gerekmez (sadece Python 3 standart kütüphanesi).
 """
 
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -1718,9 +1719,20 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
                        "features": ozler}, f, ensure_ascii=False, separators=(",", ":"))
         return hedef.stat().st_size
 
-    # Tamamı tek dosyada (indirme için)
-    gj_yolu = veri_cikti / "yollar.geojson"
-    _geojson_yaz(gj_yolu, ozellikler)
+    # İndirme paketleri ve iç raporlar yöneticiye ait gizli klasöre gider.
+    # Anahtar yoksa hiç üretilmezler: varsayılan durum "kimse indiremez".
+    _anahtar = yonetici_anahtari(ayar)
+    _klasor_adi = yonetici_klasoru(_anahtar)
+    if _klasor_adi:
+        yonetici_cikti = veri_cikti / _klasor_adi
+        yonetici_cikti.mkdir(parents=True, exist_ok=True)
+    else:
+        yonetici_cikti = None
+
+    # Tamamı tek dosyada (indirme için) — yalnızca yöneticiye
+    gj_yolu = (yonetici_cikti / "yollar.geojson") if yonetici_cikti else None
+    if gj_yolu:
+        _geojson_yaz(gj_yolu, ozellikler)
 
     # Geniş yollar katmanının dosyasını yaz (eşleştirme yukarıda yapıldı)
     if genis_bilgi and genis_ozlikler:
@@ -1733,11 +1745,17 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
                       ensure_ascii=False, separators=(",", ":"))
         # genis_bilgi ozet sozlugune asagida konuyor; burada yalnizca boyutu doldur
         genis_bilgi["boyut_mb"] = round(_hedef.stat().st_size / 1048576, 2)
+        if not yonetici_cikti:
+            genis_bilgi.pop("satir_raporu", None)
+            genis_bilgi["rapor_dosyasi"] = None
+        log("  genis_yollar.geojson : %.2f MB (ayri katman)"
+            % genis_bilgi["boyut_mb"])
 
+    if genis_bilgi and genis_ozlikler and yonetici_cikti:
         # Listenin guncel akibeti: her satir haritada ne oldu? Excel'in
         # kendisi degismez; bu, o listenin su anki durumunun raporudur.
         # Noktali virgul + BOM: Turkce Excel dogrudan acar.
-        _rapor = veri_cikti / genis_bilgi["rapor_dosyasi"]
+        _rapor = (yonetici_cikti or veri_cikti) / genis_bilgi["rapor_dosyasi"]
         _basliklar = ["Liste", "Satır", "İlçe", "Yol adı (listede)", "Renk",
                       "İmar genişliği", "Durum", "Bulunan yol",
                       "Uzunluk (km)", "Düzeltmeyle çıkarılan", "Mahalle(ler)"]
@@ -1762,21 +1780,23 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
                     r["duzeltmeyle_cikan"], ", ".join(r["mahalleler"])]) + "\r\n")
         genis_bilgi["rapor_boyut_kb"] = round(_rapor.stat().st_size / 1024, 1)
         genis_bilgi.pop("satir_raporu", None)   # ozet.json sismesin
-        log("  genis_yollar.geojson : %.2f MB (ayri katman)"
-            % genis_bilgi["boyut_mb"])
 
     # QGIS için GeoPackage: aynı veri, ama mekânsal indeksli.
     # GeoJSON'u QGIS her kaydırmada baştan tarıyor; bu dosya o sorunu çözer.
     # Burada bir aksilik olursa site yine yayınlansın; GeoJSON zaten duruyor.
-    gpkg_yolu = veri_cikti / "yollar.gpkg"
-    try:
-        gpkg_boyut, gpkg_indeksli = gpkg_yaz(
-            gpkg_yolu, ozellikler, {d: k["ad"] for d, k in kategoriler.items()})
-    except Exception as e:
-        log("  Uyarı: GeoPackage yazılamadı (%s). Site GeoJSON ile yayınlanacak." % e)
-        if gpkg_yolu.exists():
-            gpkg_yolu.unlink()
-        gpkg_boyut, gpkg_indeksli = 0, False
+    gpkg_yolu = (yonetici_cikti / "yollar.gpkg") if yonetici_cikti else None
+    gpkg_boyut, gpkg_indeksli = 0, False
+    if gpkg_yolu:
+        try:
+            gpkg_boyut, gpkg_indeksli = gpkg_yaz(
+                gpkg_yolu, ozellikler,
+                {d: k["ad"] for d, k in kategoriler.items()})
+        except Exception as e:
+            log("  Uyarı: GeoPackage yazılamadı (%s). "
+                "Site GeoJSON ile yayınlanacak." % e)
+            if gpkg_yolu.exists():
+                gpkg_yolu.unlink()
+            gpkg_boyut, gpkg_indeksli = 0, False
 
     # Kategori başına ayrı dosya: site yalnızca açık kategorileri indirir.
     # 40 bin yolun tamamını birden yüklemek tarayıcıyı gereksiz yorar.
@@ -1804,8 +1824,10 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
     KAYNAK_SINIRI_MB = 25
     kaynak_boyut = kml_yolu.stat().st_size / 1048576
     kaynak_indirme = None
-    if kaynak_boyut <= KAYNAK_SINIRI_MB:
-        shutil.copyfile(kml_yolu, veri_cikti / kml_yolu.name)
+    if not yonetici_cikti:
+        pass                      # anahtar yok: kaynak dosya yayınlanmaz
+    elif kaynak_boyut <= KAYNAK_SINIRI_MB:
+        shutil.copyfile(kml_yolu, yonetici_cikti / kml_yolu.name)
         kaynak_indirme = kml_yolu.name
     else:
         log("  Not: kaynak dosya %.1f MB (>%d MB); siteye kopyalanmadı. "
@@ -1865,16 +1887,28 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
         "degisiklikler": degisiklikler,
         "onceki_surum": onceki_bilgi,
         "depo": depo_bilgisi(),
-        "ayar_ham": ayar,
+        # gizlilik bloğu çıkarılır: anahtar oraya yazılmış olabilir
+        "ayar_ham": {k: v for k, v in ayar.items() if k != "gizlilik"},
         "ad_sayisi": len(ad_listesi),
         "ad_dosyasi": "adlar.json",
         "ad_dosya_mb": round(ad_yolu.stat().st_size / 1048576, 2),
-        "veri_boyut_mb": round(gj_yolu.stat().st_size / 1048576, 2),
+        "veri_boyut_mb": (round(gj_yolu.stat().st_size / 1048576, 2)
+                          if gj_yolu else 0),
         "gpkg_boyut_mb": round(gpkg_boyut / 1048576, 2) if gpkg_boyut else 0,
         "gpkg_indeksli": gpkg_indeksli,
     }
+    # Özeti ikiye böl: ziyaretçinin tarayıcısına yalnızca haritayı çizmeye
+    # yarayan kısım iner. Gerisi gizli klasördeki dosyada durur.
+    _giz = ayar.get("gizlilik") or {}
+    ozet, yonetici_ozet = ozeti_ayir(
+        ozet, ayrintilari_gizle=_giz.get("ayrintilari_gizle", True))
+    ozet["yonetici_modu"] = bool(_klasor_adi)
     (veri_cikti / "ozet.json").write_text(
         json.dumps(ozet, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    if yonetici_cikti:
+        (yonetici_cikti / "ozet_yonetici.json").write_text(
+            json.dumps(yonetici_ozet, ensure_ascii=False, separators=(",", ":")),
+            encoding="utf-8")
 
     # 7) Özet çıktı
     log("")
@@ -1895,10 +1929,20 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
     for u in uyarilar:
         log("  ! %s: %s" % (u["baslik"], u["mesaj"]))
     log("  " + "-" * 58)
-    log("  yollar.geojson : %.2f MB (tamamı, indirme için)" % ozet["veri_boyut_mb"])
-    if ozet["gpkg_boyut_mb"]:
+    if not _klasor_adi:
+        log("  Yönetici klasörü üretilmedi (YONETICI_ANAHTARI tanımsız): "
+            "indirme paketleri ve iç raporlar yayınlanmıyor.")
+    else:
+        # DİKKAT: klasör adı günlüğe YAZILMAZ. Bu depo herkese açık ve
+        # derleme günlüğü Actions özetine düşüyor; adı yazmak gizli
+        # klasörü ifşa etmek olurdu.
+        log("  Yönetici klasörü üretildi (adı anahtardan türetilir, "
+            "günlüğe yazılmaz).")
+    log("  yollar.geojson : %.2f MB (tamamı, indirme için)"
+        % (yonetici_ozet.get("veri_boyut_mb") or 0))
+    if yonetici_ozet.get("gpkg_boyut_mb"):
         log("  yollar.gpkg    : %.2f MB (QGIS için%s)"
-            % (ozet["gpkg_boyut_mb"],
+            % (yonetici_ozet["gpkg_boyut_mb"],
                ", mekânsal indeksli" if gpkg_indeksli else ", indekssiz"))
     log("  ozet.json      : %.2f MB | adlar.json: %.2f MB (ilk aramada iner)"
         % ((veri_cikti / "ozet.json").stat().st_size / 1048576 if (veri_cikti / "ozet.json").exists() else 0,
@@ -2282,6 +2326,93 @@ def genis_yollar_eslestir(xlsx, ozellikler, ayar, veri_dizini=None):
         "eslesen_satir": len(kayitlar) - len(eslesmeyen),
         "eslesmeyen": eslesmeyen,
     }
+
+
+# ---------------------------------------------------------------------------
+# Yönetici klasörü
+#
+# Ziyaretçi haritayı görsün ama veriyi indiremesin isteniyor. Bir düğmeyi
+# gizlemek yetmez: dosya yayındaysa adresini bilen indirir. Bu yüzden
+# yöneticiye ait ne varsa adı ANAHTARDAN TÜRETİLEN bir klasöre yazılır.
+# GitHub Pages klasör listesi vermediği için bu adres tahmin edilemez.
+#
+# Anahtar depoda durmaz: YONETICI_ANAHTARI ortam değişkeninden (GitHub
+# Actions gizli değişkeni) okunur. Anahtar yoksa klasör hiç üretilmez —
+# yani varsayılan durum "kimse indiremez".
+# ---------------------------------------------------------------------------
+def yonetici_anahtari(ayar):
+    """Anahtarı ortamdan, yoksa ayardan okur. Boşsa None.
+
+    Doğru yer ortam değişkenidir (GitHub Actions gizli değişkeni).
+    kategoriler.json herkese açık bir dosyadır; oraya yazılan anahtar
+    anahtar olmaktan çıkar, bu yüzden uyarılır.
+    """
+    anahtar = (os.environ.get("YONETICI_ANAHTARI") or "").strip()
+    if anahtar:
+        return anahtar
+    anahtar = str((ayar.get("gizlilik") or {}).get("yonetici_anahtari")
+                  or "").strip()
+    if anahtar:
+        log("  ! Yönetici anahtarı kategoriler.json'dan okundu. Bu dosya "
+            "depoda herkese açık; anahtarı GitHub'da Settings → Secrets "
+            "and variables → Actions altına YONETICI_ANAHTARI adıyla taşıyın.")
+    return anahtar or None
+
+
+def yonetici_klasoru(anahtar):
+    """Anahtardan klasör adı: y-<sha256'nın ilk 16 hanesi>."""
+    if not anahtar:
+        return None
+    ozet = hashlib.sha256(anahtar.encode("utf-8")).hexdigest()
+    return "y-" + ozet[:16]
+
+
+# Ziyaretçinin görmemesi gereken özet alanları. Haritayı çizmek için
+# gerekmezler; çalışmanın iç mutfağını anlatırlar.
+YONETICI_ALANLARI = ("uyarilar", "degisiklikler", "onceki_surum", "depo",
+                     "kaynak_dosya", "kaynak_boyut_mb", "kaynak_indirme",
+                     "ayar_ham", "veri_boyut_mb", "gpkg_boyut_mb",
+                     "gpkg_indeksli")
+
+# Geniş yollar bölümünde aynı ayrım
+GENIS_YONETICI_ALANLARI = ("eslesmeyen", "belirsiz", "belirsiz_adet",
+                           "liste_degisimi", "duzeltme", "ek1", "kaynak",
+                           "rapor_dosyasi", "rapor_boyut_kb")
+
+
+def ozeti_ayir(ozet, ayrintilari_gizle=True):
+    """(herkese_acik, yonetici) ikilisi döndürür.
+
+    Gizlenen alanlar ozet.json'dan tamamen ÇIKARILIR; ekranda gizlenmezler,
+    ziyaretçinin tarayıcısına hiç inmezler.
+    """
+    gizli = {}
+    for alan in YONETICI_ALANLARI:
+        if alan in ozet:
+            gizli[alan] = ozet.pop(alan)
+
+    genis = ozet.get("genis_yollar")
+    if isinstance(genis, dict):
+        gizli_genis = {}
+        for alan in GENIS_YONETICI_ALANLARI:
+            if alan in genis:
+                gizli_genis[alan] = genis.pop(alan)
+        # Ziyaretçi kaç satırın eşleştiğini de bilmesin; bu bir iş notudur.
+        for alan in ("liste_satiri", "eslesen_satir"):
+            if alan in genis:
+                gizli_genis[alan] = genis.pop(alan)
+        if ayrintilari_gizle and genis.get("aciklama"):
+            gizli_genis["aciklama"] = genis["aciklama"]
+            genis["aciklama"] = ""
+        gizli["genis_yollar"] = gizli_genis
+
+    if ayrintilari_gizle:
+        gizli_kat = {}
+        for durum, k in (ozet.get("kategoriler") or {}).items():
+            if k.get("aciklama"):
+                gizli_kat[durum] = k.pop("aciklama")
+        gizli["kategori_aciklamalari"] = gizli_kat
+    return ozet, gizli
 
 
 def kml_bul(veri_dizini, gpkg_haric=False):

@@ -19,7 +19,20 @@ from collections import defaultdict
 from pathlib import Path
 
 KOK = Path(__file__).resolve().parents[2]
-GJ = KOK / "_site" / "veri" / "yollar.geojson"
+VERI = KOK / "_site" / "veri"
+
+
+def _tam_geojson():
+    """Tüm yolları içeren dosya. Artık yönetici klasöründe olabilir."""
+    acik = VERI / "yollar.geojson"
+    if acik.exists():
+        return acik
+    for g in sorted(VERI.glob("y-*/yollar.geojson")):
+        return g
+    return acik                       # yoksa hata mesajı bu adı yazsın
+
+
+GJ = _tam_geojson()
 AYAR = KOK / "veri" / "kategoriler.json"
 HUCRE = 0.00002          # ~2 m ızgara
 YAKIN_M = 2.0
@@ -42,7 +55,10 @@ def anahtar(p, q):
 
 def main():
     if not GJ.exists():
-        print("HATA: %s yok. Önce 'python3 araclar/derle.py' çalıştırın." % GJ)
+        print("HATA: tüm yolları içeren dosya bulunamadı (%s).\n"
+              "Bu dosya artık yalnızca yönetici klasörüne yazılıyor; şununla "
+              "derleyin:\n"
+              "  YONETICI_ANAHTARI=<anahtar> python3 araclar/derle.py" % GJ)
         return 2
     ustun = "1"
     if AYAR.exists():

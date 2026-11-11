@@ -39,6 +39,11 @@ jobs:
           python-version: "3.11"
 
       - name: KML'i siteye dönüştür
+        env:
+          # Yönetici anahtarı. Depoda durmaz; Settings → Secrets and
+          # variables → Actions → New repository secret ile tanımlanır.
+          # Tanımsızsa indirme paketleri ve iç raporlar hiç yayınlanmaz.
+          YONETICI_ANAHTARI: ${{ secrets.YONETICI_ANAHTARI }}
         run: |
           set -o pipefail
           python3 araclar/derle.py --cikti _site 2>&1 | tee derleme.log

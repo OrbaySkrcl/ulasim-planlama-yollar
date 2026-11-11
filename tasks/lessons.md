@@ -375,3 +375,31 @@ kaydın **yol türü anahtar kelimesi** içermesi şartı (SOKAK/CADDE/BULVAR/�
 cadde çıkarıyor; ekteki tabloda çıkarılan zaten yok ama eklenenler de yok.
 Eki olduğu gibi almak eksik veri demekti. Tabloyu kararın kendisiyle
 karşılaştırmak gerekti.
+
+## Tur 22 — Statik sitede gizlilik
+
+**"Ekranda gizle" gizlemek değildir.** İlk refleks indirme düğmesini
+`hidden` yapmaktı. Ama dosya yayındaysa adresini yazan indirir ve veri
+zaten ziyaretçinin tarayıcısına inmiştir. İşe yarayan tek yaklaşım,
+gizlenecek şeyi **hiç yayınlamamak** ya da adresi tahmin edilemez yapmak.
+Bu yüzden gizlilik testi ekrana değil, önce `HEAD` isteğiyle sunucuya
+bakıyor: 404 görmek, "görünmüyor" demekten daha güçlü bir kanıt.
+
+**Gizli klasörün adını günlüğe yazmak her şeyi boşa çıkarır.** Derleme
+günlüğü GitHub Actions özetine düşüyor ve depo herkese açık. Klasör adını
+tek satır loglamak, anahtarı ilan etmekle aynı şeydi. Mekanizmayı kurarken
+"bu bilgi nereye akıyor?" sorusunu her çıktı için ayrı sormak gerekti:
+günlük, Actions özeti, `ozet.json`, `ayar_ham`, adres çubuğu.
+
+**Tarayıcı profili testler arasında sızıyor.** Yönetici anahtarı
+localStorage'da saklandığı için, bir suite'ten sonra çalışan diğeri
+"ziyaretçi" sanıp yönetici modunda test ediyordu — 8 denetim sahte biçimde
+başarısızdı, sonra sahte biçimde başarılı olurdu. Çözüm:
+`Page.addScriptToEvaluateOnNewDocument` ile sayfanın kendi kodundan önce
+`localStorage.clear()`. Ders: bir suite'in sonucu, ondan önce ne
+çalıştığına bağlı olmamalı; bunu üç kez üst üste koşarak doğrulamak lazım.
+
+**Suite'lerin rolünü ayırmak gerekti.** `site_testi` tüm özellikleri
+denetliyor, bu yüzden artık siteyi anahtarla açıyor; "ziyaretçi ne
+göremiyor" sorusu ayrı bir suite'in işi. İkisini tek dosyada tutmak her
+denetime "hangi moddayız?" sorusunu bulaştırıyordu.

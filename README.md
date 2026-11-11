@@ -18,11 +18,12 @@ _(Aşağıdaki "Tek seferlik kurulum" adımını yaptıktan birkaç dakika sonra
 1. [Tek seferlik kurulum](#1-tek-seferlik-kurulum-sadece-bir-kez)
 2. [Veriyi güncelleme](#2-veriyi-güncelleme-her-değişiklikte)
 3. [QGIS'ten doğru KML nasıl çıkarılır](#3-qgisten-doğru-kml-nasıl-çıkarılır)
-4. [Kategori adı, renk ve başlıkları değiştirme](#4-kategori-adı-renk-ve-başlıkları-değiştirme)
+4. [Kategori adı, renk ve başlıkları değiştirme](#4-kategori-adı-renk-ve-başlıkları-değiştirme-dosyadan)
 5. [İlçe ve mahalle sınırları ekleme (isteğe bağlı)](#5-ilçe-ve-mahalle-sınırları-ekleme-isteğe-bağlı)
 5b. [Üst üste çizilmiş yollar (aynı yolun iki DURUM'u)](#5b-üst-üste-çizilmiş-yollar-aynı-yolun-iki-durumu)
 5c. [Birleşik (dissolve) kayıtların ayrılması ve QGIS'e geri alma](#5c-birleşik-dissolve-kayıtların-ayrılması-ve-qgise-geri-alma)
 5d. [Geniş yollar (17 m+) — ayrı bir çalışma](#5d-geniş-yollar-17-m--ayrı-bir-çalışma)
+5e. [Gizlilik: kim neyi görebilir](#5e-gizlilik-kim-neyi-görebilir)
 6. [Görünümü site üzerinden değiştirme](#6-görünümü-site-üzerinden-değiştirme-kategoriler-ve-ilçe-sınırı)
 7. [Depoyu müdürlük hesabına taşımak](#7-depoyu-müdürlük-hesabına-taşımak)
 8. [Sitede neler var](#8-sitede-neler-var)
@@ -847,6 +848,78 @@ listededir. Haritada açıp bakmanız, yanlış olanı yukarıdaki yöntemle
   "koyu_renk": "#1e3a8a"
 }
 ```
+
+---
+
+## 5e. Gizlilik: kim neyi görebilir
+
+Site herkese açıktır (GitHub Pages'te başka türlüsü yok) ama **veri
+indirilemez** ve çalışmanın iç detayları ziyaretçiye görünmez.
+
+### Nasıl çalışıyor
+
+Bir düğmeyi gizlemek yetmez: dosya yayındaysa adresini bilen indirir. Bu
+yüzden gizlenen şey ekranda değil, **yayınlanan dosyalarda** gizli:
+
+| Dosya | Nereye yazılır |
+|---|---|
+| `yollar-0..5.geojson` (haritayı çizen parçalar) | `veri/` — herkese açık, olmak zorunda |
+| `yollar.geojson`, `yollar.gpkg`, kaynak dosya | `veri/y-<hash>/` — yalnızca yönetici |
+| `genis_yollar_durum.csv` | `veri/y-<hash>/` — yalnızca yönetici |
+| `ozet_yonetici.json` (uyarılar, değişiklikler, depo, kategori açıklamaları) | `veri/y-<hash>/` — yalnızca yönetici |
+
+`<hash>` = anahtarın SHA-256 özetinin ilk 16 hanesi. GitHub Pages klasör
+listesi vermediği için bu adres tahmin edilemez.
+
+`ozet.json` ikiye bölünür: ziyaretçinin tarayıcısına yalnızca haritayı
+çizmeye yarayan kısım iner. Veri kalitesi uyarıları, değişiklik dökümü,
+kaynak dosya adı, depo adresi ve kategori açıklamaları **o dosyada hiç
+yoktur** — CSS ile gizlenmiş değil, gönderilmemiştir.
+
+### Anahtar nerede durur
+
+**Depoda durmaz.** `YONETICI_ANAHTARI` ortam değişkeninden okunur; GitHub'da
+Settings → Secrets and variables → Actions → New repository secret ile
+tanımlanır. `.github/workflows/yayinla.yml` onu derlemeye geçirir.
+
+Anahtar tanımlı değilse gizli klasör **hiç üretilmez**: indirme dosyaları ve
+iç raporlar yayınlanmaz. Yani güvenli taraf varsayılandır.
+
+Derleme günlüğü klasör adını **yazmaz** — bu depo herkese açık ve günlük
+Actions özetine düşüyor; adı yazmak gizli klasörü ifşa etmek olurdu.
+
+### Siteyi yönetici olarak açmak
+
+Adrese `?y=ANAHTAR` eklenir. Tarayıcı anahtarı saklar, adres çubuğundan
+hemen silinir. Sağ üstte 🔑 rozeti görünür; tıklayınca çıkılır.
+
+Doğrulama, sitede saklanan bir parolayla karşılaştırma değildir: tarayıcı
+anahtardan klasör adını hesaplar ve dosyayı ister. Anahtar yanlışsa dosya
+yoktur (404) ve mod açılmaz.
+
+### Sınırları
+
+- Haritayı çizen çizgiler herkese açık olmak zorunda; teknik bilen biri
+  bunları tarayıcıdan toplayabilir. Engellemenin tek yolu siteyi kapatmaktır.
+- Depo herkese açık olduğu sürece `veri/` klasöründeki ana katman, Excel ve
+  EK-1 listesi github.com üzerinden indirilebilir. Depoyu private yapmak
+  gerçek çözümdür; ücretsiz planda Pages kapanır, GitHub Pro ile depo kapalı
+  / site açık olur.
+- Sayfaya `noindex, nofollow` konuldu: arama motorlarına çıkmaz.
+
+### Yerelde denemek
+
+```bash
+YONETICI_ANAHTARI=deneme python3 araclar/derle.py
+python3 -m http.server 8000 --directory _site
+# ziyaretçi:  http://127.0.0.1:8000/
+# yönetici:   http://127.0.0.1:8000/?y=deneme
+node araclar/testler/gizlilik_testi.mjs "" deneme
+```
+
+`gizlilik_testi.mjs` iki soruyu ayrı ayrı sorar: ziyaretçi neyi göremiyor,
+yönetici neye erişebiliyor. Dosyaların yayınlanmadığını da doğrular —
+"ekranda yok" ile "sunucuda yok" aynı şey değildir.
 
 ---
 

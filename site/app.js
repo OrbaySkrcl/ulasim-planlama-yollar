@@ -921,7 +921,8 @@
       var acik = D.seciliKategori.has(durum);
       var ozel = D.ozelKategori[durum];
       return '<div class="kat' + (acik ? "" : " kapali-kat") + '" data-kat="' + kacar(durum) +
-        '" title="' + kacar(katAd(durum)) + " — " + kacar(k.aciklama) + '">' +
+        '" title="' + kacar(katAd(durum)) +
+          (k.aciklama ? " — " + kacar(k.aciklama) : "") + '">' +
         '<div class="ust">' +
           '<label class="kat-etiket">' +
             '<input type="checkbox" data-durum="' + kacar(durum) + '"' + (acik ? " checked" : "") + ">" +
@@ -933,7 +934,8 @@
           '<span class="sayi">' + sayi(k.uzunluk_km, 1) + " km</span>" +
         "</div>" +
         '<div class="alt-satir">' +
-          '<span class="aciklama" title="' + kacar(k.aciklama) + '">' + kacar(k.aciklama) + "</span>" +
+          '<span class="aciklama" title="' + kacar(k.aciklama || "") + '">' +
+            kacar(k.aciklama || "") + "</span>" +
           '<button class="kat-yalniz" data-yalniz="' + kacar(durum) +
             '" title="Yalnızca bu kategoriyi göster">yalnız</button>' +
           '<button class="kat-duzenle" data-duzenle="' + kacar(durum) +
@@ -1706,7 +1708,9 @@
     $("#bolum-genis").style.display = "";
     var b = $("#bolum-genis").querySelector("h2");
     if (b && g.baslik) b.firstChild.nodeValue = g.baslik + " ";
-    $("#genis-aciklama").textContent = g.aciklama || "";
+    var ga = $("#genis-aciklama");
+    ga.textContent = g.aciklama || "";
+    ga.hidden = !g.aciklama;
 
     $("#genis-liste").innerHTML = genisTonlari().map(function (ton) {
       var t = g.tonlar[ton];
@@ -1733,9 +1737,10 @@
     genisDegisimCiz();
     var rapor = $("#genis-rapor");
     if (rapor) {
-      rapor.hidden = !g.rapor_dosyasi;
-      if (g.rapor_dosyasi) {
-        rapor.href = "veri/" + g.rapor_dosyasi;
+      var raporYolu = g.rapor_dosyasi ? yoneticiDosyasi(g.rapor_dosyasi) : null;
+      rapor.hidden = !raporYolu;
+      if (raporYolu) {
+        rapor.href = raporYolu;
         rapor.title = "Listedeki her satırın haritada ne olduğunu gösterir: " +
           "eşleşti mi, kaç yol bulundu, kaç km, hangi mahallede. " +
           "Excel'in kendisi değişmez.";
@@ -1883,7 +1888,9 @@
       var k = D.ozet.kategoriler[d];
       return "<li><span style='display:inline-block;width:14px;height:5px;border-radius:3px;background:" +
         kacar(katRenk(d)) + ";vertical-align:middle;margin-right:7px'></span><strong>" +
-        kacar(katAd(d)) + "</strong> — " + kacar(k.aciklama) + " (" + sayi(k.uzunluk_km, 1) + " km)</li>";
+        kacar(katAd(d)) + "</strong>" +
+        (k.aciklama ? " — " + kacar(k.aciklama) : "") +
+        " (" + sayi(k.uzunluk_km, 1) + " km)</li>";
     }).join("") + "</ul>";
     $("#yardim-not").textContent = D.ozet.site["not"] || "";
   }
@@ -2215,44 +2222,145 @@
     });
   }
 
+  /* --------------------------------------------------------- yönetici modu
+   * Ziyaretçi haritayı görür ama veriyi indiremez ve çalışmanın iç
+   * detaylarını görmez. Gizlenen şey ekranda değil, YAYINLANAN DOSYALARDA
+   * gizli: indirme paketleri ve iç raporlar, adı anahtardan türetilen bir
+   * klasörde durur (veri/y-<sha256(anahtar)[:16]>/). Ziyaretçinin
+   * tarayıcısına o dosyalar hiç inmez.
+   *
+   * Açmak için adrese ?y=ANAHTAR eklenir. Anahtar tarayıcıda saklanır ve
+   * adres çubuğundan hemen silinir (ekran paylaşımında görünmesin diye).
+   */
+  function yoneticiAnahtariOku() {
+    var p = new URLSearchParams(location.search);
+    var a = p.get("y");
+    if (a) {
+      p.delete("y");
+      var yeni = location.pathname + (p.toString() ? "?" + p : "") + location.hash;
+      history.replaceState(null, "", yeni);
+      return a.trim();
+    }
+    try { return localStorage.getItem("yoneticiAnahtari") || ""; }
+    catch (e) { return ""; }
+  }
+
+  function yoneticiKlasoru(anahtar) {
+    var veri = new TextEncoder().encode(anahtar);
+    return crypto.subtle.digest("SHA-256", veri).then(function (ozet) {
+      var onalti = Array.prototype.map.call(new Uint8Array(ozet), function (b) {
+        return ("0" + b.toString(16)).slice(-2);
+      }).join("");
+      return "y-" + onalti.slice(0, 16);
+    });
+  }
+
+  // Yönetici özetini getirir. Anahtar yanlışsa dosya yok (404) — doğrulama
+  // budur; sitede saklanan bir parola ya da karşılaştırma yoktur.
+  function yoneticiAc(anahtar) {
+    if (!anahtar || !D.ozet.yonetici_modu || !(window.crypto || {}).subtle) {
+      return Promise.resolve(false);
+    }
+    return yoneticiKlasoru(anahtar).then(function (klasor) {
+      return fetch("veri/" + klasor + "/ozet_yonetici.json", { cache: "no-cache" })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (ek) {
+          if (!ek) return false;
+          D.yonetici = { anahtar: anahtar, klasor: klasor };
+          try { localStorage.setItem("yoneticiAnahtari", anahtar); } catch (e) {}
+          // Gizli alanları özetin üstüne geri koy
+          Object.keys(ek).forEach(function (k) {
+            if (k === "genis_yollar") {
+              D.ozet.genis_yollar = Object.assign({}, D.ozet.genis_yollar, ek[k]);
+            } else if (k === "kategori_aciklamalari") {
+              Object.keys(ek[k]).forEach(function (durum) {
+                if (D.ozet.kategoriler[durum]) {
+                  D.ozet.kategoriler[durum].aciklama = ek[k][durum];
+                }
+              });
+            } else {
+              D.ozet[k] = ek[k];
+            }
+          });
+          return true;
+        })
+        .catch(function () { return false; });
+    });
+  }
+
+  function yoneticiKapat() {
+    try { localStorage.removeItem("yoneticiAnahtari"); } catch (e) {}
+    location.href = location.pathname;
+  }
+
+  function yoneticiArayuzu() {
+    var rozet = $("#yonetici-rozet");
+    var indir = $("#btn-indir");
+    var acik = !!D.yonetici;
+    if (rozet) { rozet.hidden = !acik; rozet.onclick = yoneticiKapat; }
+    if (indir) indir.hidden = !acik;
+    var yardim = $("#satir-yardim");
+    if (yardim) yardim.hidden = !acik;
+    var kaynak = $("#satir-kaynak");
+    if (kaynak) kaynak.hidden = !(acik && D.ozet.kaynak_dosya);
+  }
+
+  // Yöneticiye ait dosyalar gizli klasörde; adreslerini oradan kur.
+  function yoneticiDosyasi(ad) {
+    return D.yonetici ? "veri/" + D.yonetici.klasor + "/" + ad : null;
+  }
+
   function basligiYaz(ozet) {
     document.title = ozet.site.baslik + " · İzmir";
     $("#site-baslik").textContent = ozet.site.baslik;
     $("#site-altbaslik").textContent = ozet.site.alt_baslik;
     $("#site-not").textContent = ozet.site["not"];
     $("#guncelleme").textContent = ozet.guncelleme;
-    $("#kaynak").textContent = ozet.kaynak_dosya + " · " + sayi(ozet.toplam_km, 1) +
-      " km · " + sayi(ozet.ad_sayisi || 0) + " farklı yol adı";
-    // Düzeltme rehberi: depo adresinden türetilir
+    if (ozet.kaynak_dosya) {
+      $("#kaynak").textContent = ozet.kaynak_dosya + " · " + sayi(ozet.toplam_km, 1) +
+        " km · " + sayi(ozet.ad_sayisi || 0) + " farklı yol adı";
+    }
+    // Düzeltme rehberi: depo adresinden türetilir. Depo bilgisi yalnızca
+    // yönetici özetinde var, yani ziyaretçi bu bağlantıyı hiç görmez.
     var rehber = $("#link-rehber");
     var d = ozet.depo || {};
-    if (rehber && d.sahip && d.depo) {
-      rehber.href = "https://github.com/" + d.sahip + "/" + d.depo +
-        "/blob/" + (d.dal || "main") + "/REHBER.md";
-      rehber.hidden = false;
+    if (rehber) {
+      var varMi = !!(d.sahip && d.depo);
+      if (varMi) {
+        rehber.href = "https://github.com/" + d.sahip + "/" + d.depo +
+          "/blob/" + (d.dal || "main") + "/REHBER.md";
+      }
+      rehber.hidden = !varMi;
     }
-    $("#boyut-geojson").textContent = ozet.veri_boyut_mb + " MB";
-    // GeoPackage yazılamadıysa bağlantıyı hiç gösterme (ölü bağlantı olmasın)
+    // İndirme menüsü: dosyalar gizli klasörde, bağlantıları oradan kur
+    var gj = yoneticiDosyasi("yollar.geojson");
+    var gjBag = $("#menu-indir a[href$='.geojson']");
+    if (gjBag) {
+      gjBag.hidden = !(gj && ozet.veri_boyut_mb);
+      if (gj) gjBag.href = gj;
+    }
+    $("#boyut-geojson").textContent = (ozet.veri_boyut_mb || 0) + " MB";
     var gpkgBag = $("#menu-indir a[href$='.gpkg']");
-    if (ozet.gpkg_boyut_mb) {
-      $("#boyut-gpkg").textContent = ozet.gpkg_boyut_mb + " MB";
-      if (gpkgBag) gpkgBag.hidden = false;
-    } else if (gpkgBag) {
-      gpkgBag.hidden = true;
+    if (gpkgBag) {
+      var gp = yoneticiDosyasi("yollar.gpkg");
+      gpkgBag.hidden = !(gp && ozet.gpkg_boyut_mb);
+      if (gp) gpkgBag.href = gp;
+      if (ozet.gpkg_boyut_mb) $("#boyut-gpkg").textContent = ozet.gpkg_boyut_mb + " MB";
     }
     var kaynakBaglanti = $("#indir-kaynak");
     if (kaynakBaglanti) {
-      if (ozet.kaynak_indirme) {
+      var kb = ozet.kaynak_indirme ? yoneticiDosyasi(ozet.kaynak_indirme) : null;
+      if (kb) {
         kaynakBaglanti.hidden = false;
-        kaynakBaglanti.href = "veri/" + ozet.kaynak_indirme;
+        kaynakBaglanti.href = kb;
         kaynakBaglanti.firstChild.nodeValue =
           (/\.(kmz|zip|gz)$/i.test(ozet.kaynak_indirme) ? "Sıkıştırılmış kaynak" : "KML — kaynak dosya") + " (";
         $("#boyut-kml").textContent = ozet.kaynak_boyut_mb + " MB";
       } else {
-        // Kaynak dosya siteye konmayacak kadar büyük; GeoJSON zaten sunuluyor
         kaynakBaglanti.hidden = true;
       }
     }
+    yoneticiArayuzu();
   }
 
   function baslat() {
@@ -2267,8 +2375,13 @@
       })
       .then(function (ozet) {
         D.ozet = ozet;
+        // Yönetici özeti varsa arayüz çizilmeden önce gelsin; gizli bölümler
+        // önce görünüp sonra kaybolmasın.
+        return yoneticiAc(yoneticiAnahtariOku()).then(function () { return ozet; });
+      })
+      .then(function (ozet) {
         basligiYaz(ozet);
-        $("#yukleniyor-alt").textContent = "Yaklaşık " + ozet.veri_boyut_mb + " MB veri";
+        $("#yukleniyor-alt").textContent = "Harita verisi yükleniyor";
         haritaKur(ozet);
 
         var h = hashOku() || {};

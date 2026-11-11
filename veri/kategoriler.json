@@ -77,6 +77,11 @@
     "ek1_not": "İzmir Büyükşehir Belediye Meclisi'nin 10.03.2021 tarih ve 05.251 sayılı kararı eki. Bu yollar zaten Büyükşehir sorumluluğundadır.",
     "ek1_renk": "#f59e0b"
   },
+  "gizlilik": {
+    "_not": "Ziyaretçi haritayı görür ama veriyi indiremez. İndirme paketleri ve iç raporlar, adı anahtardan türetilen gizli bir klasöre yazılır. Anahtar DEPODA DURMAZ: GitHub deposunda Settings → Secrets and variables → Actions → New repository secret ile YONETICI_ANAHTARI adıyla tanımlanır. Anahtar yoksa o klasör hiç üretilmez.",
+    "ayrintilari_gizle": true
+  },
+
   "ilce_sinir": {
     "_aciklama": "Ilce sinir cizgisinin gorunumu. renk_koyu, koyu altlik haritalarda (Koyu/Uydu) kullanilir. etiket_min_zoom: ilce adlarinin gorunmeye basladigi yakinlastirma seviyesi. Site uzerinden de degistirilebilir.",
     "renk": "#6b7280",

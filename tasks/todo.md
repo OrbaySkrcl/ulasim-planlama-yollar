@@ -985,3 +985,71 @@ Ana çalışma dokunulmadan kaldı: 75.671 yol, 29.680,7 km; Devredilen 2.944 /
   birebir üretiyor (tek fark, OCR hatası olduğu için elle düzeltilen 12 satır).
 - Haritada Konak z15'te turuncu EK-1 çizgileri mavi kategorilerden ayırt
   edilebiliyor; lejantta ayrı başlık altında görünüyor.
+
+---
+
+# Tur 22 — Gizlilik: veri indirme ve iç detaylar yönetici modunda
+
+## Anladığım iş
+Ziyaretçi haritayı, yolları, lejantı eskisi gibi görsün. Ama **veriyi
+indiremesin** ve çalışmanın iç detaylarını (eşleşmeyen yollar, değişiklik
+dökümü, kaynak dosya adı, depo adresi, kategori açıklamaları) görmesin.
+Bunlar yalnızca yöneticiye açılsın. Depo şimdilik herkese açık kalıyor.
+
+## Tasarım kararı: gizli klasör + anahtar
+CSS ile gizlemek yetmez — veri yine tarayıcıya iner ve adres bilinirse
+indirilir. Bunun yerine:
+
+* Yöneticiye ait her şey, adı **anahtardan türetilen** bir klasöre yazılır:
+  `veri/y-<sha256(anahtar)[:16]>/…`. GitHub Pages klasör listesi vermediği
+  için bu adres tahmin edilemez.
+* Anahtar **depoda durmaz**: GitHub Actions gizli değişkeninden
+  (`YONETICI_ANAHTARI`) okunur. Anahtar yoksa o klasör hiç üretilmez —
+  yani varsayılan durum "kimse indiremez".
+* Site `?y=ANAHTAR` ile açılınca aynı adresi tarayıcıda hesaplar; dosya
+  geliyorsa yönetici modu açılır ve anahtar tarayıcıda saklanır.
+
+Böylece gizlenen şey ekranda değil, **yayınlanan dosyalarda** gizlenmiş olur.
+
+## Plan
+- [x] `derle.py`: özeti ikiye böl (`ozeti_ayir`).
+- [x] `derle.py`: indirme paketleri + CSV raporu + kaynak kopyası gizli klasöre.
+- [x] `derle.py`: anahtar yoksa hiçbiri üretilmiyor (güvenli varsayılan).
+- [x] `app.js`: yönetici modu — anahtar, SHA-256, getirme, birleştirme, rozet.
+- [x] `app.js`: indirme menüsü, veri kalitesi, son değişiklikler, kaynak
+      satırı, depo bağlantıları, kategori açıklamaları yalnızca yöneticide.
+- [x] `index.html`: açıklama sadeleşti, `noindex, nofollow` eklendi.
+- [x] `yayinla.yml`: `YONETICI_ANAHTARI` gizli değişkeni derlemeye geçiyor.
+- [x] `araclar/testler/gizlilik_testi.mjs` — 31 denetim.
+- [x] Belgeler: README 5e, REHBER 7. bölüm.
+
+## Yol boyunca yakalanan iki sorun
+1. **Derleme günlüğü gizli klasörün adını yazıyordu.** Bu depo herkese açık
+   ve günlük Actions özetine düşüyor — adı yazmak mekanizmayı tümden boşa
+   çıkarırdı. Günlük artık yalnızca "üretildi" diyor.
+2. **`ayar_ham` tüm kategoriler.json'u taşıyordu.** Anahtar oraya yazılmış
+   olsaydı yönetici özetine sızardı. `gizlilik` bloğu artık çıkarılıyor.
+
+## Sonuç
+
+| | Ziyaretçi | Yönetici |
+|---|---|---|
+| Harita, lejant, arama, ölçüm, geniş yollar | ✅ | ✅ |
+| `yollar.gpkg` / `yollar.geojson` indirme | 404 | ✅ |
+| Liste raporu (CSV) | 404 | ✅ |
+| Veri kalitesi, son değişiklikler, kaynak, depo | ozet.json'da **yok** | ✅ |
+| Kategori açıklamaları | ozet.json'da **yok** | ✅ |
+
+Önemli olan "ekranda gizli" değil "sunucuda yok" olması: gizlilik testi
+dosyaları doğrudan isteyip 404 aldığını doğruluyor.
+
+## Doğrulama
+- `gizlilik_testi.mjs` 31/31 — üst üste üç çalışmada da temiz
+  (tarayıcı profilinde kalan anahtar testi bozuyordu; sayfa açılmadan
+  localStorage temizleniyor artık).
+- `site_testi.mjs` 23/23, `genis_test.mjs` 15/15, konsol temiz.
+  İkisi de artık siteyi anahtarla açıyor; ziyaretçi görünümü ayrı suite'in işi.
+- `ortusme_denetimi.py` 0,00 km.
+- `ana_katman_testi.py` bu kapsayıcıda atlandı (QGIS kurulu değil).
+- Anahtarsız derleme ayrıca denendi: gizli klasör hiç oluşmuyor,
+  ziyaretçi denetimleri yine temiz.

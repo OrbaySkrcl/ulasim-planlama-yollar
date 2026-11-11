@@ -32,7 +32,8 @@ Excel'i, Excel'de yaptığınız hiçbir şey ana katmanı değiştirmez.
 | Bir yol **artık listede olmamalı** | Excel | [4](#4-bir-yolu-listeden-çıkarmak) |
 | Listeye **yeni yol eklemek** istiyorum | Excel | [5](#5-listeye-yeni-yol-eklemek) |
 | **EK-1 listesine** yol eklemek / çıkarmak | ek1_listesi.txt | [6](#6-ek-1-listesini-düzenlemek) |
-| **Yanlışlıkla** bir şey bozdum | — | [7](#7-geri-almak) |
+| **Yönetici modu** — indirme, uyarılar, ayrıntılar | site | [7](#7-yönetici-modu-sadece-siz) |
+| **Yanlışlıkla** bir şey bozdum | — | [8](#8-geri-almak) |
 
 ---
 
@@ -178,7 +179,72 @@ Bu bir metin dosyasıdır, doğrudan GitHub'da düzenlenir — Excel gerekmez.
 
 ---
 
-## 7. Geri almak
+## 7. Yönetici modu (sadece siz)
+
+Site herkese açıktır ama **veri indirilemez** ve çalışmanın iç detayları
+görünmez. Bunlar yalnızca size açılır.
+
+### Nasıl açılır
+
+Sitenin adresinin sonuna anahtarınızı ekleyin:
+
+```
+https://orbayskrcl.github.io/ulasim-planlama-yollar/?y=ANAHTARINIZ
+```
+
+Bir kez açtığınızda tarayıcınız hatırlar; bir daha yazmanız gerekmez.
+Sağ üstte **🔑 Yönetici** rozeti görünür. Çıkmak için rozete tıklayın.
+
+> Anahtar adres çubuğundan hemen silinir — ekran paylaşırken görünmez.
+
+### Yönetici modunda ne açılır
+
+| | Ziyaretçi | Siz |
+|---|---|---|
+| Harita, yollar, lejant, arama, ölçüm | ✅ | ✅ |
+| **Veriyi indir** menüsü (GeoPackage, GeoJSON) | ❌ | ✅ |
+| Liste durumu raporu (CSV) | ❌ | ✅ |
+| Veri kalitesi uyarıları | ❌ | ✅ |
+| Son değişiklikler | ❌ | ✅ |
+| Kaynak dosya adı, depo bağlantıları | ❌ | ✅ |
+| Kategori açıklamaları | ❌ | ✅ |
+
+### Anahtarı belirlemek / değiştirmek
+
+Anahtar **depoda durmaz.** GitHub'da:
+
+1. Depo → **Settings** → **Secrets and variables** → **Actions**
+2. **New repository secret**
+3. Name: `YONETICI_ANAHTARI` — Secret: seçtiğiniz anahtar
+4. **Add secret**, sonra herhangi bir dosyayı yeniden yükleyin (site yeniden
+   derlensin diye).
+
+Anahtarı değiştirmek için aynı yerden düzenleyip yeniden derleyin. Eski
+anahtar o an geçersiz olur.
+
+> **Anahtar tanımlı değilse** indirme dosyaları hiç üretilmez. Yani
+> "kimse indiremez" varsayılan durumdur; anahtar sizin için bir kapı açar.
+
+### Bu ne kadar güvenli?
+
+Dürüst cevap: **iyi ama mükemmel değil.**
+
+- İndirme dosyaları, adı anahtardan hesaplanan bir klasöre yazılır. GitHub
+  Pages klasör listesi vermediği için adres tahmin edilemez. Anahtarı
+  bilmeyen bu dosyalara ulaşamaz — ekranda gizlenmiş değil, **gerçekten
+  erişilemez** durumdadırlar.
+- Aynı şey iç detaylar için de geçerli: ziyaretçinin tarayıcısına o bilgiler
+  hiç inmez.
+- **Ama** haritayı çizmek için yol çizgileri herkese açık olmak zorunda.
+  Teknik bilen biri bu çizgileri tarayıcıdan toplayabilir. Bunu engellemenin
+  tek yolu siteyi tamamen kapatmaktır.
+- **Ve** depo şu an herkese açık: `veri/` klasöründeki ana katman, Excel ve
+  EK-1 listesi github.com üzerinden indirilebilir. Bunu kapatmak için depoyu
+  private yapmanız gerekir (GitHub Pro olmadan site kapanır).
+
+---
+
+## 8. Geri almak
 
 Her yükleme bir sürümdür, hiçbir şey kaybolmaz.
 
@@ -201,7 +267,7 @@ Her yüklemeden sonra:
   olduğunu gösteren tablo. Türkçe Excel çift tıklamayla açar.
 
 Beklediğinizden farklı bir sayı görürseniz yanlış dosya yüklenmiş demektir —
-[7. bölümden](#7-geri-almak) geri alabilirsiniz.
+[8. bölümden](#8-geri-almak) geri alabilirsiniz.
 
 ---
 
