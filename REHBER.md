@@ -179,6 +179,30 @@ Bu bir metin dosyasıdır, doğrudan GitHub'da düzenlenir — Excel gerekmez.
 
 ---
 
+## 6b. Haritada yol bulmak
+
+**Arama kutusuna yol adını yazın.** Her sonuçta adın altında **ilçe ve yol
+tipi** yazar:
+
+```
+ABDİ İPEKÇİ
+Bornova · Cadde                     2,8 km
+```
+
+Aynı ad birden çok ilçede geçiyorsa (sayılı sokaklarda çok olur) **her ilçe
+ayrı bir satırdır.** İstediğiniz ilçeye tıklayın, harita tam oraya gider ve
+yolun adı haritada pembe yazıyla kalır.
+
+**Fareyle bir yolun üstüne gelin:** tıklamadan adı, tipi, mahallesi ve ilçesi
+imlecin yanında çıkar.
+
+**Bütün yolların adını haritada görmek isterseniz** Kategoriler bölümünün
+altındaki *"Yol adlarını haritaya yaz"* kutusunu işaretleyin. Adlar yalnızca
+yakınlaştırdığınızda (z16) yazılır — daha uzaktan harita okunmaz hâle
+geliyor. Varsayılan kapalıdır; altlık harita zaten sokak adlarını yazar.
+
+---
+
 ## 7. Yönetici modu (sadece siz)
 
 Site herkese açıktır ama **veri indirilemez** ve çalışmanın iç detayları

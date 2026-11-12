@@ -573,6 +573,8 @@
     if (D.vurgu) { D.vurgu.setStyle({ weight: w + 9 }); D.vurgu.bringToBack(); }
     if (D.hoverKatman) { D.harita.removeLayer(D.hoverKatman); D.hoverKatman = null; }
     if (D.hover) { D.hover = null; D.harita.getContainer().style.cursor = ""; }
+    hoverEtiketi(null);
+    yolEtiketleriCiz();
     kategoriZoomNotu(zoomGizli, simdikiZoom);
     lejantCiz(zoomGizli);
     hashYaz();
@@ -694,19 +696,117 @@
   /* ------------------------------------------------------------- vurgular */
   function vurguyuKaldir() {
     if (D.vurgu) { D.harita.removeLayer(D.vurgu); D.vurgu = null; }
+    if (D.vurguEtiket) { D.harita.removeLayer(D.vurguEtiket); D.vurguEtiket = null; }
+    D.vurguluYollar = null;
   }
 
-  function hoverGoster(f) {
-    if (D.hover === f) return;
+  // Yolun adını çizginin üstüne yazmak yerine imlecin yanında gösteriyoruz:
+  // 75 binden fazla çizgi var, hepsini etiketlemek haritayı okunmaz yapar.
+  // Tıklamadan "bu hangi yol?" sorusunu cevaplamanın ucuz yolu bu.
+  function hoverEtiketi(f, latlng) {
+    if (!D.hoverEtiket) {
+      D.hoverEtiket = L.marker([0, 0], {
+        interactive: false, keyboard: false,
+        icon: L.divIcon({ className: "yol-etiket", iconSize: null, html: "" })
+      });
+    }
+    if (!f || !latlng) {
+      if (D.harita.hasLayer(D.hoverEtiket)) D.harita.removeLayer(D.hoverEtiket);
+      return;
+    }
+    var p = f.properties;
+    var alt = [p.tip, p.mahalle, p.ilce].filter(function (x) {
+      return x && x !== "Belirlenemedi" && x !== "Belirtilmemiş";
+    }).join(" · ");
+    D.hoverEtiket.setLatLng(latlng);
+    D.hoverEtiket.setIcon(L.divIcon({
+      className: "yol-etiket" + (koyuZeminMi() ? " koyu-zemin" : ""),
+      iconSize: null,
+      html: '<span class="ad">' + kacar(p.ad || "İsimsiz yol") + "</span>" +
+            (alt ? '<span class="alt">' + kacar(alt) + "</span>" : "")
+    }));
+    if (!D.harita.hasLayer(D.hoverEtiket)) D.hoverEtiket.addTo(D.harita);
+  }
+
+  function hoverGoster(f, latlng) {
+    if (D.hover === f) {
+      if (f && latlng) hoverEtiketi(f, latlng);
+      return;
+    }
     D.hover = f;
     if (D.hoverKatman) { D.harita.removeLayer(D.hoverKatman); D.hoverKatman = null; }
     D.harita.getContainer().style.cursor = f ? "pointer" : "";
+    hoverEtiketi(f, latlng);
     if (!f) return;
     D.hoverKatman = L.polyline(yolLatLng(f), {
       renderer: D.cizer, color: katRenk(f.properties.durum),
       weight: agirlik() + 4, opacity: 1, interactive: false,
       lineCap: "round", lineJoin: "round"
     }).addTo(D.harita);
+  }
+
+  /* ------------------------------------------------------ yol adı katmanı
+   * Varsayılan KAPALI ve yalnızca yakından çalışır. Sebebi basit: altlık
+   * harita zaten sokak adlarını yazıyor, 75 binden fazla çizginin adını
+   * birden basmak hem okunmaz hem ağır. Açmak isteyen için duruyor.
+   */
+  var YOL_ETIKET_ZOOM = 16;
+  var YOL_ETIKET_SINIR = 80;
+
+  function yolEtiketleriCiz() {
+    if (!D.yolEtiketleri) D.yolEtiketleri = L.layerGroup();
+    var katman = D.yolEtiketleri;
+    katman.clearLayers();
+    var acik = D.yolAdiGoster && D.harita.getZoom() >= YOL_ETIKET_ZOOM;
+    if (!acik) {
+      if (D.harita.hasLayer(katman)) D.harita.removeLayer(katman);
+      yolEtiketNotu();
+      return;
+    }
+    var gorunen = D.harita.getBounds();
+    var koyu = koyuZeminMi();
+    var yazilan = {};
+    var sayac = 0;
+    (D.ozellikler || []).some(function (f) {
+      if (sayac >= YOL_ETIKET_SINIR) return true;
+      var p = f.properties;
+      if (!p.ad || p.ad === "İsimsiz yol") return false;
+      if (!D.seciliKategori.has(p.durum)) return false;
+      if (!gecerliMi(p)) return false;
+      var ll = yolLatLng(f);
+      if (!ll.length || !ll[0].length) return false;
+      var dizi = ll[0];
+      var nokta = dizi[Math.floor(dizi.length / 2)];
+      if (!gorunen.contains(nokta)) return false;
+      // Aynı ad ekranda bir kez yazılsın; sokaklar çok parçalı.
+      var anahtar = p.ad + "|" + (p.mahalle || "");
+      if (yazilan[anahtar]) return false;
+      yazilan[anahtar] = true;
+      sayac++;
+      katman.addLayer(L.marker(nokta, {
+        interactive: false, keyboard: false,
+        icon: L.divIcon({
+          className: "yol-etiket katman" + (koyu ? " koyu-zemin" : ""),
+          iconSize: null, html: '<span class="ad">' + kacar(p.ad) + "</span>"
+        })
+      }));
+      return false;
+    });
+    if (sayac && !D.harita.hasLayer(katman)) katman.addTo(D.harita);
+    if (!sayac && D.harita.hasLayer(katman)) D.harita.removeLayer(katman);
+    yolEtiketNotu();
+  }
+
+  function yolEtiketNotu() {
+    var el = $("#yol-adi-notu");
+    if (!el) return;
+    var yakin = D.harita.getZoom() >= YOL_ETIKET_ZOOM;
+    el.hidden = !D.yolAdiGoster || yakin;
+    if (!el.hidden) {
+      el.textContent = "🔍 Yol adları z" + YOL_ETIKET_ZOOM +
+        " yakınlıktan itibaren yazılır (şu an z" +
+        sayi(D.harita.getZoom(), 1) + ").";
+    }
   }
 
   /* -------------------------------------------------------- mesafe ölçümü */
@@ -785,9 +885,21 @@
         if (!r.ok) throw new Error(dosya + " bulunamadı (" + r.status + ")");
         return r.json();
       })
-      .then(function (liste) {
-        liste.forEach(function (a) { a.arama = normalize(a.ad); });
+      .then(function (ham) {
+        // Dosya biçimi:
+        //   {ilceler:[ad…], tipler:[ad…],
+        //    adlar:[{ad, km, d:[durum…], t:tip indeksi, y:[[ilçe indeksi, km]…]}]}
+        // İlçe ve tip adları tekrarlanmasın diye indeksle tutuluyor.
+        var ilceler = (ham && ham.ilceler) || [];
+        var tipler = (ham && ham.tipler) || [];
+        var liste = (ham && ham.adlar) || ham || [];
+        liste.forEach(function (a) {
+          a.arama = normalize(a.ad);
+          a.ilceAdlari = (a.y || []).map(function (x) { return ilceler[x[0]]; });
+          a.tipAdi = a.t === undefined ? "" : (tipler[a.t] || "");
+        });
         D.adlar = liste;
+        D.adIlceleri = ilceler;
         D.adlarYukleniyor = null;
         return liste;
       })
@@ -828,34 +940,59 @@
       adlariYukle().then(function (l) { if (l) aramaCiz($("#arama").value); });
       return;
     }
-    var sonuc = D.adlar.filter(function (a) { return a.arama.indexOf(q) !== -1; });
-    sonuc.sort(function (a, b) {
-      var ab = a.arama.indexOf(q) === 0 ? 0 : 1, bb = b.arama.indexOf(q) === 0 ? 0 : 1;
-      return ab - bb || b.km - a.km;
+    var eslesen = D.adlar.filter(function (a) { return a.arama.indexOf(q) !== -1; });
+
+    // Aynı ad birçok ilçede geçebiliyor ("1580 SOKAK" yedi ilçede var).
+    // Tek satırda göstermek yanıltıcı: tıklayınca harita ilin yarısını
+    // kapsayacak kadar uzaklaşıyordu. Her ilçe ayrı bir sonuç.
+    var sonuc = [];
+    eslesen.forEach(function (a) {
+      var basta = a.arama.indexOf(q) === 0 ? 0 : 1;
+      if (!a.ilceAdlari || !a.ilceAdlari.length) {
+        sonuc.push({ ad: a.ad, ilce: null, km: a.km, d: a.d,
+                     tip: a.tipAdi, basta: basta });
+        return;
+      }
+      a.ilceAdlari.forEach(function (ilce, i) {
+        sonuc.push({ ad: a.ad, ilce: ilce, km: a.y[i][1], d: a.d,
+                     tip: a.tipAdi, basta: basta });
+      });
     });
+    sonuc.sort(function (a, b) { return a.basta - b.basta || b.km - a.km; });
     if (!sonuc.length) { kap.innerHTML = '<div class="bos">Sonuç bulunamadı.</div>'; return; }
 
     kap.innerHTML = sonuc.slice(0, 60).map(function (a) {
-      var noktalar = Object.keys(a.durumlar).sort().map(function (d) {
+      var noktalar = (a.d || []).map(function (d) {
         return '<i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' +
           kacar(katRenk(d)) + ';margin-right:3px" title="' + kacar(katAd(d)) + '"></i>';
       }).join("");
-      return '<div class="satir" data-ad="' + kacar(a.ad) + '">' + noktalar +
-        '<span class="ad">' + kacar(a.ad) + '</span>' +
+      return '<div class="satir" data-ad="' + kacar(a.ad) + '"' +
+        (a.ilce ? ' data-ilce="' + kacar(a.ilce) + '"' : "") + ">" +
+        '<span class="nokta">' + noktalar + "</span>" +
+        '<span class="metin">' +
+          '<span class="ad">' + kacar(a.ad) + "</span>" +
+          (a.ilce || a.tip
+            ? '<span class="yer">' +
+                kacar([a.ilce, a.tip].filter(Boolean).join(" · ")) + "</span>"
+            : "") +
+        "</span>" +
         '<span class="bilgi">' + sayi(a.km, 1) + " km</span></div>";
     }).join("") + (sonuc.length > 60
       ? '<div class="bos">… ve ' + (sonuc.length - 60) + " sonuç daha. Aramayı daraltın.</div>" : "");
 
     kap.querySelectorAll(".satir").forEach(function (el) {
-      el.onclick = function () { adaGit(el.dataset.ad); };
+      el.onclick = function () { adaGit(el.dataset.ad, el.dataset.ilce || null); };
     });
   }
 
-  function adaGit(ad) {
-    if (!D.adlar) { adlariYukle().then(function (l) { if (l) adaGit(ad); }); return; }
+  function adaGit(ad, ilce) {
+    if (!D.adlar) {
+      adlariYukle().then(function (l) { if (l) adaGit(ad, ilce); });
+      return;
+    }
     // Aranan yol henüz indirilmemiş bir kategoride olabilir
     var kayit = D.adlar.filter(function (a) { return a.ad === ad; })[0];
-    var gerekli = kayit ? Object.keys(kayit.durumlar || {}) : [];
+    var gerekli = (kayit && kayit.d) || [];
     // Açık kategorilerde varsa yalnızca onları indir; hiçbirinde yoksa
     // kapalı kategoriyi açmak gerekir (yoksa yol hiç görünmez).
     var acik = gerekli.filter(function (d) { return D.seciliKategori.has(d); });
@@ -865,10 +1002,17 @@
       eksik.forEach(function (d) { D.seciliKategori.add(d); });
       kategoriListesiCiz();
       bildir("Veri yükleniyor…");
-      kategorileriYukle(eksik).then(function () { adaGit(ad); });
+      kategorileriYukle(eksik).then(function () { adaGit(ad, ilce); });
       return;
     }
-    var secilenler = D.ozellikler.filter(function (f) { return f.properties.ad === ad; });
+    var secilenler = D.ozellikler.filter(function (f) {
+      return f.properties.ad === ad &&
+        (!ilce || f.properties.ilce === ilce);
+    });
+    // İlçe süzgeci tutmazsa (veri değişmiş olabilir) ada göre devam et
+    if (!secilenler.length && ilce) {
+      secilenler = D.ozellikler.filter(function (f) { return f.properties.ad === ad; });
+    }
     if (!secilenler.length) return;
 
     var degisti = false;
@@ -893,15 +1037,35 @@
       var llf = yolLatLng(f);
       for (var i = 0; i < llf.length; i++) cizgiler.push(llf[i]);
     });
+    // Pembe: turuncu artık EK-1 listesinin rengi, karışmasın.
     D.vurgu = L.polyline(cizgiler, {
-      renderer: D.cizer, color: "#f59e0b", weight: agirlik() + 9,
+      renderer: D.cizer, color: "#ec4899", weight: agirlik() + 9,
       opacity: 0.5, interactive: false, lineCap: "round"
     }).addTo(D.harita);
     D.vurgu.bringToBack();
+    D.vurguluYollar = secilenler;
 
     D.harita.fitBounds(D.vurgu.getBounds(), { padding: [60, 60], maxZoom: 16 });
+
+    // Aranan yolun adı haritada kalsın: vurgu rengi tek başına "hangisi
+    // bu?" sorusunu cevaplamıyor. cizgiler bir PARÇA dizisidir, nokta
+    // dizisi değil; ortanca parçanın ortanca noktasını alıyoruz.
+    if (D.vurguEtiket) { D.harita.removeLayer(D.vurguEtiket); D.vurguEtiket = null; }
+    var parca = cizgiler[Math.floor(cizgiler.length / 2)] || [];
+    var orta = parca[Math.floor(parca.length / 2)];
+    if (orta) {
+      D.vurguEtiket = L.marker(orta, {
+        interactive: false, keyboard: false,
+        icon: L.divIcon({
+          className: "yol-etiket vurgu" + (koyuZeminMi() ? " koyu-zemin" : ""),
+          iconSize: null,
+          html: '<span class="ad">' + kacar(ad) + "</span>" +
+                (ilce ? '<span class="alt">' + kacar(ilce) + "</span>" : "")
+        })
+      }).addTo(D.harita);
+    }
     var km = secilenler.reduce(function (t, f) { return t + f.properties.uzunluk_m; }, 0);
-    bildir(ad + " — " + uzunlukYazi(km));
+    bildir(ad + (ilce ? " · " + ilce : "") + " — " + uzunlukYazi(km));
     if (window.innerWidth <= 860) $("#panel").classList.add("kapali");
   }
 
@@ -2040,7 +2204,7 @@
       beklemede = true;
       requestAnimationFrame(function () {
         beklemede = false;
-        hoverGoster(yolBul(sonLatLng, 10));
+        hoverGoster(yolBul(sonLatLng, 10), sonLatLng);
       });
     });
     D.harita.on("mouseout", function () { hoverGoster(null); });
@@ -2100,6 +2264,21 @@
     function yardimAc(e) { if (e) e.preventDefault(); $("#perde-yardim").classList.add("acik"); }
     $("#btn-yardim").onclick = yardimAc;
     $("#link-yardim").onclick = yardimAc;
+
+    var yolAdi = $("#yol-adi-goster");
+    if (yolAdi) {
+      D.yolAdiGoster = yerelOku("yolAdiGoster", false) === true;
+      yolAdi.checked = D.yolAdiGoster;
+      yolAdi.onchange = function () {
+        D.yolAdiGoster = yolAdi.checked;
+        yerelYaz("yolAdiGoster", D.yolAdiGoster);
+        yolEtiketleriCiz();
+        if (D.yolAdiGoster && D.harita.getZoom() < YOL_ETIKET_ZOOM) {
+          bildir("Yol adları z" + YOL_ETIKET_ZOOM +
+                 " yakınlıktan itibaren yazılır — yakınlaştırın.");
+        }
+      };
+    }
 
     $$("[data-kapat]").forEach(function (b) {
       b.onclick = function () { document.getElementById(b.dataset.kapat).classList.remove("acik"); };

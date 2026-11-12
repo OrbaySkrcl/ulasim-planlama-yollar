@@ -250,6 +250,63 @@ denetle("arama dizini tembel iniyor ve sonuç veriyor", await ev(`(async functio
           dizin:(window.IZMIR_HARITA.adlar||[]).length};})()`),
   r => !r.oncedenYukluydu && r.sonuc >= 1 && r.dizin > 1000);
 
+denetle("aynı ad birden çok ilçede ayrı sonuç oluyor", await ev(`(async function(){
+  var g=document.getElementById('arama');
+  g.focus(); g.value='1580'; g.dispatchEvent(new Event('input'));
+  for(var i=0;i<40;i++){ await new Promise(function(r){setTimeout(r,250);});
+    if(document.querySelectorAll('#arama-sonuc .satir').length) break; }
+  var s=Array.from(document.querySelectorAll('#arama-sonuc .satir'));
+  var tam=s.filter(function(e){return e.querySelector('.ad').textContent==='1580';});
+  return {toplam:s.length, tamAd:tam.length,
+          ilceler:tam.map(function(e){return e.dataset.ilce;}),
+          yazi:tam.length? tam[0].querySelector('.yer').textContent : null};})()`),
+  r => r.tamAd >= 3 && new Set(r.ilceler).size === r.tamAd &&
+       / · /.test(r.yazi || ""));
+
+denetle("ilçeli sonuca tıklayınca o ilçeye gidiyor", await ev(`(async function(){
+  var D=window.IZMIR_HARITA;
+  var s=Array.from(document.querySelectorAll('#arama-sonuc .satir'))
+    .filter(function(e){return e.querySelector('.ad').textContent==='1580';});
+  var hedef=s.find(function(e){return e.dataset.ilce==='Torbalı';}) || s[0];
+  var ilce=hedef.dataset.ilce;
+  hedef.click();
+  await new Promise(function(r){setTimeout(r,1800);});
+  var v=D.vurguluYollar||[];
+  return {ilce:ilce, vurgu:v.length,
+          hepsiAyniIlce: v.length>0 && v.every(function(f){
+            return f.properties.ilce===ilce;}),
+          zoom:Math.round(D.harita.getZoom())};})()`),
+  r => r.vurgu > 0 && r.hepsiAyniIlce && r.zoom >= 13);
+
+denetle("aranan yolun adı haritada yazıyor", await ev(`(function(){
+  var D=window.IZMIR_HARITA;
+  var e=document.querySelector('.yol-etiket.vurgu');
+  return {etiket:!!D.vurguEtiket, yazi:e? e.textContent : null};})()`),
+  r => r.etiket && /1580/.test(r.yazi || "") && /Torbalı/.test(r.yazi || ""));
+
+denetle("yol adı katmanı varsayılan kapalı ve yakınlığa bağlı", await ev(`(async function(){
+  var D=window.IZMIR_HARITA;
+  var kutu=document.getElementById('yol-adi-goster');
+  var basta={acik:kutu.checked, etiket:D.yolEtiketleri? D.yolEtiketleri.getLayers().length:0};
+  D.harita.setZoom(12);
+  await new Promise(function(r){setTimeout(r,1200);});
+  kutu.click();
+  await new Promise(function(r){setTimeout(r,1200);});
+  var uzak={etiket:D.yolEtiketleri? D.yolEtiketleri.getLayers().length:0,
+            not:!document.getElementById('yol-adi-notu').hidden};
+  D.harita.setZoom(17);
+  await new Promise(function(r){setTimeout(r,2500);});
+  var yakin={etiket:D.yolEtiketleri? D.yolEtiketleri.getLayers().length:0,
+             not:!document.getElementById('yol-adi-notu').hidden};
+  kutu.click();
+  await new Promise(function(r){setTimeout(r,900);});
+  var kapali={etiket:D.yolEtiketleri? D.yolEtiketleri.getLayers().length:0};
+  return {basta:basta, uzak:uzak, yakin:yakin, kapali:kapali};})()`),
+  r => r.basta.acik === false && r.basta.etiket === 0 &&
+       r.uzak.etiket === 0 && r.uzak.not === true &&
+       r.yakin.etiket > 0 && r.yakin.not === false &&
+       r.kapali.etiket === 0);
+
 console.log("\n— Kategori süzgeci —");
 denetle("yalnız düğmesi tek kategori bırakıyor", await ev(`(async function(){
   document.querySelector('#arama').value='';
@@ -269,6 +326,26 @@ denetle("temizle varsayılana döndürüyor", await ev(`(async function(){
   var D=window.IZMIR_HARITA;
   return {secili:Array.from(D.seciliKategori).sort()};})()`),
   r => r.secili.length >= 2);
+
+denetle("yolun üstüne gelince adı çıkıyor", await ev(`(async function(){
+  var D=window.IZMIR_HARITA;
+  var f=D.ozellikler.find(function(x){
+    return D.seciliKategori.has(x.properties.durum) &&
+           x.properties.ad && x.properties.ad!=='İsimsiz yol';});
+  var g=f.geometry, dz=g.type==='MultiLineString'?g.coordinates:[g.coordinates];
+  var c=dz[0][Math.floor(dz[0].length/2)];
+  D.harita.setView([c[1],c[0]],16);
+  await new Promise(function(r){setTimeout(r,2000);});
+  // mousemove olayını doğrudan haritaya gönder
+  D.harita.fire('mousemove', {latlng: L.latLng(c[1], c[0])});
+  await new Promise(function(r){setTimeout(r,500);});
+  // Aranan yolun etiketi de ".yol-etiket"; imleç etiketi sınıfsız olandır
+  var e=document.querySelector('.yol-etiket:not(.vurgu):not(.katman)');
+  return {beklenen:f.properties.ad, hover: D.hover? D.hover.properties.ad : null,
+          etiket: !!(D.hoverEtiket && D.harita.hasLayer(D.hoverEtiket)),
+          yazi: e? e.textContent : null};})()`),
+  r => r.hover === r.beklenen && r.etiket &&
+       (r.yazi || "").indexOf(r.beklenen) === 0);
 
 console.log("\n— Harita araçları —");
 denetle("altlık haritalar anahtarsız", await ev(`(function(){

@@ -426,3 +426,26 @@ olduğunda site hiçbir şey söylemiyordu; kullanıcı "giremiyorum" dedi ve
 sebebi anlamanın yolu yoktu. Artık üç durumu ayırt eden bir mesaj çıkıyor:
 anahtar yanlış / site anahtarsız derlenmiş / önbellek. Bir kapıyı kilitlerken
 "açılmadı" demenin yolunu da bırakmak gerekiyor.
+
+## Tur 23 — Arama ve yol adı etiketleri
+
+**Sessizce fırlayan bir istisna, ilgisiz bir özelliği bozdu.** Vurgu
+etiketini `fitBounds`'tan ÖNCE eklemiştim ve `cizgiler`i nokta dizisi
+sandım — oysa parça dizisi. `L.marker` geçersiz koordinatla fırlayınca
+`fitBounds` hiç çalışmadı: arama sonucuna tıklayınca harita yakınlaşmıyordu.
+Belirti ("zoom 9'da kaldı") ile sebep (etiket kodu) arasında görünür bir
+bağ yoktu. İki ders: yeni ve isteğe bağlı bir şeyi **asıl işin arkasına**
+koy, ve bir alanın şeklini varsaymadan önce bak.
+
+**Test, DOM'da ilk eşleşeni aldığı için yanlış şeyi ölçtü.**
+`.yol-etiket` seçicisi imleç etiketini değil, aramanın bıraktığı vurgu
+etiketini buluyordu; denetim "YUKARICUMA bekleniyordu, 1580 geldi" diye
+patladı. Kod doğruydu, seçici gevşekti. Birden fazla benzer öğe olabilecek
+yerlerde seçiciyi daraltmak gerekiyor
+(`.yol-etiket:not(.vurgu):not(.katman)`).
+
+**Arama dizini büyürken alan alan budamak işe yaradı.** İlçe kırılımı
+eklenince adlar.json 1,57 MB'dan 2,42 MB'a çıkmıştı. Kullanılmayan iki
+alanı (`n`, `durumlar` sayıları) atıp ilçe ve tip adlarını indeksle
+tutunca 2,02 MB'a indi — yani özellik eklerken dosya yalnızca 0,45 MB
+büyüdü. Her alan için "bu ekranda görünüyor mu?" diye sormak gerekiyor.

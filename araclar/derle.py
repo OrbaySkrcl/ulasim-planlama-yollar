@@ -1483,10 +1483,22 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
         t["adet"] += 1
         t["uzunluk_m"] += uzunluk
 
-        a = adlar.setdefault(ad, {"adet": 0, "uzunluk_m": 0.0, "durumlar": {}})
+        a = adlar.setdefault(ad, {"adet": 0, "uzunluk_m": 0.0, "durumlar": {},
+                                  "ilceler": {}, "tipler": {}})
+        # Ağda ad ve tip ayrı alanlarda ("1580" + "Sokak"). Aramada tek
+        # başına "1580" bir şey anlatmıyor; baskın tip gösterilecek.
+        a["tipler"][tip] = a["tipler"].get(tip, 0.0) + uzunluk
         a["adet"] += 1
         a["uzunluk_m"] += uzunluk
         a["durumlar"][durum] = a["durumlar"].get(durum, 0) + 1
+        # Aynı ad birçok ilçede geçiyor ("1580 SOKAK" gibi). Aramada hangi
+        # ilçede olduğu görünsün, tıklayınca da doğru yere gidilsin diye
+        # ilçe kırılımı tutuluyor.
+        _il = prop.get("ilce")
+        if _il and _il != "Belirlenemedi":
+            _iv = a["ilceler"].setdefault(_il, [0, 0.0])
+            _iv[0] += 1
+            _iv[1] += uzunluk
 
     # Yolu olmayan alanlar da listede görünsün (çalışmanın kapsamı belli olsun)
     for _ad, _kutu, _poly in ilceler:
@@ -1837,14 +1849,40 @@ def derle(kml_yolu, cikti_dizini, ondalik=6):
     guncelleme = datetime.now(TR_SAAT)
     # Arama dizini ayrı dosyada: 30 binden fazla yol adı ozet.json'u 2 MB'a
     # çıkarıyor ve her açılışta iniyordu. Site bunu ilk arama anında indirir.
+    # İlçe adları tekrar tekrar yazılmasın: bir kez listelenip indeksle
+    # gösteriliyor. 30 binden fazla satır var, fark MB'larla ölçülüyor.
+    _ilce_sira = sorted({i for v in adlar.values() for i in v["ilceler"]})
+    _ilce_no = {ad: n for n, ad in enumerate(_ilce_sira)}
+    # Belirsiz tipler aramada gösterilmez; yer kaplamasınlar
+    _tip_gizle = {"Belirtilmemiş", "Tanımsız kod 0"}
+    _tip_sira = sorted({t for v in adlar.values() for t in v["tipler"]
+                        if t and t not in _tip_gizle})
+    _tip_no = {ad: n for n, ad in enumerate(_tip_sira)}
+
+    def _baskin_tip(v):
+        """En çok kilometreyi kaplayan tipin indeksi; yoksa None."""
+        uygun = [(k, m) for k, m in v["tipler"].items() if k in _tip_no]
+        if not uygun:
+            return None
+        return _tip_no[max(uygun, key=lambda x: x[1])[0]]
+    # Dosya 30 binden fazla satır; yalnızca ekranda kullanılan alanlar
+    # yazılıyor. "d" kategori anahtarları (renk noktaları ve hangi
+    # dosyaların indirileceği için), "y" ise [ilçe indeksi, km] ikilileri.
     ad_listesi = sorted(
-        [{"ad": a, "n": v["adet"], "km": round(v["uzunluk_m"] / 1000.0, 2),
-          "durumlar": v["durumlar"]}
+        [{"ad": a, "km": round(v["uzunluk_m"] / 1000.0, 2),
+          "d": sorted(v["durumlar"]),
+          **({"t": _baskin_tip(v)} if _baskin_tip(v) is not None else {}),
+          "y": [[_ilce_no[i], round(v["ilceler"][i][1] / 1000.0, 2)]
+                for i in sorted(v["ilceler"],
+                                key=lambda x: -v["ilceler"][x][1])]}
          for a, v in adlar.items()],
         key=lambda x: -x["km"])
     ad_yolu = veri_cikti / "adlar.json"
-    ad_yolu.write_text(json.dumps(ad_listesi, ensure_ascii=False, separators=(",", ":")),
-                       encoding="utf-8")
+    ad_yolu.write_text(
+        json.dumps({"ilceler": _ilce_sira, "tipler": _tip_sira,
+                    "adlar": ad_listesi},
+                   ensure_ascii=False, separators=(",", ":")),
+        encoding="utf-8")
 
     ozet = {
         "site": {

@@ -123,8 +123,15 @@ html[data-tema="koyu"] a { color: var(--vurgu); }
   display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 7px; cursor: pointer;
 }
 #arama-sonuc .satir:hover { background: var(--vurgu-soft); }
-#arama-sonuc .satir .ad { flex: 1; min-width: 0; font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#arama-sonuc .satir .bilgi { font-size: 11.5px; color: var(--yazi-soluk); white-space: nowrap; }
+#arama-sonuc .satir .nokta { flex: 0 0 auto; line-height: 1; }
+#arama-sonuc .satir .metin { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+#arama-sonuc .satir .ad { font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Aynı ad birçok ilçede geçiyor; hangisi olduğu adın altında yazar. */
+#arama-sonuc .satir .yer {
+  font-size: 11px; color: var(--yazi-soluk); overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+#arama-sonuc .satir .bilgi { font-size: 11.5px; color: var(--yazi-soluk); white-space: nowrap; align-self: center; }
 #arama-sonuc .bos { color: var(--yazi-soluk); font-size: 12.5px; padding: 8px 2px; }
 
 /* kategori listesi */
@@ -523,4 +530,34 @@ html[data-tema="koyu"] a { color: var(--vurgu); }
   font-weight: 600;
   letter-spacing: .02em;
   color: var(--yazi-soluk);
+}
+
+/* ------------------------------------------------------------ yol adları
+   İmleçle gezerken, aranan yolda ve (isteğe bağlı) yakın yakınlıkta
+   çizilen yol adı etiketleri. */
+.yol-etiket { pointer-events: none; background: none; border: 0; }
+.yol-etiket > span {
+  position: absolute; left: 0; transform: translateX(-50%);
+  white-space: nowrap; display: block; text-align: center;
+}
+.yol-etiket .ad {
+  top: -26px; font-weight: 700; font-size: 12px; color: #111827;
+  text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 6px #fff, 0 0 10px #fff;
+}
+.yol-etiket .alt {
+  top: -12px; font-size: 10.5px; font-weight: 600; color: #4b5563;
+  text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 6px #fff;
+}
+.yol-etiket.koyu-zemin .ad {
+  color: #f3f6fa; text-shadow: 0 0 3px #0b1220, 0 0 3px #0b1220, 0 0 8px #0b1220;
+}
+.yol-etiket.koyu-zemin .alt {
+  color: #b9c3d1; text-shadow: 0 0 3px #0b1220, 0 0 3px #0b1220, 0 0 7px #0b1220;
+}
+/* Aranan yolun etiketi vurgu rengini taşısın */
+.yol-etiket.vurgu .ad { color: #be1b6b; }
+.yol-etiket.vurgu.koyu-zemin .ad { color: #f9a8d4; }
+/* Katman modunda etiketler çizginin üstünde ve daha sakin */
+.yol-etiket.katman .ad {
+  top: -8px; font-size: 11px; font-weight: 650; letter-spacing: .01em;
 }

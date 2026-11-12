@@ -1073,7 +1073,17 @@ güncellemeniz iyi olur.
 - **Bir ilçe ya da mahalle seçince harita oraya gider** — aradığınız mahalleyi
   listeden seçmeniz yeterli, haritayı elle bulmanız gerekmez. Seçimi kaldırınca
   harita yerinde kalır.
-- **Yol adı arama** — Türkçe karaktere duyarsız (`sarikoy` yazınca `SARIKÖY` bulunur)
+- **Yol adı arama** — Türkçe karaktere duyarsız (`sarikoy` yazınca `SARIKÖY` bulunur).
+  Her sonuç **hangi ilçede ve hangi tipte** olduğunu yazar; aynı ad birden çok
+  ilçede geçiyorsa (sayılı sokaklarda sık) **her ilçe ayrı bir sonuçtur** ve
+  tıklayınca harita tam o ilçedeki yola gider, ilin yarısına değil
+- **Yolun üstüne gelince adı görünür** — tıklamaya gerek kalmadan ad, tip,
+  mahalle ve ilçe imlecin yanında yazar
+- **Aranan yolun adı haritada kalır** — pembe vurgunun üstünde
+- **Yol adlarını haritaya yaz** (isteğe bağlı, varsayılan kapalı) — z16
+  yakınlıktan itibaren, seçili kategorilerdeki yolların adlarını haritaya basar.
+  Kapalı olmasının sebebi: altlık harita zaten sokak adlarını yazıyor ve 75
+  binden fazla çizginin adını birden basmak haritayı okunmaz hâle getiriyor
 - **Yola tıklayınca** ad, tip, kategori, uzunluk, kayıt no, koordinat; koordinatı kopyalama
   ve Google Maps'te açma; fareyle üzerine gelince yol vurgulanır
 - **📏 Mesafe ölçme:** haritada çok noktalı, canlı toplamlı mesafe ölçümü
